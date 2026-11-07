@@ -1,0 +1,1711 @@
+<!--
+==================================================
+Heron Tools - shared window theme (Heron brand, dark)
+Used by every Heron Tools window. Brush KEY names are what windows bind to; values come
+only from the Heron brand palette:
+
+    Ink #0F0F10      dark background, text on light
+    Mist #F7F5F2     text on dark (as see-through shades), light background
+    Accent #FD641A   the one highlight colour: main button, selection, focus - never "danger"
+    Accent Light #FF9A5C  only as the light end of an Accent gradient, never alone
+    Surface #1B1B1F  a panel or card on the dark background
+    Success #3ECF8E  done, passed      Warning #F5A524  needs attention
+    Error #FF5A4E    failed, refused   White #FFFFFF    text on Accent
+    Shadow #000000   only as a see-through shadow
+
+Shades are see-through versions of these, never new colours: Mist over Ink at 92 % main text,
+72 % secondary, 55 % quiet, 14 % a line, 8 % / 4 % a faint fill.
+Never add a colour here that is not in that list - ask first.
+
+Font: Manrope, falling back to Segoe UI when Manrope is not installed on the PC.
+
+Templates and motion were carried over from the AJ-Tools theme (Filter Pro move, 2026-11-07);
+only the colours and font changed.
+==================================================
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Brand font, with the Windows system font as the fallback. -->
+    <FontFamily x:Key="BrandFont">Manrope, Segoe UI</FontFamily>
+
+    <!-- ============================================================
+         Brand colours as raw values (for gradients)
+         ============================================================ -->
+    <Color x:Key="InkColor">#FF0F0F10</Color>
+    <Color x:Key="AccentColor">#FFFD641A</Color>
+    <Color x:Key="AccentLightColor">#FFFF9A5C</Color>
+
+    <!-- Surfaces -->
+    <SolidColorBrush x:Key="BackgroundDark" Color="#FF0F0F10"/>   <!-- Ink -->
+    <SolidColorBrush x:Key="BackgroundMedium" Color="#FF1B1B1F"/> <!-- Surface -->
+    <SolidColorBrush x:Key="BackgroundLight" Color="#14F7F5F2"/>  <!-- Mist 8 % fill -->
+    <SolidColorBrush x:Key="CardBackground" Color="#FF1B1B1F"/>   <!-- Surface -->
+
+    <!-- Accents -->
+    <SolidColorBrush x:Key="Accent" Color="#FFFD641A"/>           <!-- Accent -->
+    <SolidColorBrush x:Key="AccentSuccess" Color="#FF3ECF8E"/>    <!-- Success -->
+    <SolidColorBrush x:Key="AccentWarning" Color="#FFF5A524"/>    <!-- Warning -->
+    <SolidColorBrush x:Key="AccentGray" Color="#24F7F5F2"/>       <!-- Mist 14 %: quiet button fill -->
+    <SolidColorBrush x:Key="AccentDanger" Color="#FFFF5A4E"/>     <!-- Error -->
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#EBF7F5F2"/>      <!-- Mist 92 % -->
+    <SolidColorBrush x:Key="TextSecondary" Color="#B8F7F5F2"/>    <!-- Mist 72 % -->
+    <SolidColorBrush x:Key="TextDisabled" Color="#8CF7F5F2"/>     <!-- Mist 55 % -->
+    <SolidColorBrush x:Key="TextOnAccent" Color="#FFFFFFFF"/>     <!-- White on Accent -->
+    <SolidColorBrush x:Key="TextSuccess" Color="#FF3ECF8E"/>      <!-- Success -->
+
+    <!-- Lines / overlay -->
+    <SolidColorBrush x:Key="BorderSoft" Color="#24F7F5F2"/>       <!-- Mist 14 % -->
+    <SolidColorBrush x:Key="BorderStrong" Color="#47F7F5F2"/>     <!-- Mist 28 % -->
+    <SolidColorBrush x:Key="OverlayBackground" Color="#CC0F0F10"/> <!-- Ink 80 % -->
+
+    <!-- Aliases used by the templates below -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#FFFD641A"/>
+    <!-- Hover: Accent into Accent Light - the one place Accent Light may appear. -->
+    <LinearGradientBrush x:Key="PrimaryHoverBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource AccentColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource AccentLightColor}" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#CCFD641A"/> <!-- Accent 80 % -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FF0F0F10"/>
+    <SolidColorBrush x:Key="CardBrush" Color="#FF1B1B1F"/>
+    <SolidColorBrush x:Key="SoftCardBrush" Color="#FF1B1B1F"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#EBF7F5F2"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#B8F7F5F2"/>
+    <SolidColorBrush x:Key="BorderBrushSoft" Color="#24F7F5F2"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFFF5A4E"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#FF3ECF8E"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFF5A524"/>
+
+
+    <!-- ============================================================
+         Motion (v1.3.0) - one shared feel for every Heron Tools control.
+
+         Timing budget (motion-design): hover under 100ms, press under 150ms,
+         release/settle 200-300ms. Everything decelerates (CubicEase EaseOut) so a
+         control reads as finished well before it stops moving. Deliberately short:
+         these are working dialogs opened many times a day, not a showcase.
+
+         TWO HOUSE RULES BAKED IN BELOW - keep them if this file is edited:
+         1. NEVER animate Background or Foreground here. Several windows set those two
+            directly from code-behind (About's nav buttons, PipeSizing's mode toggles),
+            and a running animation outruns a locally-set value, which would break the
+            state colouring. Animate an overlay element's Opacity or a RenderTransform
+            instead - both are template-internal, so no code-behind can collide with them.
+         2. ONE trigger per animated property. Hover, press and focus each drive their own
+            overlay, so they can never fight over who wrote last when several are true at
+            once (hovering while pressed, pressing while focused).
+         ============================================================ -->
+    <CubicEase x:Key="MotionEaseOut" EasingMode="EaseOut"/>
+
+    <!-- Typography -->
+    <Style x:Key="TitleText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="30"/>
+    </Style>
+
+    <Style x:Key="SubtitleText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="BodyText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style x:Key="DisabledText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <!-- No implicit Foreground to keep button text contrast correct -->
+    <Style TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style TargetType="Label">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="Separator">
+        <Setter Property="Margin" Value="0,8"/>
+        <Setter Property="Background" Value="{StaticResource BorderSoft}"/>
+    </Style>
+
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,4"/>
+    </Style>
+
+    <Style x:Key="PanelCard" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <!-- Buttons -->
+    <Style x:Key="ButtonBase" TargetType="Button">
+        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinWidth" Value="80"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <!-- Replaced by the animated FocusRing below - the OS dotted rectangle would sit outside the
+             rounded corner and fight the house look. -->
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <!-- Layout is unchanged from v1.2.0: InnerFill still owns the padding and the
+                         content, so no button changes size. The three overlays sit on top of it and
+                         only ever have their Opacity animated. -->
+                    <Grid x:Name="Root" Margin="2" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="PressScale" ScaleX="1" ScaleY="1"/>
+                        </Grid.RenderTransform>
+                        <Border x:Name="InnerFill"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              RecognizesAccessKey="True" TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <!-- Hover lift: a soft white wash. Works over every button colour (blue, grey,
+                             green, red, and anything a window sets from code-behind). -->
+                        <Border x:Name="HoverGlow" CornerRadius="4" Background="#1FFFFFFF"
+                                Opacity="0" IsHitTestVisible="False"/>
+                        <!-- Press shade: matches the old 0.7-opacity dim, but eased. -->
+                        <Border x:Name="PressShade" CornerRadius="4" Background="#33000000"
+                                Opacity="0" IsHitTestVisible="False"/>
+                        <Border x:Name="FocusRing" CornerRadius="4" BorderBrush="#99FFFFFF" BorderThickness="1"
+                                Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PressShade" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.97" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.97" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PressShade" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.18"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <!-- Foreground stays a plain Setter on purpose: a Setter loses to a
+                                 code-behind local value, an animation would not. -->
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity"
+                                                         To="0.4" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Window Control Buttons -->
+    <Style x:Key="WindowControlButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <!-- The hover/press COLOURS stay plain Setters here on purpose: WindowCloseButton
+                         overrides the hover fill with red from a Style trigger, which only works
+                         because these are Setters. Only the press dip is animated. -->
+                    <Border x:Name="ControlFill" Background="{TemplateBinding Background}" CornerRadius="16"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="ControlScale" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#20FFFFFF"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="#10FFFFFF"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.88" Duration="0:0:0.10"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.88" Duration="0:0:0.10"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.22"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.22"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Close Button specifically highlights Red on hover -->
+    <Style x:Key="WindowCloseButton" BasedOn="{StaticResource WindowControlButton}" TargetType="Button">
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource AccentDanger}"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ModernButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource Accent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}"/>
+
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource AccentGray}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource AccentSuccess}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentSuccess}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+    </Style>
+
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{StaticResource AccentDanger}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentDanger}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+    </Style>
+
+    <Style x:Key="CompactSecondaryButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="MinHeight" Value="24"/>
+        <Setter Property="MinWidth" Value="60"/>
+        <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style x:Key="CompactPrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
+        <Setter Property="MinHeight" Value="24"/>
+        <Setter Property="MinWidth" Value="60"/>
+        <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <!-- A dropdown-style ToggleButton (Linked Search's model picker). It had NO template, so it drew
+         default Windows chrome AND repainted itself on the checked state, which left the label barely
+         readable while the dropdown was open. This template never touches Foreground or Background, so
+         the caller's colours - and the label - stay exactly as set in both states; "open" is shown with
+         an accent ring instead. -->
+    <Style x:Key="ModernDropdownToggle" TargetType="ToggleButton">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid x:Name="Root">
+                        <Border x:Name="Fill"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <Border x:Name="HoverGlow" CornerRadius="4" Background="#1FFFFFFF"
+                                Opacity="0" IsHitTestVisible="False"/>
+                        <Border x:Name="OpenRing" CornerRadius="4"
+                                BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                                Opacity="0" IsHitTestVisible="False"/>
+                        <Border x:Name="FocusRing" CornerRadius="4"
+                                BorderBrush="#99FFFFFF" BorderThickness="1"
+                                Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="OpenRing" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="OpenRing" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Inputs -->
+    <Style x:Key="ModernTextBox" TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <!-- The blue edge used to be an instant BorderBrush swap. It is now two rings
+                         that fade: one owned by hover, one by focus, so neither can overwrite the
+                         other when the box is hovered AND focused. The field's own BorderBrush is
+                         left alone, so a window can still colour it from code-behind. -->
+                    <Grid SnapsToDevicePixels="True">
+                        <Border x:Name="FieldFill"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <Border x:Name="HoverRing" CornerRadius="4" BorderThickness="1"
+                                BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>
+                        <Border x:Name="FocusRing" CornerRadius="4" BorderThickness="1"
+                                BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverRing" Storyboard.TargetProperty="Opacity"
+                                                         To="0.55" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverRing" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <ControlTemplate x:Key="ModernComboToggleTemplate" TargetType="ToggleButton">
+        <Border x:Name="ComboToggleBorder"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="4"
+                SnapsToDevicePixels="True">
+            <Grid>
+                <Path x:Name="ComboArrow"
+                      Data="M 0 0 L 5 5 L 10 0 Z"
+                      Fill="{StaticResource TextSecondary}"
+                      Width="10"
+                      Height="5"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Center"
+                      Margin="0,0,10,0"
+                      Stretch="Uniform"
+                      RenderTransformOrigin="0.5,0.5">
+                    <Path.RenderTransform>
+                        <RotateTransform x:Name="ComboArrowRotate" Angle="0"/>
+                    </Path.RenderTransform>
+                </Path>
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ComboToggleBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="ComboToggleBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                <Setter TargetName="ComboArrow" Property="Fill" Value="{StaticResource Accent}"/>
+                <!-- The arrow turns to point up while the list is open, and back when it closes. -->
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="ComboArrowRotate" Storyboard.TargetProperty="Angle"
+                                             To="180" Duration="0:0:0.18"
+                                             EasingFunction="{StaticResource MotionEaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="ComboArrowRotate" Storyboard.TargetProperty="Angle"
+                                             To="0" Duration="0:0:0.18"
+                                             EasingFunction="{StaticResource MotionEaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ComboToggleBorder" Property="Opacity" Value="0.7"/>
+                <Setter TargetName="ComboArrow" Property="Fill" Value="{StaticResource TextDisabled}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style TargetType="ComboBox">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid SnapsToDevicePixels="True">
+                        <ToggleButton x:Name="ToggleButton"
+                                      Focusable="False"
+                                      ClickMode="Press"
+                                      Template="{StaticResource ModernComboToggleTemplate}"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
+                        <ContentPresenter x:Name="ContentSite"
+                                          Margin="10,0,30,0"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Left"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"
+                                          IsHitTestVisible="False"/>
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Margin="10,0,30,0"
+                                 VerticalContentAlignment="Center"
+                                 HorizontalAlignment="Stretch"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 CaretBrush="{StaticResource Accent}"
+                                 Visibility="Hidden"
+                                 Focusable="True"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                        <Popup x:Name="Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Fade">
+                            <Border x:Name="PopupBorder"
+                                    Background="{StaticResource CardBackground}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="0,0,8,8"
+                                    MinWidth="{TemplateBinding ActualWidth}">
+                                <ScrollViewer Margin="2"
+                                              SnapsToDevicePixels="True"
+                                              CanContentScroll="True">
+                                    <StackPanel IsItemsHost="True"
+                                                KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                <Setter Property="Opacity" Value="0.65"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Grid>
+                        <Border x:Name="ComboItemBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <!-- Highlight fades in as an overlay so it reads the same over an unselected
+                             row and over the blue selected row. Selection itself stays instant. -->
+                        <Border x:Name="HighlightGlow" CornerRadius="6" BorderThickness="1"
+                                Background="#18FFFFFF" BorderBrush="{StaticResource Accent}"
+                                Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HighlightGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HighlightGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ComboItemBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            <Setter TargetName="ComboItemBorder" Property="Background" Value="{StaticResource Accent}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Lists -->
+    <Style x:Key="ModernListBox" TargetType="ListBox">
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BackgroundMedium}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ModernListBoxItem" TargetType="ListBoxItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="Margin" Value="0,2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid>
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <!-- Hover is an overlay, not a Background swap: a long list stays cheap and the
+                             wash reads the same over a selected (blue) row as an unselected one. -->
+                        <Border x:Name="HoverGlow" CornerRadius="6" BorderThickness="1"
+                                Background="#18FFFFFF" BorderBrush="{StaticResource BorderSoft}"
+                                Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource Accent}"/>
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ModernListBoxItemSuccess" TargetType="ListBoxItem" BasedOn="{StaticResource ModernListBoxItem}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid>
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <Border x:Name="HoverGlow" CornerRadius="6" BorderThickness="1"
+                                Background="#18FFFFFF" BorderBrush="{StaticResource BorderSoft}"
+                                Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource AccentSuccess}"/>
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource AccentSuccess}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============================================================
+         Selection (templated v1.4.0). These three were setter-only until now, so every tick box and
+         radio button in the suite was drawing raw Windows chrome inside an otherwise soft, rounded,
+         Neon-Blue UI - the last big visual inconsistency left.
+
+         The original Setters (Foreground / VerticalAlignment / FontSize / Margin) are all kept exactly
+         as they were, so nothing moves on any window.
+
+         These are KEYED styles on purpose - no implicit TargetType="CheckBox" style. An implicit one
+         would also capture the CheckBox that DataGridCheckBoxColumn generates (Duct Standards has one),
+         where the animated tick would replay every time a row scrolled into view. Same rule as
+         selection and the Graphics Override category list: animate what the user changed, not what
+         merely appeared.
+
+         Checked 2026-08-05 before templating: nothing in the project uses IsThreeState or sets
+         IsChecked to null, so there is no indeterminate state to represent.
+         ============================================================ -->
+    <Style x:Key="ModernCheckBox" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <!-- Transparent background so the label is clickable too, not just the 18px box. -->
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Width="18" Height="18" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="BoxPressScale" ScaleX="1" ScaleY="1"/>
+                            </Grid.RenderTransform>
+                            <Border x:Name="Box" CornerRadius="4"
+                                    Background="{StaticResource BackgroundDark}"
+                                    BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"/>
+                            <!-- The accent fill fades in rather than snapping, and owns only IsChecked. -->
+                            <Border x:Name="BoxFill" CornerRadius="4"
+                                    Background="{StaticResource Accent}" Opacity="0"/>
+                            <Border x:Name="BoxHover" CornerRadius="4"
+                                    BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                                    Opacity="0" IsHitTestVisible="False"/>
+                            <Border x:Name="BoxFocus" CornerRadius="4"
+                                    BorderBrush="#99FFFFFF" BorderThickness="1"
+                                    Opacity="0" IsHitTestVisible="False"/>
+                            <Path x:Name="Tick"
+                                  Data="M 0 4 L 4 8 L 11 0"
+                                  Width="11" Height="8" Stretch="Uniform"
+                                  Stroke="{StaticResource TextOnAccent}" StrokeThickness="2"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <ScaleTransform x:Name="TickScale" ScaleX="0.5" ScaleY="0.5"/>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Grid>
+
+                        <ContentPresenter Grid.Column="1" Margin="8,0,0,0"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxFill" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="Tick" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxFill" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="Tick" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.1"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.5" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.5" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxHover" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxHover" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.88" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.88" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The list variant: identical box, but the TICK IS INSTANT. Use this for any checkbox inside a
+         scrolling list or a DataTemplate. Those containers are created and recycled as rows scroll into
+         view, so an animated tick would replay on every scroll and read as flicker running down the
+         list. Hover, press and focus still animate - those fire on user action, not on materialization.
+         Same rule as list selection and the Graphics Override category list. -->
+    <Style x:Key="ModernListCheckBox" TargetType="CheckBox" BasedOn="{StaticResource ModernCheckBox}">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Width="18" Height="18" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="BoxPressScale" ScaleX="1" ScaleY="1"/>
+                            </Grid.RenderTransform>
+                            <Border x:Name="Box" CornerRadius="4"
+                                    Background="{StaticResource BackgroundDark}"
+                                    BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"/>
+                            <Border x:Name="BoxFill" CornerRadius="4"
+                                    Background="{StaticResource Accent}" Opacity="0"/>
+                            <Border x:Name="BoxHover" CornerRadius="4"
+                                    BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                                    Opacity="0" IsHitTestVisible="False"/>
+                            <!-- This style inherits FocusVisualStyle="{x:Null}" from ModernCheckBox, so
+                                 without this ring a keyboard user would have NO indication of where
+                                 they are. Nulling the OS focus rectangle obliges us to draw our own. -->
+                            <Border x:Name="BoxFocus" CornerRadius="4"
+                                    BorderBrush="#99FFFFFF" BorderThickness="1"
+                                    Opacity="0" IsHitTestVisible="False"/>
+                            <Path x:Name="Tick"
+                                  Data="M 0 4 L 4 8 L 11 0"
+                                  Width="11" Height="8" Stretch="Uniform"
+                                  Stroke="{StaticResource TextOnAccent}" StrokeThickness="2"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Opacity="0"/>
+                        </Grid>
+
+                        <ContentPresenter Grid.Column="1" Margin="8,0,0,0"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- Plain Setters, not storyboards - this is the whole point of this variant. -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="BoxFill" Property="Opacity" Value="1"/>
+                            <Setter TargetName="Tick" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxHover" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxHover" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.88" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.88" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="BoxPressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BoxFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Named a switch since v1.0 but drawn as a tick box until now. It is used for genuine on/off
+         settings ("Update existing filters", "Override items with same name"), which is exactly what a
+         switch is for, so it now looks like one - matching the switch in Graphics Settings Manager.
+         The knob SLIDES its 20px (track 40, knob 14, 3px inset each side) instead of jumping. -->
+    <Style x:Key="ToggleSwitchCheckBox" TargetType="CheckBox" BasedOn="{StaticResource ModernCheckBox}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Width="40" Height="20" VerticalAlignment="Center">
+                            <Border x:Name="Track" CornerRadius="10"
+                                    Background="{StaticResource BackgroundDark}"
+                                    BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"/>
+                            <Border x:Name="TrackOn" CornerRadius="10"
+                                    Background="{StaticResource Accent}" Opacity="0"/>
+                            <Border x:Name="TrackHover" CornerRadius="10"
+                                    BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                                    Opacity="0" IsHitTestVisible="False"/>
+                            <!-- Same obligation as the list box above: FocusVisualStyle is nulled by
+                                 the base style, so the keyboard marker has to be drawn here. -->
+                            <Border x:Name="TrackFocus" CornerRadius="10"
+                                    BorderBrush="#99FFFFFF" BorderThickness="1"
+                                    Opacity="0" IsHitTestVisible="False"/>
+                            <Ellipse x:Name="Knob" Width="14" Height="14"
+                                     Fill="{StaticResource TextPrimary}"
+                                     HorizontalAlignment="Left" Margin="3,0,0,0">
+                                <Ellipse.RenderTransform>
+                                    <TranslateTransform x:Name="KnobSlide" X="0"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Grid>
+
+                        <ContentPresenter Grid.Column="1" Margin="10,0,0,0"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="KnobSlide" Storyboard.TargetProperty="X"
+                                                         To="20" Duration="0:0:0.2"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="KnobSlide" Storyboard.TargetProperty="X"
+                                                         To="0" Duration="0:0:0.2"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TrackHover" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TrackHover" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TrackFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TrackFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ModernRadioButton" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Width="18" Height="18" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="DotPressScale" ScaleX="1" ScaleY="1"/>
+                            </Grid.RenderTransform>
+                            <Ellipse x:Name="Ring"
+                                     Fill="{StaticResource BackgroundDark}"
+                                     Stroke="{StaticResource BorderStrong}" StrokeThickness="1"/>
+                            <Ellipse x:Name="RingOn" Stroke="{StaticResource Accent}" StrokeThickness="1"
+                                     Opacity="0"/>
+                            <Ellipse x:Name="RingHover" Stroke="{StaticResource Accent}" StrokeThickness="1"
+                                     Opacity="0" IsHitTestVisible="False"/>
+                            <Ellipse x:Name="RingFocus" Stroke="#99FFFFFF" StrokeThickness="1"
+                                     Opacity="0" IsHitTestVisible="False"/>
+                            <Ellipse x:Name="Dot" Width="8" Height="8"
+                                     Fill="{StaticResource Accent}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <ScaleTransform x:Name="DotScale" ScaleX="0.4" ScaleY="0.4"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Grid>
+
+                        <ContentPresenter Grid.Column="1" Margin="8,0,0,0"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RingOn" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="DotScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="DotScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RingOn" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.1"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="DotScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.4" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="DotScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.4" Duration="0:0:0.12"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RingHover" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RingHover" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="DotPressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="0.88" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="DotPressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="0.88" Duration="0:0:0.11"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="DotPressScale" Storyboard.TargetProperty="ScaleX"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="DotPressScale" Storyboard.TargetProperty="ScaleY"
+                                                         To="1" Duration="0:0:0.24"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RingFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RingFocus" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                            <Setter TargetName="Root" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ModernGroupBox" TargetType="GroupBox">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="6"/>
+        <Setter Property="Padding" Value="10"/>
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <!-- Own template: Windows' default GroupBox draws a white double line, which is not a brand colour.
+             This one is a rounded Surface card with a Mist 14 % line and the header above the content. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GroupBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8"
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <ContentPresenter Grid.Row="0"
+                                              ContentSource="Header"
+                                              RecognizesAccessKey="True"
+                                              Margin="12,10,12,4"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"
+                                              TextElement.FontWeight="{TemplateBinding FontWeight}"
+                                              TextElement.FontSize="{TemplateBinding FontSize}"/>
+                            <ContentPresenter Grid.Row="1"
+                                              Margin="{TemplateBinding Padding}"
+                                              TextElement.FontWeight="Normal"
+                                              TextElement.FontSize="12"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TabControl">
+        <Setter Property="Background" Value="{StaticResource BackgroundDark}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style TargetType="TabItem">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Background" Value="{StaticResource CardBackground}"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Grid>
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{StaticResource BorderSoft}"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="8,8,0,0"
+                                Margin="0,0,4,0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="TabContent"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"
+                                              ContentSource="Header"/>
+                        </Border>
+                        <!-- Same margin as TabBorder so the hover edge lines up exactly. -->
+                        <Border x:Name="HoverGlow" Margin="0,0,4,0" CornerRadius="8,8,0,0"
+                                BorderThickness="1,1,1,0" BorderBrush="{StaticResource Accent}"
+                                Background="#14FFFFFF" Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource Accent}"/>
+                            <Setter TargetName="TabBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            <Setter TargetName="TabContent" Property="TextElement.Foreground" Value="{StaticResource TextOnAccent}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.09"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverGlow" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16"
+                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Progress. The default WPF bar is the old green/blue Aero one and looks foreign in these
+         windows; this is the house version. Determinate is driven by the control itself
+         (PART_Track / PART_Indicator are the names ProgressBar looks for - don't rename them).
+         Indeterminate gets a slow breathe so a busy state reads as alive rather than stuck. -->
+    <Style TargetType="ProgressBar">
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="Background" Value="{StaticResource BackgroundLight}"/>
+        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid SnapsToDevicePixels="True">
+                        <Border x:Name="PART_Track"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"/>
+                        <Border x:Name="PART_Indicator"
+                                HorizontalAlignment="Left"
+                                Background="{TemplateBinding Foreground}"
+                                CornerRadius="4"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard x:Name="BusyPulse">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PART_Indicator" Storyboard.TargetProperty="Opacity"
+                                                         From="1" To="0.35" Duration="0:0:0.9"
+                                                         AutoReverse="True" RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="BusyPulse"/>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ModernDataGrid" TargetType="DataGrid">
+        <Setter Property="Background" Value="{StaticResource BackgroundDark}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+    </Style>
+
+</ResourceDictionary>

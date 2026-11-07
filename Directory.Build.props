@@ -1,0 +1,79 @@
+<Project>
+  <!--
+    Heron Tools - shared build settings.
+
+    ONE property picks the Revit release being built:
+
+        dotnet build src/HeronTools/HeronTools.csproj -c Release -p:RevitVersion=2024
+
+    build/build.ps1 runs that once per Revit year.
+
+    Runtime per Revit release (checked against the Autodesk SDK for each release):
+        2020         net472            .NET Framework 4.7.2
+        2021 - 2024  net48             .NET Framework 4.8
+        2025 - 2026  net8.0-windows    .NET 8
+        2027         net10.0-windows   .NET 10
+
+    A release this table does not list is an ERROR, never a guess. Autodesk moved the
+    runtime at 2025 and again at 2027, so when Revit 2028 ships: confirm its .NET target
+    in the Autodesk SDK, add a row below, add its manifest in manifests/, and add the
+    year to build/build.ps1.
+  -->
+  <PropertyGroup>
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2024</RevitVersion>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Platform>x64</Platform>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <!-- .NET runtime per Revit release -->
+  <PropertyGroup>
+    <HeronToolsTfm Condition="'$(RevitVersion)' == '2020'">net472</HeronToolsTfm>
+    <HeronToolsTfm Condition="'$(RevitVersion)' &gt;= '2021' AND '$(RevitVersion)' &lt;= '2024'">net48</HeronToolsTfm>
+    <HeronToolsTfm Condition="'$(RevitVersion)' &gt;= '2025' AND '$(RevitVersion)' &lt;= '2026'">net8.0-windows</HeronToolsTfm>
+    <HeronToolsTfm Condition="'$(RevitVersion)' == '2027'">net10.0-windows</HeronToolsTfm>
+    <HeronToolsVersionKnown Condition="'$(HeronToolsTfm)' != ''">true</HeronToolsVersionKnown>
+    <!-- Keeps the project loadable long enough to print the real problem below. -->
+    <HeronToolsTfm Condition="'$(HeronToolsTfm)' == ''">net48</HeronToolsTfm>
+  </PropertyGroup>
+
+  <!--
+    ONE OUTPUT FOLDER AND ONE obj FOLDER PER REVIT RELEASE.
+    2021 to 2024 all build net48 but are not interchangeable (each gets its own REVIT<year>
+    symbol), so the split is by Revit year, not by framework. Set here in .props, because
+    OutputPath and the obj folder are read before the project file and before any .targets.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj\R$(RevitVersion)\</BaseIntermediateOutputPath>
+    <OutputPath>bin\$(Configuration)\$(RevitVersion)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- Another year's generated files must never be compiled into this year's build. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!--
+    Compile symbols. REVIT<year> for the exact release, REVIT<year>_OR_GREATER for
+    "this release and every later one". Version-specific code belongs only in Helpers\.
+    Known breaks this covers: units (2021, ForgeTypeId), parameter types (2022),
+    case-sensitive filter rules (2023), ElementId.Value long (2024), IntegerValue removed (2026).
+  -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);REVIT$(RevitVersion);REVIT2020_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2021'">$(DefineConstants);REVIT2021_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2022'">$(DefineConstants);REVIT2022_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2023'">$(DefineConstants);REVIT2023_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2024'">$(DefineConstants);REVIT2024_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2025'">$(DefineConstants);REVIT2025_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2026'">$(DefineConstants);REVIT2026_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="'$(RevitVersion)' &gt;= '2027'">$(DefineConstants);REVIT2027_OR_GREATER</DefineConstants>
+  </PropertyGroup>
+
+  <Target Name="HeronToolsCheckRevitVersion" BeforeTargets="PrepareForBuild;Restore;CollectPackageReferences">
+    <Error Condition="'$(HeronToolsVersionKnown)' != 'true'"
+           Text="Heron Tools does not know which .NET runtime Revit $(RevitVersion) uses. Supported today: 2020 to 2027. Confirm the target for that release in the Autodesk SDK, then add it to Directory.Build.props." />
+  </Target>
+</Project>
