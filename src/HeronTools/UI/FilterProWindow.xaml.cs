@@ -320,9 +320,11 @@ namespace HeronTools.UI
         {
             try
             {
+                // Drafting patterns only: graphic overrides refuse a model pattern.
                 var patterns = new FilteredElementCollector(_doc)
                     .OfClass(typeof(FillPatternElement))
                     .Cast<FillPatternElement>()
+                    .Where(p => p.GetFillPattern()?.Target == FillPatternTarget.Drafting)
                     .Select(p =>
                     {
                         var fp = p.GetFillPattern();

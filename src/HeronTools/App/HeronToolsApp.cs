@@ -84,6 +84,58 @@ namespace HeronTools.App
             };
 
             panel.AddItem(filterPro);
+
+            panel.AddItem(Button(assemblyPath, "HeronTools_Colorize", "Colorize", typeof(CmdColorize), typeof(CmdColorizeAvailability), "Colorize",
+                "Colour elements by category or by parameter value in the active view (or views you pick) - no view filter is made.",
+                "The same picks as Filter Pro (categories, a parameter, values), but the colour is put straight on the matching " +
+                "elements instead of through a view filter. Shuffle colours gives every value its own colour; click it again for " +
+                "a new set. Each run is one Undo step."));
+
+            // View Crop: two related tools under one button.
+            var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View\nCrop")
+            {
+                ToolTip = "Fit crop regions and annotation crops of plan views.",
+                Image = BrandImages.Load("ViewCrop16.png"),
+                LargeImage = BrandImages.Load("ViewCrop32.png"),
+            };
+            var viewCropButton = (PulldownButton)panel.AddItem(viewCrop);
+            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_CropByElements", "Crop View\nby Elements",
+                typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
+                "Fit the crop region of plan views around their elements.",
+                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the offset. " +
+                "Each run is one Undo step."));
+            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_AnnotationCrop", "Annotation Crop\nby View Crop",
+                typeof(CmdSetAnnotationCropByViewCrop), typeof(CmdPlanViewAvailability), "AnnotationCrop",
+                "Turn on the annotation crop in the picked views and set an equal offset from each view's crop region.",
+                "Pick the views and the offset. Revit's own limits on the annotation crop are respected. Each run is one Undo step."));
+
+            // Small everyday view tools, stacked.
+            panel.AddStackedItems(
+                Button(assemblyPath, "HeronTools_UnhideAll", "Unhide All", typeof(CmdUnhideAll), typeof(CmdGraphicalViewAvailability), "UnhideAll",
+                    "Show everything hidden in the active view: temporary hide/isolate and elements hidden in the view.",
+                    "One click, one Undo step. Categories hidden in Visibility/Graphics are left as they are."),
+                Button(assemblyPath, "HeronTools_ToggleLinks", "Toggle Links", typeof(CmdToggleRevitLinks), typeof(CmdRevitLinkToggleAvailability), "ToggleLinks",
+                    "Turn the Revit Links category off or on in the active view.",
+                    "The same as ticking RVT Links in Visibility/Graphics: one click hides all links, the next shows them " +
+                    "again. Links hidden one by one stay as they are. One Undo step."),
+                Button(assemblyPath, "HeronTools_HighlightSelection", "Highlight", typeof(Commands.GraphicsTools.CmdHighlightSelection), typeof(CmdGraphicalViewAvailability), "HighlightSelection",
+                    "Show the selected elements in red and everything else in grey in the active view. Click again to put the view back.",
+                    "Select elements first (or pick them when asked). Every element's own graphic overrides are remembered and put " +
+                    "back exactly when you click Highlight again in the same view (or press Undo)."));
+        }
+
+        /// <summary>One ribbon button: id, caption, command, when it is enabled, its two icons and its help text.</summary>
+        private static PushButtonData Button(string assemblyPath, string id, string text, Type command, Type availability,
+                                             string icon, string toolTip, string longDescription)
+        {
+            return new PushButtonData(id, text, assemblyPath, command.FullName)
+            {
+                ToolTip = toolTip,
+                LongDescription = longDescription,
+                AvailabilityClassName = availability.FullName,
+                Image = BrandImages.Load(icon + "16.png"),
+                LargeImage = BrandImages.Load(icon + "32.png"),
+            };
         }
     }
 }

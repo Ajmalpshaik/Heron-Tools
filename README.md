@@ -21,7 +21,14 @@ side on one **Heron** tab.
 
 | Tool | Panel | What it does |
 |---|---|---|
-| **Filter Pro** | View | Pick categories, a parameter and its values. Filter Pro makes one view filter per value, names it for you (the name says the rule, e.g. "Not 300", "Has value") and adds it to the active view or views you pick, first in the filter list. Shuffle colours gives every filter its own colour. Each button press is one Undo step. |
+| **Filter Pro** | View | Pick categories, a parameter and its values. Filter Pro makes one view filter per value, names it for you (the name says the rule, e.g. "Not 300", "Has value") and adds it to the active view or views you pick, first in the filter list. Shuffle colours gives every filter its own colour. |
+| **Colorize** | View | The same picks, but the colour goes straight onto the matching elements (no view filter) - by value, or whole categories. **Restore original** puts back the elements' own overrides. |
+| **View Crop** | View | **Crop View by Elements** fits plan crops around their elements with a margin. **Annotation Crop by View Crop** turns the annotation crop on at an offset measured on paper. |
+| **Unhide All** | View | Shows everything hidden one by one in the view and turns Temporary Hide/Isolate off. |
+| **Toggle Links** | View | Turns the RVT Links category off or on in the view, and says if some links stay hidden one by one. |
+| **Highlight** | View | Selection in red, the rest grey. **Click again to put the view back** - every element's own overrides are remembered. |
+
+Every button press is **one Undo step**; if anything fails, the whole run is undone and the window says so.
 
 **The Filter Pro window** reads left to right in the order you work: **1 Categories - 2 Parameter - 3 Values**,
 each with a count ("2 of 10 picked"), a search box and an empty-list hint. On the right, the live **name
@@ -144,15 +151,23 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 src/HeronTools/          the add-in (one project, every Revit year)
   App/                   start-up class: builds the ribbon
   Commands/              ribbon commands
-  Services/FilterPro/    Filter Pro's Revit work (create, apply, reorder filters)
+  Services/              each tool's Revit work (FilterPro, Colorize, ViewCrop, UnhideAll, GraphicsTools)
   Models/  Helpers/      data classes; version-safe helpers
   UI/                    windows and the brand theme (HeronStyles.xaml)
   Resources/Icons/       16 and 32 px ribbon icons
 manifests/               one .addin manifest per Revit year
 build/                   build.ps1, uninstall.ps1
-docs/                    notes and pictures
+docs/                    notes (what was moved and fixed, metadata standard, ideas for Heron AI), pictures
 Directory.Build.props    Revit year -> .NET runtime, output folders, compile symbols
 ```
+
+## Project documents
+
+[CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) · [CODE OF CONDUCT](CODE_OF_CONDUCT.md) ·
+[DISCLAIMER](DISCLAIMER.md) · [CHANGELOG](CHANGELOG.md) · [AGENTS](AGENTS.md) (for AI agents working on the code)
+
+Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
+[Metadata standard](docs/metadata-standard.md) · [Ideas for Heron AI](docs/ideas-for-heron-ai.md)
 
 ## Licence
 

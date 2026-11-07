@@ -103,6 +103,15 @@ namespace HeronTools.Models
             return next;
         }
 
+        /// <summary>The colour at this position of the current shuffled deck (Colorize: one per value).</summary>
+        public static Color GetShuffledColorAt(int index)
+        {
+            if (_deck == null)
+                BeginShuffle();
+            int safe = (index == int.MinValue ? 0 : System.Math.Abs(index)) % _deck.Length;
+            return Palette[_deck[safe]];
+        }
+
         public static Color GetRandomColor()
         {
             int idx = _rand.Value.Next(Palette.Length);

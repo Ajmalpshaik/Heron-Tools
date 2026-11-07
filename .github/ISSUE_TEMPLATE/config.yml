@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem
+    url: https://github.com/Ajmalpshaik/Heron-Tools/security/advisories/new
+    about: Report privately. Never open a public issue for a security problem - Heron Tools changes live project models.

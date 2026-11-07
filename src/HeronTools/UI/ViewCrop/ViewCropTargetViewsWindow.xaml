@@ -1,0 +1,208 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  View Crop - pick the views a View Crop run works on. Grouped by sheet, searchable, with a live
+  count. Footer: what to fix on the left, ONE Accent action on the right.
+  Design: Heron brand kit via HeronStyles.xaml (same layout language as Filter Pro).
+-->
+<Window x:Class="HeronTools.UI.ViewCrop.ViewCropTargetViewsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pick Views - Heron Tools"
+        Width="920"
+        Height="640"
+        MinWidth="760"
+        MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ColumnHead" TargetType="TextBlock" BasedOn="{StaticResource Overline}">
+                <Setter Property="Margin" Value="4,0"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="Cell" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                <Setter Property="Margin" Value="4,0"/>
+            </Style>
+            <Style x:Key="CellQuiet" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="*"/>      <!-- list card -->
+            <RowDefinition Height="Auto"/>   <!-- footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ============ HEADER ============ -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="11"
+                        Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Pick views" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Tick the views to change. Only the views this tool can work on are listed, grouped by sheet."
+                               Style="{StaticResource HeaderSubtitle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ LIST ============ -->
+        <Border Grid.Row="1" Margin="24,20,24,16" Style="{StaticResource StepCard}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>   <!-- search + count -->
+                    <RowDefinition Height="Auto"/>   <!-- column heads -->
+                    <RowDefinition Height="*"/>      <!-- list -->
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="SearchTextBox" Grid.Column="0"
+                             Style="{StaticResource SearchTextBox}" Tag="Search views, types or sheets"
+                             ToolTip="Search by view name, view type, sheet number or sheet name"
+                             TextChanged="OnSearchChanged"/>
+                    <TextBlock x:Name="SelectionCountText" Grid.Column="1" Style="{StaticResource StepCount}"
+                               VerticalAlignment="Center" Margin="16,0,16,0"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="Select all shown" Style="{StaticResource LinkButton}" Click="OnSelectAll"
+                                ToolTip="Tick every view the search is showing"/>
+                        <TextBlock Text="·" Foreground="{StaticResource TextDisabled}" Margin="8,0" VerticalAlignment="Center"/>
+                        <Button Content="Clear" Style="{StaticResource LinkButton}" Click="OnClearAll"
+                                ToolTip="Untick every view"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="6,0,14,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="3*"/>
+                        <ColumnDefinition Width="1.4*"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="1" Text="VIEW" Style="{StaticResource ColumnHead}"/>
+                    <TextBlock Grid.Column="2" Text="TYPE" Style="{StaticResource ColumnHead}"/>
+                    <TextBlock Grid.Column="3" Text="SHEET" Style="{StaticResource ColumnHead}"/>
+                    <TextBlock Grid.Column="4" Text="SHEET NAME" Style="{StaticResource ColumnHead}"/>
+                </Grid>
+
+                <Grid Grid.Row="2">
+                    <ListBox x:Name="ViewsListBox"
+                             Style="{StaticResource ModernListBox}"
+                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.CanContentScroll="False">
+                        <!-- Pixel scrolling so the grouped list scrolls smoothly even with many views. -->
+                        <ListBox.Template>
+                            <ControlTemplate TargetType="ListBox">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="8" SnapsToDevicePixels="True">
+                                    <ScrollViewer Focusable="False" Padding="6"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  CanContentScroll="False">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </ControlTemplate>
+                        </ListBox.Template>
+                        <ListBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1"
+                                                Padding="4,10,4,6" Margin="0,4,0,4">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextSecondary}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ListBox.GroupStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="3*"/>
+                                        <ColumnDefinition Width="1.4*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="2*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Style="{StaticResource ModernListCheckBox}"
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ViewName}" Style="{StaticResource Cell}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding ViewTypeName}" Style="{StaticResource CellQuiet}"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding SheetNumber}" Style="{StaticResource CellQuiet}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding SheetName}" Style="{StaticResource CellQuiet}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="No views to show. Clear the search, or open a model that has plan views this tool can work on."
+                               Tag="{Binding HasItems, ElementName=ViewsListBox}" Style="{StaticResource EmptyHint}"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ============ FOOTER ============ -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="SelectionErrorText" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0"
+                           Foreground="{StaticResource AccentWarning}" FontSize="12" TextWrapping="Wrap"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Run on picked views" Style="{StaticResource PrimaryButton}"
+                            MinWidth="170" Margin="0,0,16,0" Click="OnRun"/>
+                    <Button Content="Cancel" Style="{StaticResource GhostButton}" MinWidth="88"
+                            IsCancel="True" Click="OnCancel"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
