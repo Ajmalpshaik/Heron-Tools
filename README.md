@@ -11,7 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Revit-2020%20to%202027-FD641A?style=flat-square" alt="Revit 2020 to 2027">
-  <img src="https://img.shields.io/badge/licence-all%20rights%20reserved-0F0F10?style=flat-square" alt="Licence: all rights reserved">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-Apache%202.0-0F0F10?style=flat-square" alt="Licence: Apache 2.0"></a>
   <a href="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml"><img src="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml/badge.svg" alt="Gates"></a>
 </p>
 
@@ -171,4 +171,6 @@ Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools m
 
 ## Licence
 
-Copyright (c) 2026 Ajmal PS. All rights reserved.
+Heron Tools is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Ajmal PS.
+
+The Heron name, mark and app icon are not covered by the code's licence - see [NOTICE](NOTICE).

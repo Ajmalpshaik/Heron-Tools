@@ -16,6 +16,7 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - The Heron metadata standard on every source file, checked by `build/check-metadata.ps1`, and a GitHub
   `Gates` check that compiles every Revit year.
 - `build/build.ps1` (build all years, install into each installed Revit) and `build/uninstall.ps1`.
+- Licensed under the Apache License 2.0 (`LICENSE`, `NOTICE`), like the Heron AI platform.
 
 ### Changed (compared with the AJ-Tools versions these tools came from)
 - Every run is one named Undo step, rolled back completely on any failure; the commit result is checked.

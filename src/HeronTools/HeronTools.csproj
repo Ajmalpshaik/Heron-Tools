@@ -18,7 +18,7 @@
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <Company>Ajmal PS</Company>
     <Product>Heron Tools</Product>
-    <Copyright>Copyright (c) 2026 Ajmal PS</Copyright>
+    <Copyright>Copyright 2026 Ajmal PS. Licensed under the Apache License 2.0.</Copyright>
     <Version>1.0.0</Version>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>

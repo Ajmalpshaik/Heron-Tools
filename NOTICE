@@ -1,0 +1,29 @@
+Heron Tools
+Copyright 2026 Ajmal PS
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full licence text.
+
+---
+
+The Heron name, the heron mark and the Heron app icon (docs/brand/) are not
+licensed under the Apache License. Section 6 of that licence grants no right to
+use the project's names or marks; they may be used to refer to Heron Tools, but
+not to present another product as Heron.
+
+---
+
+Heron Tools integrates with Autodesk Revit through the Revit API.
+
+Autodesk and Revit are trademarks or registered trademarks of Autodesk, Inc.
+Heron Tools is not affiliated with, endorsed by, or sponsored by Autodesk, Inc.
+
+The Autodesk Revit API assemblies (RevitAPI.dll, RevitAPIUI.dll) are the
+property of Autodesk, Inc. and are NOT redistributed with this software. They
+are referenced at build time and supplied by the user's Revit installation at
+runtime.
+
+---
+
+Heron Tools changes live Revit project models. It is provided without warranty
+of any kind. See DISCLAIMER.md before use on any project.
