@@ -42,7 +42,8 @@ namespace HeronTools.Utils
             if (id == null)
                 return "(none)";
 
-            return GetIntegerValue(id).ToString();
+            // The full 64-bit value: from Revit 2024 an id can be larger than an int holds.
+            return id.LongValue().ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         /// <summary>

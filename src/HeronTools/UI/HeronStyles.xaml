@@ -1798,7 +1798,8 @@ by today's windows; they are kept for the next tools moved in, and use brand col
         <Setter Property="Margin" Value="0,0,0,5"/>
     </Style>
 
-    <!-- Shown over an empty list (Tag bound to the list's HasItems). -->
+    <!-- Shown over an empty list (Tag bound to the list's HasItems). A DataTrigger, because a plain Trigger
+         on Tag (an object) compares the TEXT "False" with the true/false value and never fires. -->
     <Style x:Key="EmptyHint" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
@@ -1810,9 +1811,9 @@ by today's windows; they are kept for the next tools moved in, and use brand col
         <Setter Property="IsHitTestVisible" Value="False"/>
         <Setter Property="Visibility" Value="Collapsed"/>
         <Style.Triggers>
-            <Trigger Property="Tag" Value="False">
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="False">
                 <Setter Property="Visibility" Value="Visible"/>
-            </Trigger>
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -1836,7 +1837,9 @@ by today's windows; they are kept for the next tools moved in, and use brand col
                                    Foreground="{StaticResource TextDisabled}"
                                    VerticalAlignment="Center" Margin="31,0,8,0"
                                    IsHitTestVisible="False" Visibility="Collapsed"/>
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                        <!-- No Margin here: the TextBox already applies its Padding inside the content host,
+                             and applying it twice pushed typed text about 60 px in. -->
+                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
                         <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="1"
                                 BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>
                     </Grid>

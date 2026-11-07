@@ -25,6 +25,11 @@ namespace HeronTools.Utils
         public const double FEET_TO_MM = 304.8;
 
         /// <summary>
+        /// Minimum distance (feet) below which two points or a span are treated as zero (Level Extents).
+        /// </summary>
+        public const double MIN_DISTANCE_TOLERANCE = 0.001;
+
+        /// <summary>
         /// Maximum number of elements to scan when collecting parameter values.
         /// Prevents performance issues in large models.
         /// </summary>

@@ -1,0 +1,223 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Find by Element ID (Heron Tools): type an Element ID, pick which models to look in (this model and/or
+  loaded links), and the element is selected and zoomed to. Reads only. Heron brand theme (HeronStyles.xaml).
+-->
+<Window x:Class="HeronTools.UI.LinkedSearchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Find by Element ID - Heron Tools"
+        Width="560"
+        Height="760"
+        MinWidth="480"
+        MinHeight="660"
+        ResizeMode="CanResize"
+        Loaded="OnWindowLoaded"
+        WindowStartupLocation="CenterOwner"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="44" Height="44" CornerRadius="11" Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Find by Element ID" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Type an ID, choose where to look, and Heron zooms to the element."
+                               Style="{StaticResource HeaderSubtitle}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Body -->
+        <Grid Grid.Row="1" Margin="24,20,24,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*" MinHeight="230"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 1. The ID -->
+            <Border Grid.Row="0" Style="{StaticResource StepCard}">
+                <StackPanel>
+                    <TextBlock Text="Element ID" Style="{StaticResource SectionLabel}"/>
+                    <TextBox x:Name="ElementIdBox"
+                             Style="{StaticResource SearchTextBox}"
+                             Tag="Type an Element ID, for example 123456"
+                             KeyDown="OnElementIdKeyDown"
+                             Margin="0,4,0,8"
+                             ToolTip="Whole numbers only. Press Enter to find it."/>
+                    <TextBlock Style="{StaticResource HelpText}"
+                               Text="The same ID can be in this model and in a link - if so, you pick which."/>
+                </StackPanel>
+            </Border>
+
+            <!-- 2. Where to look -->
+            <Border Grid.Row="1" Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="SelectAllModelsButton" Content="Select all" Style="{StaticResource LinkButton}"
+                                    Click="OnSelectAllModels" ToolTip="Tick every model in the list"/>
+                            <TextBlock Text="·" Foreground="{StaticResource TextDisabled}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button x:Name="ClearModelsButton" Content="Clear" Style="{StaticResource LinkButton}"
+                                    Click="OnClearModels" ToolTip="Untick every model"/>
+                        </StackPanel>
+                        <TextBlock Text="Where to look" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <CheckBox x:Name="SearchAllCheck"
+                              Grid.Row="1"
+                              Content="All models - this model and every loaded link"
+                              Margin="0,6,0,10"
+                              Style="{StaticResource ModernCheckBox}"
+                              Checked="OnSearchAllChanged"
+                              Unchecked="OnSearchAllChanged"/>
+
+                    <ListBox x:Name="LinkSelector"
+                             Grid.Row="2"
+                             MinHeight="80"
+                             SelectionMode="Multiple"
+                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectionChanged="OnModelSelectionChanged">
+                        <!-- Dimmed while "All models" is ticked (the list is then not used). -->
+                        <ListBox.Style>
+                            <Style TargetType="ListBox" BasedOn="{StaticResource ModernListBox}">
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.45"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.Style>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Grid.Column="0"
+                                              IsChecked="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}"
+                                              Style="{StaticResource ModernCheckBox}"
+                                              Margin="0"
+                                              VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DisplayName}"
+                                               Foreground="{StaticResource TextPrimary}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding DisplayName}"/>
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding SourceLabel}"
+                                               FontSize="12"
+                                               Margin="12,0,4,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextDisabled}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBlock x:Name="ModelSummaryText"
+                               Grid.Row="3"
+                               Margin="0,8,0,0"
+                               Style="{StaticResource StepCount}"/>
+                </Grid>
+            </Border>
+
+            <!-- 3. Result -->
+            <Border Grid.Row="2" Style="{StaticResource StepCard}" Margin="0,12,0,0" Padding="16,12">
+                <StackPanel>
+                    <TextBlock x:Name="InfoText"
+                               Text="The result shows here. The active view zooms to the element (an element in this model is also selected)."
+                               TextWrapping="Wrap"
+                               FontSize="12"
+                               Foreground="{StaticResource TextSecondary}"/>
+
+                    <!-- Shown only when the same Element ID exists in more than one model:
+                         the modeller picks which one to go to. -->
+                    <ListBox x:Name="MatchList"
+                             Margin="0,8,0,0"
+                             MaxHeight="120"
+                             Visibility="Collapsed"
+                             Style="{StaticResource ModernListBox}"
+                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                             SelectionChanged="OnMatchSelected"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ErrorText"
+                           Grid.Column="0"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource AccentWarning}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Find and zoom"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="OnSearch"
+                            MinWidth="130"
+                            Margin="0,0,8,0"
+                            ToolTip="Find the element in the models you picked and zoom to it (Enter in the ID box)"/>
+                    <Button Content="Close"
+                            Style="{StaticResource GhostButton}"
+                            Click="OnCancel"
+                            IsCancel="True"
+                            MinWidth="88"
+                            ToolTip="Close (Esc)"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

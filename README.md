@@ -27,6 +27,18 @@ side on one **Heron** tab.
 | **Unhide All** | View | Shows everything hidden one by one in the view and turns Temporary Hide/Isolate off. |
 | **Toggle Links** | View | Turns the RVT Links category off or on in the view, and says if some links stay hidden one by one. |
 | **Highlight** | View | Selection in red, the rest grey. **Click again to put the view back** - every element's own overrides are remembered. |
+| **Quick Menu** | Quick | A tool wheel that opens around the mouse pointer with your favourite Heron Tools buttons and Revit commands; **Quick Menu Settings** chooses what sits in each slot. |
+| **Reset Datums to 3D** | Datums | Put grid and/or level ends in the view back to their 3D extents. |
+| **Level Extents** | Datums | Match level extents to another level, or stretch them to the section box. |
+| **Flip Bubbles** | Datums | Swap which end of a grid or level shows its bubble. |
+| **Match Elevation** | Modify | Match the centre, top or bottom elevation of a source MEP element. |
+| **Reassign Level** | Modify | Move MEP elements to another reference level without moving them in space. |
+| **Pin / Unpin** | Modify | Pin or unpin groups (title blocks, views on sheets, ducts, pipes, grids, levels...). |
+| **Smart Selection** | Modify | Pick one element, window-select, keep only that category. |
+| **Element ID** | Coordination | See the ID of a picked element (also in links), or find an element by ID and zoom to it. |
+| **3D Views by Workset** | Coordination | One 3D view per user workset. |
+| **Link Workset** | Coordination | Put selected Revit links and CAD imports on a workset. |
+| **About Heron** | About | Version details and the Heron family. |
 
 Every button press is **one Undo step**; if anything fails, the whole run is undone and the window says so.
 
@@ -80,6 +92,26 @@ The script builds every Revit year, then, for each Revit installed on the PC, co
 It skips any year whose Revit is not installed, or is open, and prints a summary table.
 Useful options: `-Years 2024,2026` builds only those years, and `-NoInstall` builds without copying.
 
+Before it copies anything, for every year it checks (the same safeguards as the Heron AI installer):
+
+| Check | Why |
+|---|---|
+| The built DLL says it is for that Revit's .NET (4.7.2 / 4.8 / 8 / 10) | A DLL for the wrong .NET does not load. |
+| 2025-2027 builds have their `HeronTools.deps.json` | .NET 8/10 add-ins need it to load. |
+| No `<ManifestSettings>` in a manifest for Revit 2025 or older | Those Revits crash on it. |
+| No Revit of that year is open, and no Revit of unknown year at all | The DLL would be locked, half-copied. It never closes Revit. |
+| No Autodesk DLL is copied | Revit loads its own; a second copy clashes. |
+| Every copied file matches the build byte for byte | Proof the install is what was built. |
+
+It also keeps the install it replaces in `%LocalAppData%\HeronTools\install-backup\<year>\` (with
+`replaced.json`: version, SHA-256, time), puts it back by itself if a copy fails, removes Windows'
+"downloaded from the internet" mark from the copied files, and warns if an all-users copy of Heron Tools
+also exists (Revit would report a duplicate add-in). To go back to the previous install:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File build\build.ps1 -Years 2024 -Rollback
+```
+
 To build one year by hand:
 
 ```powershell
@@ -97,7 +129,9 @@ powershell -ExecutionPolicy Bypass -File build\uninstall.ps1
 ```
 
 It removes only `HeronTools.addin` and the `HeronTools` folder from each Revit year. Heron AI and every
-other add-in are left alone. Add `-DryRun` to see what it would remove.
+other add-in are left alone. Add `-DryRun` to see what it would remove, and `-RemoveBackups` to also delete
+the installs kept for `-Rollback`. A Revit that is open (or of unknown year) stops it; an all-users copy is
+reported, not removed (that needs admin rights).
 
 ## How it shares the Heron tab
 
@@ -106,7 +140,7 @@ Revit decides which add-in loads first and never says. So Heron Tools never assu
 ```csharp
 try { app.CreateRibbonTab("Heron"); }
 catch (Autodesk.Revit.Exceptions.ArgumentException) { /* tab exists */ }
-var panel = app.CreateRibbonPanel("Heron", "View");
+var panel = app.CreateRibbonPanel("Heron", "View");   // and Quick, Datums, Modify, Coordination, About
 ```
 
 - **Installed alone:** the tab does not exist, so Heron Tools creates it and adds its **View** panel.
@@ -117,8 +151,8 @@ Only that one exception is caught, by its full name. The tab name `Heron` must k
 spelling and case - one letter different makes a second tab.
 
 What keeps the two products apart: assembly `HeronTools.dll` (Heron AI has none by that name), its own
-AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`, and panel name
-`View` (Heron AI uses other panel names).
+AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`, and panel names
+`Quick`, `View`, `Datums`, `Modify`, `Coordination`, `About` (Heron AI uses other panel names).
 
 ## Rules this code follows
 
@@ -167,6 +201,7 @@ Directory.Build.props    Revit year -> .NET runtime, output folders, compile sym
 [DISCLAIMER](DISCLAIMER.md) · [CHANGELOG](CHANGELOG.md) · [AGENTS](AGENTS.md) (for AI agents working on the code)
 
 Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
+[Panels move notes](docs/panels-move-notes.md) ·
 [Metadata standard](docs/metadata-standard.md) · [Ideas for Heron AI](docs/ideas-for-heron-ai.md)
 
 ## Licence

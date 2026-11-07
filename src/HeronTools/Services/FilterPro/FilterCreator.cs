@@ -151,6 +151,16 @@ namespace HeronTools.Services.FilterPro
                     continue;
                 }
 
+                // Same name and parameter but other categories (the name can match while the category list
+                // differs, e.g. with "Include the category name" off): reusing it would leave the extra
+                // categories uncoloured with no word said.
+                if (filter != null && !selection.OverrideExisting && !CoversSameCategories(filter, categorySet))
+                {
+                    skipped?.Add($"A filter named '{filterName}' already exists for other categories, so it was not used. " +
+                                 "Change the prefix or suffix, or turn on Update existing filters to rewrite it.");
+                    continue;
+                }
+
                 bool needsRules = filter == null || selection.OverrideExisting;
                 if (needsRules &&
                     !ParameterFilterElement.ElementFilterIsAcceptableForParameterFilterElement(doc, categorySet, elementFilter))
@@ -526,6 +536,26 @@ namespace HeronTools.Services.FilterPro
         /// True if the filter's rules test the selected parameter (for "Family and Type": the family and type name
         /// parameters). A filter Revit cannot describe is treated as not matching.
         /// </summary>
+        private static bool CoversSameCategories(ParameterFilterElement filter, HashSet<ElementId> wanted)
+        {
+            try
+            {
+                ICollection<ElementId> current = filter.GetCategories();
+                if (current == null || current.Count != wanted.Count)
+                    return false;
+                foreach (ElementId id in current)
+                {
+                    if (!wanted.Contains(id))
+                        return false;
+                }
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         private static bool TestsSameParameter(ParameterFilterElement filter, FilterParameterItem parameter)
         {
             if (parameter == null)

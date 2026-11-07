@@ -79,7 +79,7 @@ namespace HeronTools.Services.FilterPro
                 return false;
 
             var baseline = BuildBaseline(doc, view, liveClean);
-            var desiredOrder = BuildDesiredOrder(newFilters, baseline);
+            var desiredOrder = BuildDesiredOrder(newFilters, baseline, liveClean);
 
             if (IsOrderIdentical(baseline, desiredOrder))
             {
@@ -154,24 +154,34 @@ namespace HeronTools.Services.FilterPro
 #endif
         }
 
-        private static List<ElementId> BuildDesiredOrder(List<ElementId> newFilters, List<ElementId> baseline)
+        /// <summary>
+        /// Filters this run ADDS to the view go first; a filter that was already on the view keeps its place
+        /// (the modeller may have set its priority on purpose - Shuffle and a re-Apply only recolour it).
+        /// </summary>
+        private static List<ElementId> BuildDesiredOrder(List<ElementId> newFilters, List<ElementId> baseline,
+                                                         List<ElementId> liveFilters)
         {
-            var newSet = new HashSet<long>(newFilters.Select(x => x.LongValue()));
+            var onView = new HashSet<long>(liveFilters.Select(x => x.LongValue()));
+            var added = new HashSet<long>();
             var desiredOrder = new List<ElementId>();
 
             foreach (var id in newFilters)
             {
-                if (!desiredOrder.Any(x => x.LongValue() == id.LongValue()))
+                if (!onView.Contains(id.LongValue()) && added.Add(id.LongValue()))
                     desiredOrder.Add(id);
             }
 
             foreach (var id in baseline)
             {
-                if (!newSet.Contains(id.LongValue()) &&
-                    !desiredOrder.Any(x => x.LongValue() == id.LongValue()))
-                {
+                if (added.Add(id.LongValue()))
                     desiredOrder.Add(id);
-                }
+            }
+
+            // A run filter already on the view but missing from the baseline still belongs in the list.
+            foreach (var id in newFilters)
+            {
+                if (added.Add(id.LongValue()))
+                    desiredOrder.Add(id);
             }
 
             return desiredOrder;

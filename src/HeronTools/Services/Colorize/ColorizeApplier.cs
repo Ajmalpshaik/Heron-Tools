@@ -159,12 +159,88 @@ namespace HeronTools.Services.Colorize
                 Color color = colors != null && i < colors.Count ? colors[i] : ColorPalette.GetColorAt(i);
                 OverrideGraphicSettings settings = BuildOverrideSettings(selection, color, patternId);
 
+                matched = WithInsulationAndLining(doc, view, matched);
                 ColorizeMemory.Remember(doc, view, matched);   // so Restore original can put them back
                 MergeSummary(summary, GraphicsElementService.ApplyOverrides(doc, view, matched, settings));
             }
 
             if (!anyMatched)
                 skipped?.Add($"View '{view.Name}': no element of the picked categories is shown there.");
+        }
+
+        /// <summary>Categories that can carry insulation or lining.</summary>
+        private static readonly BuiltInCategory[] WrapHostCategories =
+        {
+            BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_DuctAccessory,
+            BuiltInCategory.OST_FlexDuctCurves, BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_PipeFitting,
+            BuiltInCategory.OST_PipeAccessory, BuiltInCategory.OST_FlexPipeCurves
+        };
+
+        /// <summary>
+        /// The matched elements plus their insulation and lining shown in this view - colour a duct and leave
+        /// its insulation alone, and the new colour sits inside a jacket of the old one. Same rule as
+        /// Highlight Selection.
+        /// </summary>
+        private static ICollection<ElementId> WithInsulationAndLining(Document doc, View view, ICollection<ElementId> matched)
+        {
+            var hostCategories = new HashSet<long>();
+            foreach (BuiltInCategory bic in WrapHostCategories)
+                hostCategories.Add((long)bic);
+
+            var wrapsInView = new HashSet<long>();
+            foreach (ElementId id in new FilteredElementCollector(doc, view.Id)
+                         .WherePasses(new ElementMulticategoryFilter(new List<BuiltInCategory>
+                         {
+                             BuiltInCategory.OST_DuctInsulations, BuiltInCategory.OST_PipeInsulations,
+                             BuiltInCategory.OST_DuctLinings
+                         }))
+                         .ToElementIds())
+            {
+                wrapsInView.Add(id.LongValue());
+            }
+
+            if (wrapsInView.Count == 0)
+                return matched;
+
+            var result = new List<ElementId>(matched);
+            var seen = new HashSet<long>();
+            foreach (ElementId id in matched)
+                seen.Add(id.LongValue());
+
+            foreach (ElementId hostId in matched)
+            {
+                Category category = doc.GetElement(hostId)?.Category;
+                if (category == null || !hostCategories.Contains(category.Id.LongValue()))
+                    continue;
+
+                AddWraps(InsulationLiningBase.GetInsulationIds, doc, hostId, wrapsInView, seen, result);
+                AddWraps(InsulationLiningBase.GetLiningIds, doc, hostId, wrapsInView, seen, result);
+            }
+
+            return result;
+        }
+
+        private static void AddWraps(Func<Document, ElementId, ICollection<ElementId>> getWraps, Document doc, ElementId hostId,
+                                     HashSet<long> wrapsInView, HashSet<long> seen, List<ElementId> result)
+        {
+            ICollection<ElementId> wraps;
+            try
+            {
+                wraps = getWraps(doc, hostId);
+            }
+            catch (Autodesk.Revit.Exceptions.ArgumentException)
+            {
+                return;   // this element cannot carry insulation/lining
+            }
+
+            if (wraps == null)
+                return;
+            foreach (ElementId id in wraps)
+            {
+                long key = id.LongValue();
+                if (wrapsInView.Contains(key) && seen.Add(key))
+                    result.Add(id);
+            }
         }
 
         private static void ApplyPerValue(
@@ -224,6 +300,7 @@ namespace HeronTools.Services.Colorize
 
                 OverrideGraphicSettings settings = BuildOverrideSettings(selection, color, patternId);
 
+                matched = WithInsulationAndLining(doc, view, matched);
                 ColorizeMemory.Remember(doc, view, matched);   // so Restore original can put them back
                 MergeSummary(summary, GraphicsElementService.ApplyOverrides(doc, view, matched, settings));
                 valueIndex++;

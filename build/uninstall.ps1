@@ -14,21 +14,50 @@
         HeronTools.addin
         HeronTools\        (the folder with HeronTools.dll)
     Heron AI, AJ-Tools, pyRevit and every other add-in are not touched. A year whose Revit is open is
-    skipped (its files are locked) - close Revit and run again.
+    skipped (its files are locked) - close Revit and run again. If a Revit is open whose year cannot be
+    read, nothing is removed. It never closes Revit.
+
+    The copies build.ps1 kept for -Rollback (%LocalAppData%\HeronTools\install-backup\) stay, unless
+    -RemoveBackups is given. An all-users copy (ProgramData, or Program Files from 2027) is reported but
+    not removed: that needs admin rights, and this script never asks for them.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build\uninstall.ps1
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build\uninstall.ps1 -DryRun
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File build\uninstall.ps1 -RemoveBackups
 #>
 [CmdletBinding()]
 param(
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [switch]$RemoveBackups
 )
 
 $ErrorActionPreference = 'Stop'
 $productName = 'HeronTools'
 $addinsRoot  = Join-Path $env:APPDATA 'Autodesk\Revit\Addins'
+$backupRoot  = Join-Path $env:LOCALAPPDATA "$productName\install-backup"
+
+# Every running Revit's year, read from its program folder ("Revit 2024\Revit.exe"); 0 = cannot be read.
+$runningYears = @()
+foreach ($p in @(Get-Process -Name Revit -ErrorAction SilentlyContinue)) {
+    $path = $null
+    try { $path = $p.Path } catch { }
+    if ($path -and $path -match 'Revit[ _]?(\d{4})') { $runningYears += [int]$Matches[1] } else { $runningYears += 0 }
+}
+if ($runningYears -contains 0) {
+    Write-Host "A Revit is open whose year cannot be read - nothing was removed. Close every Revit and run again." -ForegroundColor Yellow
+    exit 1
+}
+
+# All-users copies: reported only (removing them needs admin rights).
+$allUsers = @(Get-ChildItem -Path (Join-Path $env:ProgramData 'Autodesk\Revit\Addins\*\HeronTools.addin') -ErrorAction SilentlyContinue) +
+            @(Get-ChildItem -Path (Join-Path $env:ProgramFiles 'Autodesk\Revit\Addins\*\HeronTools.addin') -ErrorAction SilentlyContinue)
+foreach ($copy in $allUsers) {
+    Write-Host "An all-users copy is at $($copy.FullName) - remove it by hand as an administrator if you want it gone." -ForegroundColor Yellow
+}
 
 if (-not (Test-Path $addinsRoot)) {
     Write-Host "No Revit add-ins folder at $addinsRoot - nothing to remove."
@@ -46,9 +75,7 @@ foreach ($yearDir in Get-ChildItem -Path $addinsRoot -Directory | Where-Object {
     $present = @($manifest, $folder) | Where-Object { Test-Path $_ }
     if (-not $present) { continue }
 
-    $running = Get-Process -Name Revit -ErrorAction SilentlyContinue |
-        Where-Object { $_.Path -and $_.Path -like "*\Revit $year\*" }
-    if ($running) {
+    if ($runningYears -contains [int]$year) {
         $results.Add([pscustomobject]@{ Revit = $year; Result = 'skipped (Revit is open - close it and run again)' })
         continue
     }
@@ -73,6 +100,17 @@ foreach ($yearDir in Get-ChildItem -Path $addinsRoot -Directory | Where-Object {
     catch {
         $failed = $true
         $results.Add([pscustomobject]@{ Revit = $year; Result = 'FAILED (a file is in use? close Revit): ' + $_.Exception.Message })
+    }
+}
+
+if ($RemoveBackups -and (Test-Path $backupRoot)) {
+    if ((Get-Item -LiteralPath $backupRoot -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        Write-Host "$backupRoot is a link - not removed; remove it by hand." -ForegroundColor Yellow
+    } elseif ($DryRun) {
+        Write-Host "would remove the kept installs in $backupRoot"
+    } else {
+        try { Remove-Item -LiteralPath $backupRoot -Recurse -Force; Write-Host "Removed the kept installs in $backupRoot" }
+        catch { $failed = $true; Write-Host "Could not remove $backupRoot : $($_.Exception.Message)" -ForegroundColor Red }
     }
 }
 

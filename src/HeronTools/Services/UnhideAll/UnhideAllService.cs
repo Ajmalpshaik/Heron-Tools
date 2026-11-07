@@ -128,15 +128,25 @@ namespace HeronTools.Services.UnhideAll
         }
 
         /// <summary>
-        /// Elements hidden one by one in this view. Only model elements and this view's own annotation are
-        /// looked at (other views' annotation can never be hidden here), and only those Revit says can be
+        /// Elements hidden one by one in this view. Only model elements, this view's own annotation and (in a
+        /// dependent view) its primary view's annotation are looked at, and only those Revit says can be
         /// hidden in the view - much faster than asking every element in the model.
         /// </summary>
         private static List<ElementId> CollectHiddenElementIds(Document doc, View view)
         {
-            var ownedHereOrModel = new LogicalOrFilter(
+            var owners = new List<ElementFilter>
+            {
                 new ElementOwnerViewFilter(view.Id),
-                new ElementOwnerViewFilter(ElementId.InvalidElementId));
+                new ElementOwnerViewFilter(ElementId.InvalidElementId)
+            };
+
+            // A dependent view shows its primary view's annotation (it is owned there), and that annotation
+            // can be hidden in the dependent view on its own.
+            ElementId primaryId = view.GetPrimaryViewId();
+            if (primaryId != null && primaryId != ElementId.InvalidElementId && primaryId != view.Id)
+                owners.Add(new ElementOwnerViewFilter(primaryId));
+
+            var ownedHereOrModel = new LogicalOrFilter(owners);
 
             var hiddenIds = new List<ElementId>();
             foreach (Element element in new FilteredElementCollector(doc)

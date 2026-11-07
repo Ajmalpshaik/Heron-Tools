@@ -8,6 +8,7 @@
 // Heron Tools - the add-in's start-up class. Builds its panel on the shared "Heron" ribbon tab.
 
 using System;
+using System.Collections.Generic;
 using Autodesk.Revit.UI;
 using HeronTools.Commands;
 using HeronTools.Utils;
@@ -31,8 +32,13 @@ namespace HeronTools.App
         /// <summary>Exact spelling and case. Never change it: a one-letter difference makes a second tab.</summary>
         internal const string TabName = "Heron";
 
-        /// <summary>This product's own panel. Heron AI uses other panel names on the same tab.</summary>
+        /// <summary>This product's own panels. Heron AI uses other panel names ("AI Bridge") on the same tab.</summary>
         internal const string PanelName = "View";
+        internal const string QuickPanelName = "Quick";
+        internal const string DatumsPanelName = "Datums";
+        internal const string ModifyPanelName = "Modify";
+        internal const string CoordinationPanelName = "Coordination";
+        internal const string AboutPanelName = "About";
 
         public Result OnStartup(UIControlledApplication application)
         {
@@ -62,9 +68,25 @@ namespace HeronTools.App
         {
             try { app.CreateRibbonTab(TabName); }
             catch (Autodesk.Revit.Exceptions.ArgumentException) { /* tab exists */ }
-            var panel = app.CreateRibbonPanel(TabName, PanelName);
 
             string assemblyPath = typeof(HeronToolsApp).Assembly.Location;
+
+            // ---- Quick: the tool wheel and its settings, under one split button.
+            var quickPanel = app.CreateRibbonPanel(TabName, QuickPanelName);
+            var quick = (SplitButton)quickPanel.AddItem(new SplitButtonData("HeronTools_QuickMenuGroup", "Quick\nMenu"));
+            quick.IsSynchronizedWithCurrentItem = false;   // the wheel stays the face of the button
+            quick.AddPushButton(Button(assemblyPath, "HeronTools_QuickMenu", "Quick\nMenu",
+                typeof(Commands.QuickMenu.CmdQuickMenu), null, "QuickMenu",
+                "Open the quick tool wheel around the mouse pointer. Point at a tool and click to run it, or press its number.",
+                "Your favourite Heron Tools buttons and Revit commands in a ring. Esc closes it. Tip: give this button a " +
+                "keyboard shortcut (File > Options > User Interface > Keyboard Shortcuts, search Quick Menu) so the " +
+                "wheel opens right where you are working."));
+            quick.AddPushButton(Button(assemblyPath, "HeronTools_QuickMenuSettings", "Quick Menu\nSettings",
+                typeof(Commands.QuickMenu.CmdQuickMenuSettings), typeof(CmdAlwaysAvailable), "QuickMenuSettings",
+                "Choose which tool sits in each slot of the wheel, how many slots there are and how big the wheel opens.",
+                "Saved for you on this PC."));
+
+            var panel = app.CreateRibbonPanel(TabName, PanelName);
 
             var filterPro = new PushButtonData(
                 "HeronTools_FilterPro",
@@ -123,6 +145,99 @@ namespace HeronTools.App
                     "Show the selected elements in red and everything else in grey in the active view. Click again to put the view back.",
                     "Select elements first (or pick them when asked). Every element's own graphic overrides are remembered and put " +
                     "back exactly when you click Highlight again in the same view (or press Undo)."));
+
+            BuildDatumsModifyCoordinationAbout(app, assemblyPath);
+        }
+
+        private static void BuildDatumsModifyCoordinationAbout(UIControlledApplication app, string assemblyPath)
+        {
+            // ---- Datums
+            var datums = app.CreateRibbonPanel(TabName, DatumsPanelName);
+            var reset = new PulldownButtonData("HeronTools_ResetDatumsGroup", "Reset Datums to 3D")
+            {
+                ToolTip = "Put grid and level ends in this view back to their 3D extents.",
+                Image = BrandImages.Load("ResetDatums16.png"),
+                LargeImage = BrandImages.Load("ResetDatums32.png"),
+            };
+            var levelExtents = new PulldownButtonData("HeronTools_LevelExtentsGroup", "Level Extents")
+            {
+                ToolTip = "Match level extents to another level, or stretch them to the section box.",
+                Image = BrandImages.Load("LevelExtents16.png"),
+                LargeImage = BrandImages.Load("LevelExtents32.png"),
+            };
+            IList<RibbonItem> datumItems = datums.AddStackedItems(reset, levelExtents,
+                Button(assemblyPath, "HeronTools_FlipBubbles", "Flip Bubbles", typeof(CmdFlipGridBubble), null, "FlipBubbles",
+                    "Swap which end of a grid or level shows its bubble.",
+                    "Pick datums one at a time (each flips at once), or window-select batches. The whole run is one Undo step."));
+            var resetButton = (PulldownButton)datumItems[0];
+            resetButton.AddPushButton(Button(assemblyPath, "HeronTools_ResetGrids", "Grids", typeof(CmdResetDatumsGrids), null, "ResetDatums",
+                "Reset every visible grid in this view to its 3D extents.", "One Undo step."));
+            resetButton.AddPushButton(Button(assemblyPath, "HeronTools_ResetLevels", "Levels", typeof(CmdResetDatumsLevels), null, "ResetDatums",
+                "Reset every visible level in this view to its 3D extents.", "One Undo step."));
+            resetButton.AddPushButton(Button(assemblyPath, "HeronTools_ResetGridsLevels", "Grids and Levels", typeof(CmdResetDatums), null, "ResetDatums",
+                "Reset every visible grid and level in this view to its 3D extents.", "One Undo step."));
+            var levelButton = (PulldownButton)datumItems[1];
+            levelButton.AddPushButton(Button(assemblyPath, "HeronTools_MatchLevelExtents", "Match Level Extents", typeof(CmdExtendLevelsBySelected), null, "LevelExtents",
+                "Pick one level, then the levels to match its 3D extents (Esc to finish).",
+                "Only the 3D extents change; level ends made 2D in a view stay 2D. The whole run is one Undo step."));
+            levelButton.AddPushButton(Button(assemblyPath, "HeronTools_MaximizeLevelExtents", "Levels to Section Box", typeof(CmdMaximizeLevelsBySectionBox), null, "LevelExtents",
+                "Stretch every level's 3D extents to the active 3D view's section box.",
+                "Open a 3D view with a section box first. Level ends made 2D in a view stay 2D. One Undo step."));
+
+            // ---- Modify
+            var modify = app.CreateRibbonPanel(TabName, ModifyPanelName);
+            var matchElevation = new PulldownButtonData("HeronTools_MatchElevationGroup", "Match Elevation")
+            {
+                ToolTip = "Match the centre, top or bottom elevation of a source MEP element on other elements.",
+                Image = BrandImages.Load("MatchElevation16.png"),
+                LargeImage = BrandImages.Load("MatchElevation32.png"),
+            };
+            IList<RibbonItem> modifyItems = modify.AddStackedItems(matchElevation,
+                Button(assemblyPath, "HeronTools_ReassignLevel", "Reassign Level", typeof(CmdReassignLevel), null, "ReassignLevel",
+                    "Move ducts, pipes, trays, conduits and free-standing families to another level without moving them.",
+                    "Whole project or just your selection. Each element is measured before and after; any that would " +
+                    "move is left as it was. Hosted families and spaces are skipped. One Undo step."),
+                Button(assemblyPath, "HeronTools_PinElements", "Pin / Unpin", typeof(CmdPinElements), null, "PinElements",
+                    "Pin or unpin groups of elements: title blocks, views on sheets, ducts, pipes, grids, levels...",
+                    "Pick the groups and whether it is this sheet or all sheets. Each Pin or Unpin press is one Undo step."));
+            var matchButton = (PulldownButton)modifyItems[0];
+            matchButton.AddPushButton(Button(assemblyPath, "HeronTools_MatchCenter", "Match Centre", typeof(CmdMatchElevation), null, "MatchElevation",
+                "Match the centre elevation of a source MEP element on the elements you pick.", "One Undo step."));
+            matchButton.AddPushButton(Button(assemblyPath, "HeronTools_MatchTop", "Match Top", typeof(CmdMatchElevationTop), null, "MatchElevation",
+                "Match the top elevation of a source MEP element on the elements you pick.", "One Undo step."));
+            matchButton.AddPushButton(Button(assemblyPath, "HeronTools_MatchBottom", "Match Bottom", typeof(CmdMatchElevationBottom), null, "MatchElevation",
+                "Match the bottom elevation of a source MEP element on the elements you pick.", "One Undo step."));
+            modify.AddItem(Button(assemblyPath, "HeronTools_SmartSelection", "Smart\nSelection", typeof(CmdSmartSelection), null, "SmartSelection",
+                "Pick one element, then window-select: only elements of the same category are kept.",
+                "Everything else caught in the box is skipped. The result stays selected for your next step."));
+
+            // ---- Coordination
+            var coordination = app.CreateRibbonPanel(TabName, CoordinationPanelName);
+            var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")
+            {
+                ToolTip = "Element ID tools for this model and linked models.",
+                Image = BrandImages.Load("ElementId16.png"),
+                LargeImage = BrandImages.Load("ElementId32.png"),
+            };
+            IList<RibbonItem> coordItems = coordination.AddStackedItems(elementId,
+                Button(assemblyPath, "HeronTools_Views3DByWorkset", "3D Views by Workset", typeof(Cmd3DViewsAsPerWorkset), null, "Views3D",
+                    "Make one 3D view per user workset, each showing only its workset.",
+                    "Workshared models only. One Undo step."),
+                Button(assemblyPath, "HeronTools_LinkWorkset", "Link Workset", typeof(CmdSetLinkWorkset), null, "LinkWorkset",
+                    "Put Revit links and CAD imports on a workset (the ones you selected start ticked).",
+                    "Workshared models only. One Undo step."));
+            var idButton = (PulldownButton)coordItems[0];
+            idButton.AddPushButton(Button(assemblyPath, "HeronTools_ElementIdOfPick", "ID of a Picked Element", typeof(CmdLinkedElementIdViewer), null, "ElementId",
+                "Pick a model element - in this model or a link - and see its Element ID and where it comes from.",
+                "Reads only; changes nothing. For annotation in this model, use Revit's own IDs of Selection."));
+            idButton.AddPushButton(Button(assemblyPath, "HeronTools_FindById", "Find by Element ID", typeof(CmdLinkedElementSearch), null, "FindById",
+                "Find an element by its ID in this model or a linked model, and zoom to it.", "Reads only; changes nothing."));
+
+            // ---- About
+            var about = app.CreateRibbonPanel(TabName, AboutPanelName);
+            about.AddItem(Button(assemblyPath, "HeronTools_AboutHeron", "About\nHeron", typeof(CmdAboutHeron), typeof(CmdAlwaysAvailable), "AboutHeron",
+                "Version details and the Heron family (Heron Tools and Heron AI).",
+                "Shows which Heron Tools version runs in this Revit, with links to both Heron products."));
         }
 
         /// <summary>One ribbon button: id, caption, command, when it is enabled, its two icons and its help text.</summary>
@@ -133,7 +248,8 @@ namespace HeronTools.App
             {
                 ToolTip = toolTip,
                 LongDescription = longDescription,
-                AvailabilityClassName = availability.FullName,
+                // No availability class = Revit's default: enabled whenever a model is open.
+                AvailabilityClassName = availability?.FullName,
                 Image = BrandImages.Load(icon + "16.png"),
                 LargeImage = BrandImages.Load(icon + "32.png"),
             };
