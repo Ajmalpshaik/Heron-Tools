@@ -85,6 +85,9 @@ namespace HeronTools.UI
         {
             InitializeComponent();
 
+            // The Heron app icon on the title bar and taskbar - the same mark as Heron AI.
+            Icon = BrandImages.Load(BrandImages.AppIcon);
+
             // Shared Heron Tools window entrance (fade + short rise). Cosmetic only.
             WindowMotionHelper.AttachStandardEntrance(this);
 

@@ -1,10 +1,9 @@
 // Heron Tools - the add-in's start-up class. Builds its panel on the shared "Heron" ribbon tab.
 
 using System;
-using System.IO;
-using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using HeronTools.Commands;
+using HeronTools.Utils;
 
 namespace HeronTools.App
 {
@@ -73,34 +72,11 @@ namespace HeronTools.App
                     "(or to other views you pick). Each run is a single Undo step.\n\n" +
                     "Works in plan, ceiling, area, section, elevation and 3D views that are not controlled by a view template.",
                 AvailabilityClassName = typeof(CmdFilterProAvailability).FullName,
-                Image = LoadIcon("FilterPro16.png"),
-                LargeImage = LoadIcon("FilterPro32.png"),
+                Image = BrandImages.Load("FilterPro16.png"),
+                LargeImage = BrandImages.Load("FilterPro32.png"),
             };
 
             panel.AddItem(filterPro);
-        }
-
-        /// <summary>
-        /// Loads a ribbon icon built into this DLL (Resources\Icons, embedded as "HeronTools.Icons.&lt;file&gt;").
-        /// Read as a stream, so it does not depend on a pack:// address being registered in Revit.
-        /// A missing icon gives a button without a picture, never a failed start-up.
-        /// </summary>
-        private static BitmapImage LoadIcon(string fileName)
-        {
-            using (Stream stream = typeof(HeronToolsApp).Assembly
-                       .GetManifestResourceStream("HeronTools.Icons." + fileName))
-            {
-                if (stream == null)
-                    return null;
-
-                var image = new BitmapImage();
-                image.BeginInit();
-                image.StreamSource = stream;
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.EndInit();
-                image.Freeze();
-                return image;
-            }
         }
     }
 }

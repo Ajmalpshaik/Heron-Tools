@@ -28,10 +28,15 @@ colours or White/Shadow at an opacity, which the brand allows.
   and red for "failed", so both are now quiet buttons.
 - Windows' default GroupBox drew a white double line; it now has its own rounded Surface card template.
 - Font: `Manrope, Segoe UI`. Manrope is **not installed** on this PC, so Segoe UI shows (the brand's own
-  stated fallback). Embedding the font is a separate decision (the kit has only the variable-weight
-  file, and WPF's handling of variable fonts needs a real test first).
+  stated fallback) - the same as Heron AI today.
 - The colours Filter Pro writes into the **model** (the 20-colour filter palette) are model colours,
   not UI, and stay as they were.
+- Logo: the Heron mark from the designer's kit (`D:_Development\Heron grafics update\Heron`) - the
+  same artwork Heron AI shows - is in `docs/brand/`, in the README header, drawn in Mist in the window
+  header, and the orange app icon is on the window's title bar. The full wordmark reads "Heron AI", so
+  it is not used for this product.
+- The kit also has the static Manrope files (Regular, Medium, SemiBold, ExtraBold), which WPF can
+  embed. Not embedded yet: the font's licence file (SIL OFL) must ship with it and is not in the kit.
 - Seen while checking: Heron AI's own Revit windows still use its old blue `#2F9BE3`
   (`revit/Heron.Revit.Addin/HeronWindowStyle.cs`), not the brand. Nothing in Heron AI was changed.
 

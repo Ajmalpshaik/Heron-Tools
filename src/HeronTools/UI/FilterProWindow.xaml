@@ -58,19 +58,27 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Filter Pro" 
-                               FontSize="26" 
-                               FontWeight="ExtraBold" 
-                               Foreground="{StaticResource TextPrimary}"/>
-                    <TextBlock Text="Heron Tools - by Ajmal PS"
-                               FontSize="12"
-                               Foreground="{StaticResource TextSecondary}"
-                               Margin="0,2,0,0"/>
-                    <TextBlock Text="Create and manage Revit filters from parameter values" 
-                               FontSize="13" 
-                               Foreground="{StaticResource TextSecondary}" 
-                               Margin="0,5,0,0"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <!-- The heron mark, in Mist on the dark header (brand: logo on dark = Mist/white). -->
+                    <Viewbox Width="54" Height="54" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <Path Data="{StaticResource HeronMarkGeometry}"
+                              Fill="{StaticResource TextPrimary}"
+                              Stretch="Uniform"/>
+                    </Viewbox>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Filter Pro"
+                                   FontSize="26"
+                                   FontWeight="ExtraBold"
+                                   Foreground="{StaticResource TextPrimary}"/>
+                        <TextBlock Text="Heron Tools - by Ajmal PS"
+                                   FontSize="12"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="Create and manage Revit filters from parameter values"
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   Margin="0,5,0,0"/>
+                    </StackPanel>
                 </StackPanel>
                 
                 <!-- Preview Section -->

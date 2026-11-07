@@ -1,6 +1,18 @@
-# Heron Tools
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/heron-mark-white.svg">
+    <img src="docs/brand/heron-mark-ink.svg" alt="Heron" width="120">
+  </picture>
+</p>
 
-Everyday Revit tools for BIM modellers, on the **Heron** ribbon tab.
+<h1 align="center">Heron Tools</h1>
+
+<p align="center">Everyday Revit tools for BIM modellers, on the <b>Heron</b> ribbon tab.</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Revit-2020%20to%202027-FD641A?style=flat-square" alt="Revit 2020 to 2027">
+  <img src="https://img.shields.io/badge/licence-all%20rights%20reserved-0F0F10?style=flat-square" alt="Licence: all rights reserved">
+</p>
 
 Heron Tools is a stand-alone Revit add-in. It does not need Heron AI and uses none of Heron AI's code.
 The two only share the name of the ribbon tab, so when both are installed their buttons sit side by
@@ -107,6 +119,10 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 - Window colours and font come only from the Heron brand palette - see the header of
   `src/HeronTools/UI/HeronStyles.xaml`. (Colours a tool writes into the *model*, such as filter
   colours, are model colours and not part of the brand.)
+- The logo is the Heron mark from the designer's brand kit - the same artwork Heron AI uses -
+  kept in `docs/brand/` (mark in ink and white, app icon in ink and orange). Every window shows the
+  mark in its header and the orange app icon on its title bar. The full "Heron AI" wordmark is not
+  used here, because it names the other product.
 
 ## Repository layout
 
