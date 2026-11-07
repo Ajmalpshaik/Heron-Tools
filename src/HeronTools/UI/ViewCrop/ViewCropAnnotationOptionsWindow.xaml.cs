@@ -62,6 +62,12 @@ namespace HeronTools.UI.ViewCrop
                 return;
             }
 
+            if (double.IsNaN(offsetMm) || double.IsInfinity(offsetMm) || offsetMm > 1000)
+            {
+                ShowError("The offset must be a number from 0 to 1000 mm on the sheet.");
+                return;
+            }
+
             if (offsetMm < 0)
             {
                 ShowError("The offset cannot be below 0 mm. Type 0 or more.");

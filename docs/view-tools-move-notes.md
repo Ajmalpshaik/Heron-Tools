@@ -35,6 +35,23 @@ a stack of `Unhide All` / `Toggle Links` / `Highlight`. New brand icons for ever
 | All | Override builder switched OFF the elements' own fill patterns whenever no pattern was picked. | A pattern's Visible switch is only touched when that pattern is set. |
 | All windows | Borderless custom-title-bar windows in the old theme, "AJ Tools" wording. | Heron design (standard title bar, brand theme, heron mark, app icon, one orange button, messages in the window). |
 
+## Final review (four parallel reviewers, 2026-11-07)
+
+| Tool | Problem | Fix |
+|---|---|---|
+| Colorize | "Whole categories" painted every category the same colour, although the window promised one each. | One colour per category. |
+| Colorize | The "colours undone?" check missed cut-pattern colours (a cut-patterns-only run lost its memory and Restore). | Every override Colorize writes is compared. |
+| Colorize / Highlight | Restore threw the memory away, so undoing the restore left the colours with no way back. | Memory kept after a restore; a later run drops it only when nothing coloured is left. |
+| Colorize / Highlight | The "still coloured?" check looked at a small sample that counted deleted elements, and Highlight could mistake the modeller's own red or grey. | Up to 500 live elements checked; a colour equal to the element's own is not counted. |
+| Colorize / Filter Pro | An unexpected error after changes were kept returned Failed - Revit then undoes everything. | Kept work stays (Succeeded). |
+| View Crop | "Levels, grids and reference planes" did nothing (datums are not model categories and were thrown out first). | Grids and reference planes push the crop out when ticked (levels have no extent in a plan). |
+| View Crop | The window always forced the rectangular mode, so shaped crops were silently replaced by rectangles. | Shaped crops are left as they are and listed with the reason. |
+| View Crop | Survey Point / Project Base Point / Internal Origin could stretch every crop to kilometres. | Never counted. |
+| View Crop | A link the view hides still widened the crop in "All model elements" mode. | Skipped when the link or RVT Links is hidden in that view. |
+| View Crop | Element boxes were read after the crop was switched back on. | The crop stays off until every element is measured. |
+| View Crop | "NaN"/"Infinity" accepted in the number boxes; no upper limits; "Fit the crop around" not saved. | Rejected, same limits as the settings file; the choice is saved. |
+| Scripts / docs | Uninstall exited 0 after a failed delete; its dry run skipped the link check; a missing manifest did not fail the build; crash logs went to %TEMP% although the documents promise Heron Tools' own folder; dead code and stale comments from AJ-Tools. | All fixed; logs in `%AppData%\HeronTools\Logs`; dead code removed. |
+
 ## Still owed
 
 - **Real Revit test** of every tool (see the pull request checklist).

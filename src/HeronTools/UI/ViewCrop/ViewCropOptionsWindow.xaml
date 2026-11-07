@@ -157,7 +157,7 @@
                         <CheckBox x:Name="IncludeDatumsCheckBox" Content="Levels, grids and reference planes" Style="{StaticResource ModernCheckBox}"/>
                         <TextBlock Text="Datum lines push the crop out to their ends." Style="{StaticResource OptionHelp}"/>
                         <CheckBox x:Name="IgnoreHiddenCheckBox" Content="Skip hidden categories" Style="{StaticResource ModernCheckBox}"/>
-                        <TextBlock Text="Leave out elements whose category is hidden in the view." Style="{StaticResource OptionHelp}" Margin="28,0,0,0"/>
+                        <TextBlock Text="Leave out hidden categories, hidden elements and links the view hides (&quot;What each view shows&quot; never counts them anyway)." Style="{StaticResource OptionHelp}" Margin="28,0,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

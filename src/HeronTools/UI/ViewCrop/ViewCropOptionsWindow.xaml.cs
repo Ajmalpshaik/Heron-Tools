@@ -168,6 +168,14 @@ namespace HeronTools.UI.ViewCrop
                 return false;
             }
 
+            // "NaN" and "Infinity" parse as numbers; the same limits as the saved settings file.
+            if (double.IsNaN(marginMm) || double.IsInfinity(marginMm) || marginMm > 100000)
+            {
+                ErrorText.Text = "The margin must be a number from 0 to 100000 mm.";
+                ErrorText.Visibility = Visibility.Visible;
+                return false;
+            }
+
             if (marginMm < 0)
             {
                 ErrorText.Text = "The margin cannot be below 0 mm. Type 0 or more.";
@@ -188,6 +196,13 @@ namespace HeronTools.UI.ViewCrop
                     return false;
                 }
 
+                if (double.IsNaN(annotationOffset) || double.IsInfinity(annotationOffset) || annotationOffset > 1000)
+                {
+                    ErrorText.Text = "The annotation offset must be a number from 0 to 1000 mm on the sheet.";
+                    ErrorText.Visibility = Visibility.Visible;
+                    return false;
+                }
+
                 if (annotationOffset < 0)
                 {
                     ErrorText.Text = "The annotation offset cannot be below 0 mm. Type 0 or more.";
@@ -195,7 +210,7 @@ namespace HeronTools.UI.ViewCrop
                     return false;
                 }
             }
-            else if (!offsetParsed || annotationOffset < 0)
+            else if (!offsetParsed || annotationOffset < 0 || double.IsNaN(annotationOffset) || double.IsInfinity(annotationOffset) || annotationOffset > 1000)
             {
                 // The box is disabled while annotation crop is off, so the user cannot correct it here.
                 // Keep the offset the window opened with rather than refuse to run over an unused field.
@@ -207,7 +222,7 @@ namespace HeronTools.UI.ViewCrop
                 MarginMm = marginMm,
                 IncludeRevitLinks = IncludeLinksCheckBox.IsChecked == true,
                 IgnoreHiddenCategories = IgnoreHiddenCheckBox.IsChecked == true,
-                RectangularCropOnly = true,
+                RectangularCropOnly = false,   // shaped crops are left as they are (skipped, with the reason)
                 IncludeDatums = IncludeDatumsCheckBox.IsChecked == true,
                 ApplyAnnotationCrop = ApplyAnnotationCheckBox.IsChecked == true,
                 AnnotationOffsetMm = annotationOffset,

@@ -36,6 +36,7 @@ if (-not (Test-Path $addinsRoot)) {
 }
 
 $results = New-Object System.Collections.Generic.List[object]
+$failed = $false
 
 foreach ($yearDir in Get-ChildItem -Path $addinsRoot -Directory | Where-Object { $_.Name -match '^\d{4}$' }) {
     $year     = $yearDir.Name
@@ -52,16 +53,16 @@ foreach ($yearDir in Get-ChildItem -Path $addinsRoot -Directory | Where-Object {
         continue
     }
 
-    if ($DryRun) {
-        $results.Add([pscustomobject]@{ Revit = $year; Result = 'would remove: ' + ($present -join ', ') })
-        continue
-    }
-
     # A HeronTools folder that is a link (junction/symlink) is never deleted through: Windows PowerShell 5.1
-    # can empty the link's TARGET. Remove such a link by hand.
+    # can empty the link's TARGET. Remove such a link by hand. (Checked before -DryRun, so a dry run tells the truth.)
     $linked = $present | Where-Object { (Get-Item -LiteralPath $_ -Force).Attributes -band [IO.FileAttributes]::ReparsePoint }
     if ($linked) {
         $results.Add([pscustomobject]@{ Revit = $year; Result = 'skipped (is a link, remove by hand): ' + ($linked -join ', ') })
+        continue
+    }
+
+    if ($DryRun) {
+        $results.Add([pscustomobject]@{ Revit = $year; Result = 'would remove: ' + ($present -join ', ') })
         continue
     }
 
@@ -70,6 +71,7 @@ foreach ($yearDir in Get-ChildItem -Path $addinsRoot -Directory | Where-Object {
         $results.Add([pscustomobject]@{ Revit = $year; Result = 'removed: ' + ($present -join ', ') })
     }
     catch {
+        $failed = $true
         $results.Add([pscustomobject]@{ Revit = $year; Result = 'FAILED (a file is in use? close Revit): ' + $_.Exception.Message })
     }
 }
@@ -79,4 +81,5 @@ if ($results.Count -eq 0) {
 } else {
     $results | Format-Table -AutoSize | Out-String -Width 220 | Write-Host
 }
+if ($failed) { exit 1 }
 exit 0

@@ -54,16 +54,6 @@ namespace HeronTools.Utils
         }
 
         /// <summary>
-        /// True if <paramref name="categoryId"/> matches a defined BuiltInCategory value, version-safe.
-        /// Replaces the unsafe <c>Enum.IsDefined(typeof(BuiltInCategory), someInt)</c>, which throws in
-        /// Revit 2024+ because BuiltInCategory's underlying type widened from Int32 to Int64.
-        /// </summary>
-        internal static bool IsDefinedBuiltInCategory(int categoryId)
-        {
-            return IsDefinedEnumValue(typeof(BuiltInCategory), categoryId);
-        }
-
-        /// <summary>
         /// True if <paramref name="parameterId"/> matches a defined BuiltInParameter value, version-safe.
         /// Replaces the unsafe <c>Enum.IsDefined(typeof(BuiltInParameter), someInt)</c>, which throws in
         /// Revit 2024+ because BuiltInParameter's underlying type widened from Int32 to Int64.

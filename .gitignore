@@ -24,3 +24,12 @@ UIFramework*.dll
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Never commit client models, drawings or logs
+*.rvt
+*.rfa
+*.rte
+*.rft
+*.dwg
+*.pdf
+*.log

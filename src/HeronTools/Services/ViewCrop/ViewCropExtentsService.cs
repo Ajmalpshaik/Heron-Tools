@@ -54,6 +54,9 @@ namespace HeronTools.Services.ViewCrop
             }
 
             internal long CategoryId { get; }
+
+            /// <summary>The link instance a linked element came from (invalid for host elements).</summary>
+            internal ElementId LinkInstanceId { get; set; } = ElementId.InvalidElementId;
             internal XYZ[] Corners { get; }
             internal WorksetId WorksetId { get; }
             internal ElementId DesignOptionId { get; }
@@ -397,12 +400,6 @@ namespace HeronTools.Services.ViewCrop
                         new FilteredElementCollector(_doc, view.Id, link.Id).WhereElementIsNotElementType().ToElements().ToList();
                 }
 #endif
-            }
-            finally
-            {
-                if (cropWasOn)
-                    view.CropBoxActive = true;
-            }
 
             foreach (Element element in elements)
             {
@@ -458,6 +455,13 @@ namespace HeronTools.Services.ViewCrop
                     tracker.Update(element, null, elMinX, elMaxX, elMinY, elMaxY);
                     hasData = true;
                 }
+            }
+
+            }
+            finally
+            {
+                if (cropWasOn)
+                    view.CropBoxActive = true;   // back on only after every element has been measured
             }
 
             return hasData ? bounds : null;
@@ -585,12 +589,28 @@ namespace HeronTools.Services.ViewCrop
                 ? new Dictionary<long, bool>()
                 : null;
 
+            // A link the view hides (the link itself, or the RVT Links category) must not widen its crop.
+            var linkHiddenInView = new Dictionary<long, bool>();
             foreach (GlobalExtentCandidate candidate in _globalCandidates)
             {
                 if (_settings.IgnoreHiddenCategories
                     && IsCategoryHidden(view, candidate.CategoryId, hiddenCategoryCache))
                 {
                     continue;
+                }
+
+                if (_settings.IgnoreHiddenCategories && candidate.LinkInstanceId != ElementId.InvalidElementId)
+                {
+                    long linkKey = candidate.LinkInstanceId.LongValue();
+                    if (!linkHiddenInView.TryGetValue(linkKey, out bool linkHidden))
+                    {
+                        Element link = _doc.GetElement(candidate.LinkInstanceId);
+                        linkHidden = IsCategoryHidden(view, (int)BuiltInCategory.OST_RvtLinks, hiddenCategoryCache) ||
+                                     (link != null && link.IsHidden(view));
+                        linkHiddenInView[linkKey] = linkHidden;
+                    }
+                    if (linkHidden)
+                        continue;
                 }
 
                 if (_doc.IsWorkshared && candidate.WorksetId != WorksetId.InvalidWorksetId && !view.IsWorksetVisible(candidate.WorksetId))
@@ -751,7 +771,10 @@ namespace HeronTools.Services.ViewCrop
                             linkedElement.Id,
                             linkedElement.Name,
                             category.Name,
-                            linkInstance.Name));
+                            linkInstance.Name)
+                        {
+                            LinkInstanceId = linkInstance.Id
+                        });
                     }
 
                     continue;
@@ -804,17 +827,25 @@ namespace HeronTools.Services.ViewCrop
             if (element.ViewSpecific)
                 return false;
 
-            if (!_settings.IncludeDatums && element is DatumPlane)
-                return false;
-
-            if (element is SketchPlane || element is ImportInstance || element is Viewport)
+            if (element is SketchPlane || element is ImportInstance || element is Viewport || IsOriginMarker(element))
                 return false;
 
             Category category = element.Category;
             if (category == null || category.Id == null)
                 return false;
 
-            if (element is RevitLinkInstance)
+            long categoryId = (category.Id).LongValue();
+
+            // Datums are tested BEFORE the model-category test: grids and reference planes are not model
+            // categories, so "Levels, grids and reference planes" used to change nothing. Levels have no extent
+            // in a plan, so only grids and reference planes push the crop out.
+            bool isDatum = element is DatumPlane || IsDatumCategory(categoryId);
+            if (isDatum)
+            {
+                if (!_settings.IncludeDatums || element is Level)
+                    return false;
+            }
+            else if (element is RevitLinkInstance)
             {
                 if (!_settings.IncludeRevitLinks)
                     return false;
@@ -823,8 +854,6 @@ namespace HeronTools.Services.ViewCrop
             {
                 return false;
             }
-
-            long categoryId = (category.Id).LongValue();
             if (categoryId == (int)BuiltInCategory.OST_Coordination_Model)
             {
                 if (!_settings.IncludeCoordinationModels)
@@ -832,9 +861,6 @@ namespace HeronTools.Services.ViewCrop
             }
 
             if (IsExcludedCategory(categoryId))
-                return false;
-
-            if (!_settings.IncludeDatums && IsDatumCategory(categoryId))
                 return false;
 
             if (_settings.IgnoreHiddenCategories && view != null)
@@ -1010,6 +1036,21 @@ namespace HeronTools.Services.ViewCrop
             }
         }
 
+        /// <summary>
+        /// Survey Point, Project Base Point and the Internal Origin: model elements with a bounding box, often far
+        /// from the building (shared coordinates) - they must never stretch a crop.
+        /// </summary>
+        private static bool IsOriginMarker(Element element)
+        {
+            if (element is BasePoint)
+                return true;
+#if REVIT2021_OR_GREATER
+            if (element is InternalOrigin)
+                return true;
+#endif
+            return false;
+        }
+
         private static bool IsDatumCategory(long categoryId)
         {
             return categoryId == (int)BuiltInCategory.OST_Levels
@@ -1019,7 +1060,9 @@ namespace HeronTools.Services.ViewCrop
 
         private static bool IsExcludedCategory(long categoryId)
         {
-            return categoryId == (int)BuiltInCategory.OST_Cameras
+            return categoryId == (int)BuiltInCategory.OST_ProjectBasePoint
+                || categoryId == (int)BuiltInCategory.OST_SharedBasePoint
+                || categoryId == (int)BuiltInCategory.OST_Cameras
                 || categoryId == (int)BuiltInCategory.OST_Sheets
                 || categoryId == (int)BuiltInCategory.OST_TitleBlocks
                 || categoryId == (int)BuiltInCategory.OST_Views;

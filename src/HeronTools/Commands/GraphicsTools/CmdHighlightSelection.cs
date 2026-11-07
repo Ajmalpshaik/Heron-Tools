@@ -188,23 +188,32 @@ namespace HeronTools.Commands.GraphicsTools
                 }
             }
 
-            SavedByView.Remove(key);
+            // The memory is kept: if this restore is undone, the next click restores again (StillHighlighted).
             return restored > 0 ? Result.Succeeded : Result.Cancelled;
         }
 
-        /// <summary>True if elements this tool coloured still carry the highlight red or grey.</summary>
+        /// <summary>
+        /// True if elements this tool coloured still carry the highlight: red or grey AND different from the
+        /// element's own remembered colour (so an element the modeller had made red or grey himself does not count).
+        /// </summary>
         private static bool StillHighlighted(Document doc, View view, Dictionary<long, OverrideGraphicSettings> saved)
         {
-            foreach (long key in saved.Keys.Take(25))
+            int looked = 0;
+            foreach (KeyValuePair<long, OverrideGraphicSettings> entry in saved)
             {
-                ElementId id = ElementIdHelper.FromLong(key);
+                ElementId id = ElementIdHelper.FromLong(entry.Key);
                 if (doc.GetElement(id) == null)
-                    continue;
+                    continue;            // deleted elements are not counted
 
                 Color c = view.GetElementOverrides(id).ProjectionLineColor;
-                if (c != null && c.IsValid &&
-                    ((c.Red == 255 && c.Green == 0 && c.Blue == 0) || (c.Red == 128 && c.Green == 128 && c.Blue == 128)))
+                Color own = entry.Value.ProjectionLineColor;
+                bool isHighlight = c != null && c.IsValid &&
+                    ((c.Red == 255 && c.Green == 0 && c.Blue == 0) || (c.Red == 128 && c.Green == 128 && c.Blue == 128));
+                bool sameAsOwn = own != null && own.IsValid && own.Red == c?.Red && own.Green == c?.Green && own.Blue == c?.Blue;
+                if (isHighlight && !sameAsOwn)
                     return true;
+                if (++looked >= 500)
+                    break;
             }
             return false;
         }

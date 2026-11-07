@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Ribbon availability filter — enables a button only in plan-family views (Floor Plan, Ceiling Plan, Area Plan, Structural Plan). Used by tools that only work in plan views (View Crop, Section Mark Visibility).
+// Ribbon availability for the View Crop tools: enabled in plan views.
 
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;

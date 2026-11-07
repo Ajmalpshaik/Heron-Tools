@@ -16,15 +16,15 @@ but **you are responsible for the model**.
 
 - Tools change views and view-specific settings. If another user owns a view, Revit refuses the change and
   Heron Tools reports it as not done.
-- Filters created by Filter Pro are project-wide: they appear in every view's filter list once created,
-  even if they are only added to the views you picked. "Update existing filters" rewrites a filter for every
+- Filters created by Filter Pro belong to the whole project: once created they can be added to any view,
+  but Filter Pro only adds them to the views you picked. "Update existing filters" rewrites a filter for every
   view that uses it - it is off by default for that reason.
 - Synchronise as your team normally does; Heron Tools does not synchronise for you.
 
 ## What Heron Tools sends where
 
-Nothing. Heron Tools makes no network connection. It saves only its own window settings in
-`%AppData%\HeronTools`.
+Nothing. Heron Tools makes no network connection. It saves only its own window settings, and a crash log
+if a tool fails unexpectedly, in `%AppData%\HeronTools`.
 
 ## Graphic overrides
 

@@ -95,6 +95,19 @@ colours or White/Shadow at an opacity, which the brand allows.
 Every source file now carries the Heron metadata header (see `metadata-standard.md`), checked by
 `build/check-metadata.ps1` in every build and in the GitHub `Gates` check.
 
+## Final review (four parallel reviewers, 2026-11-07)
+
+| Problem | Fix |
+|---|---|
+| Create filters with "Update existing filters" off made "X (2)", "X (3)"... on every click, although the switch says an existing filter is left as it is. | Every button uses the existing same-named filter; with the switch off it is left untouched and listed as skipped. |
+| A selection filter holding the name made a new numbered copy on every run. | The numbering stops at the rule filter made by an earlier run. |
+| Shuffle colours with the switch on rewrote filters' rules project-wide. | Shuffle never rewrites a rule. Shuffle with no colour ticked says so. |
+| With "Include the parameter name" off, "Has value" filters for different parameters shared one name, and the wrong one was reused silently. | Presence rules always name the parameter; a same-named filter testing another parameter is never reused silently. |
+| A new value list ignored the search text and sort order already set. | The list is filtered and sorted as shown. |
+| Counts said "5 filters" for Has value (always one filter); "Nothing needed changing" when everything was skipped. | Counts follow the rule; the status says "Nothing was changed" with the reasons. |
+| Restoring the last picks started before the window was shown (its awaits might come back off the window's thread). | It starts when the window has loaded. |
+| An unexpected error after filters were made returned Failed, and Revit undid the whole session's work. | Work already kept stays (Succeeded), and the message says so. |
+
 ## Still owed
 
 - **Real Revit tests** (see the PR): tab alone / with Heron AI, every button, Undo in one step, a

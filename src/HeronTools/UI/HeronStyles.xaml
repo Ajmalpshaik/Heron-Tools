@@ -25,8 +25,9 @@ Never add a colour here that is not in that list - ask first.
 
 Font: Manrope, falling back to Segoe UI when Manrope is not installed on the PC.
 
-Templates and motion were carried over from the AJ-Tools theme (Filter Pro move, 2026-11-07);
-only the colours and font changed.
+Templates and motion were carried over from the AJ-Tools theme (Filter Pro move, 2026-11-07); only
+the colours and font changed. A few keys (DataGrid, Success/Danger buttons, brush aliases) are not used
+by today's windows; they are kept for the next tools moved in, and use brand colours only.
 ==================================================
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -76,11 +77,7 @@ only the colours and font changed.
 
     <!-- Aliases used by the templates below -->
     <SolidColorBrush x:Key="PrimaryBrush" Color="#FFFD641A"/>
-    <!-- Hover: Accent into Accent Light - the one place Accent Light may appear. -->
-    <LinearGradientBrush x:Key="PrimaryHoverBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="{StaticResource AccentColor}" Offset="0"/>
-        <GradientStop Color="{StaticResource AccentLightColor}" Offset="1"/>
-    </LinearGradientBrush>
+
     <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#CCFD641A"/> <!-- Accent 80 % -->
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FF0F0F10"/>
     <SolidColorBrush x:Key="CardBrush" Color="#FF1B1B1F"/>
@@ -318,73 +315,7 @@ only the colours and font changed.
     </Style>
 
     <!-- Window Control Buttons -->
-    <Style x:Key="WindowControlButton" TargetType="Button">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontSize" Value="10"/>
-        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <!-- The hover/press COLOURS stay plain Setters here on purpose: WindowCloseButton
-                         overrides the hover fill with red from a Style trigger, which only works
-                         because these are Setters. Only the press dip is animated. -->
-                    <Border x:Name="ControlFill" Background="{TemplateBinding Background}" CornerRadius="16"
-                            RenderTransformOrigin="0.5,0.5">
-                        <Border.RenderTransform>
-                            <ScaleTransform x:Name="ControlScale" ScaleX="1" ScaleY="1"/>
-                        </Border.RenderTransform>
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#20FFFFFF"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="#10FFFFFF"/>
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleX"
-                                                         To="0.88" Duration="0:0:0.10"
-                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
-                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleY"
-                                                         To="0.88" Duration="0:0:0.10"
-                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                            <Trigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleX"
-                                                         To="1" Duration="0:0:0.22"
-                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
-                                        <DoubleAnimation Storyboard.TargetName="ControlScale" Storyboard.TargetProperty="ScaleY"
-                                                         To="1" Duration="0:0:0.22"
-                                                         EasingFunction="{StaticResource MotionEaseOut}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.ExitActions>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- Close Button specifically highlights Red on hover -->
-    <Style x:Key="WindowCloseButton" BasedOn="{StaticResource WindowControlButton}" TargetType="Button">
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource AccentDanger}"/>
-                <Setter Property="Foreground" Value="#FFFFFF"/>
-            </Trigger>
-        </Style.Triggers>
-    </Style>
+    <!-- (The borderless-window title-bar buttons were removed: Heron Tools windows use the standard title bar.) -->
 
     <Style x:Key="ModernButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
         <Setter Property="Background" Value="{StaticResource Accent}"/>
@@ -1281,8 +1212,7 @@ only the colours and font changed.
     </Style>
 
     <!-- Named a switch since v1.0 but drawn as a tick box until now. It is used for genuine on/off
-         settings ("Update existing filters", "Override items with same name"), which is exactly what a
-         switch is for, so it now looks like one - matching the switch in Graphics Settings Manager.
+         settings ("Update existing filters"), which is exactly what a switch is for, so it looks like one.
          The knob SLIDES its 20px (track 40, knob 14, 3px inset each side) instead of jumping. -->
     <Style x:Key="ToggleSwitchCheckBox" TargetType="CheckBox" BasedOn="{StaticResource ModernCheckBox}">
         <Setter Property="FontWeight" Value="SemiBold"/>

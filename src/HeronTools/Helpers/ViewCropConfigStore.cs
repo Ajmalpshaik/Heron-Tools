@@ -84,6 +84,12 @@ namespace HeronTools.Utils
                             if (bool.TryParse(val, out bool includeCoord))
                                 settings.IncludeCoordinationModels = includeCoord;
                             break;
+                        case "extentsource":
+                            // "Fit the crop around" - saved so the choice survives a restart.
+                            if (Enum.TryParse(val, true, out HeronTools.Models.ViewCrop.ViewCropExtentSource source) &&
+                                Enum.IsDefined(typeof(HeronTools.Models.ViewCrop.ViewCropExtentSource), source))
+                                settings.ExtentSource = source;
+                            break;
                     }
                 }
             }
@@ -126,6 +132,7 @@ namespace HeronTools.Utils
                     writer.WriteLine($"AnnotationOffsetMm={settings.AnnotationOffsetMm.ToString("0.###", CultureInfo.InvariantCulture)}");
                     writer.WriteLine($"ShowDiagnostics={settings.ShowDiagnostics}");
                     writer.WriteLine($"IncludeCoordinationModels={settings.IncludeCoordinationModels}");
+                    writer.WriteLine($"ExtentSource={settings.ExtentSource}");
                 }
 
                 return true;

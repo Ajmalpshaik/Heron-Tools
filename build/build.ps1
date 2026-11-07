@@ -137,5 +137,6 @@ Write-Host ""
 Write-Host "Summary ($Configuration)" -ForegroundColor Cyan
 $results | Format-Table -AutoSize | Out-String -Width 220 | Write-Host
 
-if ($results | Where-Object { $_.Build -eq 'FAIL' -or $_.Install -like 'FAIL*' }) { exit 1 }
+# A year that could not be built at all (e.g. its manifest is missing) is a failure too.
+if ($results | Where-Object { $_.Build -eq 'FAIL' -or $_.Build -eq 'NOT RUN' -or $_.Install -like 'FAIL*' }) { exit 1 }
 exit 0

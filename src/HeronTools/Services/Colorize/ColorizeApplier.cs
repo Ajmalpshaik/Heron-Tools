@@ -7,6 +7,7 @@
 
 // Orchestrates the Colorize apply step - for each selected parameter value (or, if no parameter is selected, for the selected categories as a whole), finds the matching elements in the target view(s) and overrides them directly. No ParameterFilterElement is ever created; this is the "colorize, don't filter" counterpart to Filter Pro's FilterCreator + FilterApplier.
 
+using System;
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using HeronTools.Models;
@@ -76,7 +77,10 @@ namespace HeronTools.Services.Colorize
 
             if (!hasParameterValues)
             {
-                colors.Add(selection.RandomColors ? ColorPalette.GetShuffledColorAt(0) : ColorPalette.GetColorAt(0));
+                // Whole categories: one colour for each picked category.
+                int count = Math.Max(1, selection.CategoryIds?.Count ?? 1);
+                for (int i = 0; i < count; i++)
+                    colors.Add(selection.RandomColors ? ColorPalette.GetShuffledColorAt(i) : ColorPalette.GetColorAt(i));
                 return colors;
             }
 
@@ -142,18 +146,25 @@ namespace HeronTools.Services.Colorize
             GraphicsOperationSummary summary,
             IList<string> skipped)
         {
-            ICollection<ElementId> matched = ColorizeElementMatcher.GetMatchingElementIds(doc, view, categoryIds, null);
-            if (matched.Count == 0)
+            // One colour per category (it used to paint every picked category the same colour).
+            bool anyMatched = false;
+            for (int i = 0; i < categoryIds.Count; i++)
             {
-                skipped?.Add($"View '{view.Name}': no element of the picked categories is shown there.");
-                return;
+                ICollection<ElementId> matched = ColorizeElementMatcher.GetMatchingElementIds(
+                    doc, view, new List<ElementId> { categoryIds[i] }, null);
+                if (matched.Count == 0)
+                    continue;
+
+                anyMatched = true;
+                Color color = colors != null && i < colors.Count ? colors[i] : ColorPalette.GetColorAt(i);
+                OverrideGraphicSettings settings = BuildOverrideSettings(selection, color, patternId);
+
+                ColorizeMemory.Remember(doc, view, matched);   // so Restore original can put them back
+                MergeSummary(summary, GraphicsElementService.ApplyOverrides(doc, view, matched, settings));
             }
 
-            Color color = colors != null && colors.Count > 0 ? colors[0] : ColorPalette.GetColorAt(0);
-            OverrideGraphicSettings settings = BuildOverrideSettings(selection, color, patternId);
-
-            ColorizeMemory.Remember(doc, view, matched);   // so Restore original can put them back
-            MergeSummary(summary, GraphicsElementService.ApplyOverrides(doc, view, matched, settings));
+            if (!anyMatched)
+                skipped?.Add($"View '{view.Name}': no element of the picked categories is shown there.");
         }
 
         private static void ApplyPerValue(

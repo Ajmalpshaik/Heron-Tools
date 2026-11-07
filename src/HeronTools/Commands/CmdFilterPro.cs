@@ -33,12 +33,13 @@ namespace HeronTools.Commands
                 return Result.Cancelled;
             }
 
+            FilterProWindow window = null;
             try
             {
                 if (!WarnForLargeDocument(doc))
                     return Result.Cancelled;
 
-                var window = new FilterProWindow(doc, activeView);
+                window = new FilterProWindow(doc, activeView);
                 new WindowInteropHelper(window)
                 {
                     Owner = commandData.Application.MainWindowHandle
@@ -54,12 +55,15 @@ namespace HeronTools.Commands
             }
             catch (Exception ex)
             {
-                // Returning Failed makes Revit undo anything this command kept, so say exactly that.
+                // Revit undoes everything a command kept when it returns Failed. Filters already made by earlier
+                // clicks in this window are kept (Succeeded); otherwise nothing was changed.
+                bool keep = window != null && window.HasChanges;
                 TaskDialog.Show(
                     "Filter Pro",
-                    "Filter Pro stopped unexpectedly, and Revit has undone what this run changed.\n\n" +
+                    (keep ? "Filter Pro stopped unexpectedly. The filters already made were kept.\n\n"
+                          : "Filter Pro stopped unexpectedly. Nothing was changed.\n\n") +
                     "Revit said: " + ex.Message);
-                return Result.Failed;
+                return keep ? Result.Succeeded : Result.Failed;
             }
         }
 

@@ -89,7 +89,8 @@ namespace HeronTools.App
                 "Colour elements by category or by parameter value in the active view (or views you pick) - no view filter is made.",
                 "The same picks as Filter Pro (categories, a parameter, values), but the colour is put straight on the matching " +
                 "elements instead of through a view filter. Shuffle colours gives every value its own colour; click it again for " +
-                "a new set. Each run is one Undo step."));
+                "a new set. The colour replaces the elements' own overrides until you click Restore original, which puts " +
+                "them back. Each run is one Undo step."));
 
             // View Crop: two related tools under one button.
             var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View\nCrop")

@@ -96,7 +96,9 @@ namespace HeronTools.Services.FilterPro
             // name instead of making a numbered " (2)" copy - Shuffle only ever recolours existing filters.
             // Whether that filter's categories and rules may be REWRITTEN is decided by the "Update Existing
             // Filters (overwrite)" toggle alone (OverrideExisting), for every button.
-            bool reuseExisting = selection.OverrideExisting || selection.ApplyToView;
+            // Every button uses an existing rule filter with the same name instead of making "X (2)", "X (3)"...
+            // on each click; only the "Update existing filters" toggle decides whether its rule is rewritten.
+            bool reuseExisting = true;
 
             foreach (FilterValueItem value in selection.Values)
             {
@@ -139,6 +141,15 @@ namespace HeronTools.Services.FilterPro
                 existingFilterNames.TryGetValue(filterName, out ParameterFilterElement existing);
                 ElementFilter elementFilter = new ElementParameterFilter(rules);
                 ParameterFilterElement filter = existing;
+
+                // A same-named filter that tests a different parameter (e.g. "Ducts_Has value" made earlier for
+                // another parameter) must not be reused silently; it is only rewritten when the toggle is on.
+                if (filter != null && !selection.OverrideExisting && !TestsSameParameter(filter, selection.Parameter))
+                {
+                    skipped?.Add($"A filter named '{filterName}' already exists but tests a different parameter, so it was not used. " +
+                                 "Change the prefix or suffix, or turn on Update existing filters to rewrite it.");
+                    continue;
+                }
 
                 bool needsRules = filter == null || selection.OverrideExisting;
                 if (needsRules &&
@@ -184,6 +195,8 @@ namespace HeronTools.Services.FilterPro
                     }
                     else
                     {
+                        // Create filters, toggle off: the filter already exists - left exactly as it is.
+                        skipped?.Add($"Filter '{filterName}' already exists, so it was left as it is (turn on Update existing filters to rewrite it).");
                         continue;
                     }
                 }
@@ -491,8 +504,9 @@ namespace HeronTools.Services.FilterPro
                     parts.Add(catLabel);
             }
 
-            if (selection.IncludeParameter && selection.Parameter != null)
-                parts.Add(selection.Parameter.Name);
+            bool presenceRule = selection.RuleType == RuleTypes.HasValue || selection.RuleType == RuleTypes.HasNoValue;
+            if ((selection.IncludeParameter || presenceRule) && selection.Parameter != null)
+                parts.Add(selection.Parameter.Name);   // "Has value" means nothing without the parameter
 
             parts.Add(DescribeValueWithRule(selection.RuleType, value.Display ?? "Value"));
 
@@ -506,6 +520,26 @@ namespace HeronTools.Services.FilterPro
                 core += " " + selection.Suffix.Trim();
 
             return SanitizeName(core);
+        }
+
+        /// <summary>
+        /// True if the filter's rules test the selected parameter (for "Family and Type": the family and type name
+        /// parameters). A filter Revit cannot describe is treated as not matching.
+        /// </summary>
+        private static bool TestsSameParameter(ParameterFilterElement filter, FilterParameterItem parameter)
+        {
+            if (parameter == null)
+                return false;
+
+            ICollection<ElementId> used = filter.GetElementFilterParameters();
+            if (used == null || used.Count == 0)
+                return false;
+
+            if (parameter.Id == SpecialParameterIds.FamilyAndType)
+                return used.Contains(new ElementId(BuiltInParameter.ALL_MODEL_FAMILY_NAME)) &&
+                       used.Contains(new ElementId(BuiltInParameter.ALL_MODEL_TYPE_NAME));
+
+            return used.Any(id => id == parameter.Id);
         }
 
         /// <summary>
@@ -599,6 +633,9 @@ namespace HeronTools.Services.FilterPro
                     : baseName;
 
                 string candidate = trimmedBase + suffixText;
+
+                if (reuseExisting && ruleFilters.ContainsKey(candidate))
+                    return candidate;   // the rule filter made by an earlier run - reuse it, no new number each run
 
                 if (!takenNames.Contains(candidate))
                     return candidate;

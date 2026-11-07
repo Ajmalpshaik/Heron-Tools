@@ -156,7 +156,7 @@ src/HeronTools/          the add-in (one project, every Revit year)
   UI/                    windows and the brand theme (HeronStyles.xaml)
   Resources/Icons/       16 and 32 px ribbon icons
 manifests/               one .addin manifest per Revit year
-build/                   build.ps1, uninstall.ps1
+build/                   build.ps1, uninstall.ps1, check-metadata.ps1
 docs/                    notes (what was moved and fixed, metadata standard, ideas for Heron AI), pictures
 Directory.Build.props    Revit year -> .NET runtime, output folders, compile symbols
 ```

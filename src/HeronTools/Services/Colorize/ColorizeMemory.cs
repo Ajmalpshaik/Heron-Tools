@@ -51,32 +51,50 @@ namespace HeronTools.Services.Colorize
         }
 
         /// <summary>
-        /// True when Colorize's colours are still on in this view. A memory whose colours were undone (Ctrl+Z,
-        /// or overrides changed back by hand) is dropped here, so Restore never writes stale values over newer edits.
+        /// True when something Colorize changed is still on in this view (an element's overrides differ from the
+        /// remembered original). Read-only: after a Restore the memory is KEPT, so an Undo of the Restore can
+        /// still be restored again.
         /// </summary>
         internal static bool HasMemory(Document doc, View view)
         {
-            string key = Key(doc, view);
-            if (!Saved.TryGetValue(key, out Dictionary<long, OverrideGraphicSettings> perView) || perView.Count == 0)
+            if (!Saved.TryGetValue(Key(doc, view), out Dictionary<long, OverrideGraphicSettings> perView) || perView.Count == 0)
                 return false;
 
-            foreach (KeyValuePair<long, OverrideGraphicSettings> entry in perView.Take(50))
+            int looked = 0;
+            foreach (KeyValuePair<long, OverrideGraphicSettings> entry in perView)
             {
                 ElementId id = ElementIdHelper.FromLong(entry.Key);
                 if (doc.GetElement(id) == null)
-                    continue;
-
-                OverrideGraphicSettings now = view.GetElementOverrides(id);
-                if (!SameColour(now.ProjectionLineColor, entry.Value.ProjectionLineColor) ||
-                    !SameColour(now.CutLineColor, entry.Value.CutLineColor) ||
-                    !SameColour(now.SurfaceForegroundPatternColor, entry.Value.SurfaceForegroundPatternColor) ||
-                    now.Halftone != entry.Value.Halftone)
-                    return true;   // something Colorize changed is still there
+                    continue;            // deleted elements are not counted
+                if (Differs(view.GetElementOverrides(id), entry.Value))
+                    return true;
+                if (++looked >= 500)
+                    break;               // a large sample, so the check stays quick in big views
             }
-
-            Saved.Remove(key);     // nothing differs from the originals any more: the memory is stale
             return false;
         }
+
+        /// <summary>
+        /// Call before a new Shuffle: if nothing Colorize changed is still on (undone, or restored), the old memory
+        /// is dropped so the next Remember stores the real current overrides.
+        /// </summary>
+        internal static void DropIfStale(Document doc, View view)
+        {
+            if (!HasMemory(doc, view))
+                Saved.Remove(Key(doc, view));
+        }
+
+        /// <summary>Every override Colorize can write: line and pattern colours, pattern ids, halftone.</summary>
+        private static bool Differs(OverrideGraphicSettings a, OverrideGraphicSettings b) =>
+            !SameColour(a.ProjectionLineColor, b.ProjectionLineColor) ||
+            !SameColour(a.CutLineColor, b.CutLineColor) ||
+            !SameColour(a.SurfaceForegroundPatternColor, b.SurfaceForegroundPatternColor) ||
+            !SameColour(a.CutForegroundPatternColor, b.CutForegroundPatternColor) ||
+            a.SurfaceForegroundPatternId != b.SurfaceForegroundPatternId ||
+            a.CutForegroundPatternId != b.CutForegroundPatternId ||
+            a.IsSurfaceForegroundPatternVisible != b.IsSurfaceForegroundPatternVisible ||
+            a.IsCutForegroundPatternVisible != b.IsCutForegroundPatternVisible ||
+            a.Halftone != b.Halftone;
 
         private static bool SameColour(Color a, Color b)
         {
@@ -86,13 +104,10 @@ namespace HeronTools.Services.Colorize
             return a.Red == b.Red && a.Green == b.Green && a.Blue == b.Blue;
         }
 
-        /// <summary>Call before a new Shuffle: drops this view's memory if its colours were undone meanwhile.</summary>
-        internal static void DropIfStale(Document doc, View view) => HasMemory(doc, view);
-
         /// <summary>
         /// Puts the remembered overrides back in this view (inside the caller's transaction) and returns how
-        /// many elements were restored. The memory for the view is cleared by <see cref="Forget"/> once the
-        /// caller's transaction has committed.
+        /// many elements were restored. The memory is kept (see <see cref="HasMemory"/>), so an Undo of the
+        /// restore can be restored again; a later Shuffle drops it once nothing coloured is left.
         /// </summary>
         internal static int Restore(Document doc, View view)
         {
@@ -119,7 +134,5 @@ namespace HeronTools.Services.Colorize
             return restored;
         }
 
-        /// <summary>Drops the memory of a view (after a committed restore).</summary>
-        internal static void Forget(Document doc, View view) => Saved.Remove(Key(doc, view));
     }
 }

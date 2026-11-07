@@ -284,6 +284,8 @@ namespace HeronTools.UI
                     ? $"None picked - {_currentValues.Count} found"
                     : valuePicked == 1
                         ? $"1 of {_currentValues.Count} picked - 1 colour"
+                        : valuePicked > 20
+                        ? $"{valuePicked} of {_currentValues.Count} picked - colours repeat after 20"
                         : $"{valuePicked} of {_currentValues.Count} picked - {valuePicked} colours";
 
             // What gets coloured, in one plain line.
@@ -489,8 +491,7 @@ namespace HeronTools.UI
                 return;
             }
 
-            foreach (View view in targetViews)
-                ColorizeMemory.Forget(_doc, view);
+            // The memory is kept: if the restore is undone, Restore original still works.
             if (restored > 0)
                 _madeChanges = true;
 

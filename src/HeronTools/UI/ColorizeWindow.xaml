@@ -294,8 +294,8 @@
                                              VirtualizingStackPanel.IsVirtualizing="True"
                                              VirtualizingStackPanel.VirtualizationMode="Recycling"
                                              ScrollViewer.CanContentScroll="True"
-                                             ToolTip="Only views that can take filters are listed. Ctrl+click to pick several."/>
-                                    <TextBlock Text="No views in this model can take filters."
+                                             ToolTip="Only views that take graphic overrides are listed. Ctrl+click to pick several."/>
+                                    <TextBlock Text="No views in this model take graphic overrides."
                                                Tag="{Binding HasItems, ElementName=views_listbox}" Style="{StaticResource EmptyHint}"/>
                                 </Grid>
                             </Grid>

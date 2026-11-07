@@ -39,10 +39,9 @@ namespace HeronTools.Commands
                 return Result.Cancelled;
             }
 
+            ColorizeWindow window = null;
             try
             {
-                ColorizeWindow window;
-
                 try
                 {
                     _isWindowOpen = true;
@@ -66,8 +65,14 @@ namespace HeronTools.Commands
             }
             catch (Exception ex)
             {
-                TaskDialog.Show(DialogTitle, $"An unexpected error occurred:\n\n{ex.Message}");
-                return Result.Failed;
+                // Revit undoes everything a command kept when it returns Failed - so if Colorize already kept
+                // changes, the result is Succeeded and those changes stay.
+                bool keep = window != null && window.HasChanges;
+                TaskDialog.Show(DialogTitle,
+                    (keep ? "Colorize stopped unexpectedly. The colours already applied were kept.\n\n"
+                          : "Colorize stopped unexpectedly. Nothing was changed.\n\n") +
+                    "Revit said: " + ex.Message);
+                return keep ? Result.Succeeded : Result.Failed;
             }
         }
 
@@ -111,11 +116,7 @@ namespace HeronTools.Commands
 
             if (!CmdFilterProAvailability.CanViewHaveFilters(activeView, out string viewReason))
             {
-                validationMessage =
-                    $"The current view ({activeView.ViewType}) does not support graphics overrides.\n\n" +
-                    $"{viewReason}\n\n" +
-                    "Please switch to a view that supports visibility/graphics overrides " +
-                    "(e.g. plan, section, elevation, 3D).";
+                validationMessage = "Colorize cannot work in this view. " + viewReason;
                 return false;
             }
 

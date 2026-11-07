@@ -79,7 +79,7 @@ namespace HeronTools.Commands
                 case ViewType.ThreeD:
                     break;
                 default:
-                    reason = "Filter Pro works in plan, ceiling, structural, area, section, detail, elevation and 3D views.";
+                    reason = "This tool works in plan, ceiling, structural, area, section, detail, elevation and 3D views.";
                     return false;
             }
 
@@ -96,7 +96,7 @@ namespace HeronTools.Commands
 
             if (!overridesAllowed)
             {
-                reason = "This view does not allow graphic overrides, so it cannot take filters.";
+                reason = "This view does not allow graphic overrides.";
                 return false;
             }
 

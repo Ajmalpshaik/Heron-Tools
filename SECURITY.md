@@ -16,7 +16,7 @@ is fixed before everything else.
 
 - Anything that can change or delete model content the modeller did not ask to change.
 - Anything that writes outside Heron Tools' own folders (`%AppData%\Autodesk\Revit\Addins\<year>\HeronTools`,
-  `%AppData%\HeronTools`).
+  and `%AppData%\HeronTools` for settings and crash logs).
 - Anything that loads code or files from outside the installed add-in.
 - Build or install scripts that could delete files other than Heron Tools' own.
 

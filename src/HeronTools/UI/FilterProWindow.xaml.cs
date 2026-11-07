@@ -56,7 +56,7 @@ namespace HeronTools.UI
             WindowMotionHelper.AttachStandardEntrance(this);
 
             // Shared Heron Tools window exit (fade + short sink). The window's result,
-            // validation and close behaviour are unchanged - see WindowMotionHelper's header.
+            // validation and close behaviour are unchanged.
             WindowMotionHelper.AttachStandardExit(this);
 
             // Shared tab-change transition (fade + short rise on the panel). Cosmetic only.
@@ -71,7 +71,9 @@ namespace HeronTools.UI
             LoadCategories();
             LoadViewsForApply();
             LoadPatterns();
-            RestoreLastSelection();
+            // Restored once the window is up (inside ShowDialog's message loop), so its awaits come back on the
+            // window's own thread.
+            Loaded += (s, e) => RestoreLastSelection();
 
             if (_stateTracker.LastState == null)
                 UpdateStatus("Select categories to begin.");
@@ -159,7 +161,7 @@ namespace HeronTools.UI
                          radio_has_value, radio_not_has_value
                      })
             {
-                rb.Checked += (s, e) => UpdateNamePreview();
+                rb.Checked += (s, e) => { UpdateNamePreview(); UpdateCounts(); };
             }
 
             // Value filtering and sorting
@@ -443,8 +445,11 @@ namespace HeronTools.UI
 
             int valueTotal = _currentValues.Count;
             int valuePicked = values_listbox.SelectedItems.Count;
+            string rule = GetSelectedRuleType();
             values_count_text.Text = param == null
                 ? "Pick a parameter first"
+                : rule == RuleTypes.HasValue || rule == RuleTypes.HasNoValue
+                    ? "Not needed - this rule makes 1 filter"
                 : valuePicked == 0
                     ? $"None picked - {valueTotal} found"
                     : valuePicked == 1
@@ -904,7 +909,7 @@ namespace HeronTools.UI
             RememberState(selection);
             ShowReport(skipped);
             UpdateStatus(affected == 0
-                ? "Nothing needed changing. " + BuildResultStatus(selection.Values.Count, affected, skipped)
+                ? (skipped.Count > 0 ? "Nothing was changed. " : "Nothing needed changing. ") + BuildResultStatus(selection.Values.Count, affected, skipped)
                 : BuildResultStatus(selection.Values.Count, affected, skipped));
         }
 
@@ -1034,7 +1039,7 @@ namespace HeronTools.UI
                 _currentValues.Clear();
                 _currentValues.AddRange(collectedValues);
 
-                values_listbox.ItemsSource = collectedValues;
+                ApplyValueFilters();   // keeps the search text and sort order already set
                 values_listbox.DisplayMemberPath = "Display";
                 UpdateCounts();
 
@@ -1120,8 +1125,14 @@ namespace HeronTools.UI
             selection.ApplyToView = true;
             selection.ApplyGraphics = true;
             selection.RandomColors = true;
-            // OverrideExisting stays as the toggle says (see ApplyViewButton_Click) - recolouring an
-            // existing filter never needs its categories or rules rewritten.
+            selection.OverrideExisting = false;   // Shuffle only recolours - it never rewrites a filter's rule
+
+            if (!selection.ColorProjectionLines && !selection.ColorProjectionPatterns && !selection.ColorCutLines &&
+                !selection.ColorCutPatterns && !selection.ColorHalftone)
+            {
+                ShowProblem("Tick at least one item in the Colours tab (lines, patterns or halftone).");
+                return;
+            }
 
             RunAsOneUndoStep("Filter Pro: Shuffle Colors", selection, targetViews);
         }

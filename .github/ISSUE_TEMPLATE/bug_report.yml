@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Do not report security problems here** - see [SECURITY.md](../../SECURITY.md).
+        **Do not report security problems here** - see [SECURITY.md](https://github.com/Ajmalpshaik/Heron-Tools/blob/main/SECURITY.md).
 
         **Never attach a real client model or project data.** Describe the model, or make a small test model.
   - type: dropdown

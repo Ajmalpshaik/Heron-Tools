@@ -9,6 +9,7 @@
 
 using System;
 using System.IO;
+using HeronTools.Utils;
 using Autodesk.Revit.UI;
 using HeronTools.Models.ViewCrop;
 
@@ -74,7 +75,9 @@ namespace HeronTools.Services.ViewCrop
             try
             {
                 string fileName = $"HeronTools_{logPrefix}_Error_{DateTime.Now:yyyyMMdd_HHmmss}.log";
-                string path = Path.Combine(Path.GetTempPath(), fileName);
+                // Heron Tools' own folder (%AppData%\HeronTools\Logs), not %TEMP%.
+                string path = AppDataConfigStore.GetPath(Path.Combine("Logs", fileName));
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var body = new System.Text.StringBuilder();
                 body.AppendLine($"Command: {commandTitle}");
                 if (!string.IsNullOrWhiteSpace(sourceLabel))
