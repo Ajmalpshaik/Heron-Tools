@@ -31,7 +31,7 @@ colours or White/Shadow at an opacity, which the brand allows.
   stated fallback) - the same as Heron AI today.
 - The colours Filter Pro writes into the **model** (the 20-colour filter palette) are model colours,
   not UI, and stay as they were.
-- Logo: the Heron mark from the designer's kit (`D:_Development\Heron grafics update\Heron`) - the
+- Logo: the Heron mark from the designer's kit (`D:\06_Development\Heron grafics update\Heron`) - the
   same artwork Heron AI shows - is in `docs/brand/`, in the README header, drawn in Mist in the window
   header, and the orange app icon is on the window's title bar. The full wordmark reads "Heron AI", so
   it is not used for this product.
