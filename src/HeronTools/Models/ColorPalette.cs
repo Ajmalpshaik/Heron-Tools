@@ -1,47 +1,11 @@
-#region Metadata
-/*
- * Tool Name     : Filter Pro
- * File Name     : ColorPalette.cs
- * Purpose       : Provides a 20-colour neon palette for filter graphic overrides — deterministic
- *                 colour by ElementId and thread-safe random colour selection.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.2.1
- *
- * Created Date  : 2025-12-10
- * Last Updated  : 2026-10-12
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API, System, System.Threading
- *
- * Input         : ElementId (for deterministic colour) or none (for random colour)
- * Output        : Autodesk.Revit.DB.Color instance
- *
- * Notes         :
- * - Targets Revit 2020 through latest.
- * - 2020 = .NET Fx 4.7.2; 2021-2024 = .NET Fx (verify 4.8 if required); 2025-2026 = .NET 8; 2027+ = verify Autodesk SDK.
- * - ThreadLocal<Random> is used to avoid seed-collision on concurrent threads.
- * - GetColorFor / GetColorAt map int.MinValue to 0 explicitly: Math.Abs(int.MinValue) throws even inside unchecked().
- * - Production-ready implementation.
- *
- * Changelog     :
- * v1.2.1 (2026-10-12) - The int.MinValue guard never worked (Math.Abs throws for it even inside unchecked);
- *                       that one value now maps to 0 explicitly. All other colours unchanged.
- * v1.0.0 (2025-12-10) - Initial release.
- * v1.1.0 (2025-12-11) - Replaced shared Random with ThreadLocal<Random> for thread safety;
- *                        added unchecked Math.Abs guard for int.MinValue ElementIds.
- * v1.1.1 (2026-06-30) - Added mandatory metadata block; confirmed 2020-latest version coverage.
- * v1.2.0 (2026-07-13) - Added GetColorAt(index) so the Colorize tool can assign a distinct, stable
- *                       palette colour per selected value by list position, without needing a real
- *                       Revit ElementId to key off.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Provides a 20-colour neon palette for filter graphic overrides — deterministic colour by ElementId and thread-safe random colour selection.
 
 using Autodesk.Revit.DB;
 using System;
@@ -98,6 +62,45 @@ namespace HeronTools.Models
             long idValue = id.LongValue();
             int index = (int)Math.Abs(idValue % Palette.Length);
             return Palette[index];
+        }
+
+        // Shuffle Colors: one shuffled deck per run, dealt in order, so filters in one run never repeat a
+        // colour until all 20 are used (picking at random repeated a colour about 4 times in 10 with only 5
+        // filters). A filter keeps the colour it was dealt for every view in the same run.
+        private static int[] _deck;
+        private static int _dealt;
+        private static readonly System.Collections.Generic.Dictionary<long, Color> _dealtByFilter =
+            new System.Collections.Generic.Dictionary<long, Color>();
+
+        /// <summary>Starts a new Shuffle run: a freshly shuffled deck, no filter dealt yet.</summary>
+        public static void BeginShuffle()
+        {
+            _deck = new int[Palette.Length];
+            for (int i = 0; i < _deck.Length; i++) _deck[i] = i;
+            Random rand = _rand.Value;
+            for (int i = _deck.Length - 1; i > 0; i--)
+            {
+                int j = rand.Next(i + 1);
+                int t = _deck[i]; _deck[i] = _deck[j]; _deck[j] = t;
+            }
+            _dealt = 0;
+            _dealtByFilter.Clear();
+        }
+
+        /// <summary>The colour dealt to this filter in the current Shuffle run (dealing the next one if new).</summary>
+        public static Color GetShuffledColorFor(ElementId filterId)
+        {
+            if (_deck == null)
+                BeginShuffle();
+
+            long key = filterId.LongValue();
+            if (_dealtByFilter.TryGetValue(key, out Color known))
+                return known;
+
+            Color next = Palette[_deck[_dealt % _deck.Length]];
+            _dealt++;
+            _dealtByFilter[key] = next;
+            return next;
         }
 
         public static Color GetRandomColor()

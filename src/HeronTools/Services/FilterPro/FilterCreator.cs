@@ -1,54 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Filter Pro
- * File Name     : FilterCreator.cs
- * Purpose       : Creates and updates ParameterFilterElements — builds filter rules by storage type,
- *                 composes and sanitises filter names, and ensures name uniqueness in the project.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.1.3
- *
- * Created Date  : 2025-12-10
- * Last Updated  : 2026-10-12
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API, System.Linq
- *
- * Input         : FilterSelection (categories, parameter, values, rule type, naming options)
- * Output        : ParameterFilterElements created or updated in the Revit document
- *
- * Notes         :
- * - Targets Revit 2020 through latest.
- * - 2020 = .NET Fx 4.7.2; 2021-2024 = .NET Fx (verify 4.8 if required); 2025-2026 = .NET 8; 2027+ = verify Autodesk SDK.
- * - String rules route through FilterRuleCompat: the 3-arg (caseSensitive) factory overloads exist
- *   only in Revit 2020-2025 (REMOVED 2026); the 2-arg overloads exist from 2023. Verified against
- *   the per-version RevitAPI reference assemblies (2026-07-23).
- * - Numeric (int / double+tolerance), ElementId, HasValue and HasNoValue rule factory overloads are
- *   unchanged across Revit 2020-2027 and are safe to call directly (same verification).
- * - ElementId numeric access uses the IntValue() extension (ElementIdExtensions), which is
- *   version-safe: IntegerValue was removed in Revit 2026; the extension switches to .Value at 2024.
- * - Production-ready implementation.
- *
- * Changelog     :
- * v1.0.0 (2025-12-10) - Initial release.
- * v1.1.0 (2026-05-25) - Optimised name-uniqueness check from O(n²) DB queries to O(1) dictionary
- *                        lookups; added HashSet dedup for processed filter IDs; removed dead fallback method.
- * v1.1.1 (2026-06-30) - Added mandatory metadata block; confirmed 2020-latest version coverage.
- * v1.1.2 (2026-07-23) - Compatibility audit: corrected stale header notes. Every Revit API member
- *                        used here verified present/correct on 2020-2027 against the per-version
- *                        RevitAPI reference assemblies (Nice3point NuGet). No code changes needed.
- * v1.1.3 (2026-10-12) - Fix: Apply To View / Shuffle Colors rewrote the categories and rules of every
- *                        same-named existing filter (project-wide) even with "Update Existing Filters"
- *                        off. They still use the existing same-named filter rather than making a copy,
- *                        but now only rewrite it when that toggle is on; otherwise it is applied as is.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Creates and updates ParameterFilterElements — builds filter rules by storage type, composes and sanitises filter names, and ensures name uniqueness in the project.
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -285,7 +243,7 @@ namespace HeronTools.Services.FilterPro
                 case StorageType.String:
                     return BuildStringRules(parameter.Id, value, ruleType, caseSensitive);
                 case StorageType.ElementId:
-                    return BuildElementIdRules(parameter.Id, value, ruleType);
+                    return BuildElementIdRules(parameter.Id, value, ruleType, skipped);
                 case StorageType.Integer:
                     return BuildIntegerRules(parameter, value, ruleType, skipped);
                 case StorageType.Double:
@@ -346,8 +304,18 @@ namespace HeronTools.Services.FilterPro
         private static IList<FilterRule> BuildElementIdRules(
             ElementId paramId,
             FilterValueItem value,
-            string ruleType)
+            string ruleType,
+            IList<string> skipped)
         {
+            // An element parameter (Level, System Type...) holds an element, not text: a text rule such as
+            // Contains used to be built silently as Equals. It is refused instead.
+            if (ruleType != RuleTypes.EqualsRule && ruleType != RuleTypes.NotEquals &&
+                ruleType != RuleTypes.HasValue && ruleType != RuleTypes.HasNoValue)
+            {
+                skipped?.Add($"The rule '{RuleTypes.Label(ruleType)}' only works on text; this parameter holds an element. Pick Equals or Does Not Equal.");
+                return null;
+            }
+
             var singleRules = new List<FilterRule>();
             ElementId id = value.ElementId ?? value.RawValue as ElementId ?? ElementId.InvalidElementId;
 
@@ -526,7 +494,7 @@ namespace HeronTools.Services.FilterPro
             if (selection.IncludeParameter && selection.Parameter != null)
                 parts.Add(selection.Parameter.Name);
 
-            parts.Add(value.Display ?? "Value");
+            parts.Add(DescribeValueWithRule(selection.RuleType, value.Display ?? "Value"));
 
             string separator = string.IsNullOrEmpty(selection.Separator)
                 ? "_"
@@ -540,25 +508,44 @@ namespace HeronTools.Services.FilterPro
             return SanitizeName(core);
         }
 
+        /// <summary>
+        /// The value part of a filter name, carrying the rule when it is not Equals: "Not 300", "Contains SA",
+        /// "Has value". Without this, "Has value" and "Has no value" (both "Any") or "Equals A" and "Does not
+        /// equal A" got the same name, and a later run reused the OPPOSITE filter.
+        /// </summary>
+        internal static string DescribeValueWithRule(string ruleType, string valueText)
+        {
+            switch (ruleType)
+            {
+                case RuleTypes.NotEquals: return "Not " + valueText;
+                case RuleTypes.Contains: return "Contains " + valueText;
+                case RuleTypes.NotContains: return "Not containing " + valueText;
+                case RuleTypes.BeginsWith: return "Begins " + valueText;
+                case RuleTypes.NotBeginsWith: return "Not beginning " + valueText;
+                case RuleTypes.EndsWith: return "Ends " + valueText;
+                case RuleTypes.NotEndsWith: return "Not ending " + valueText;
+                case RuleTypes.HasValue: return "Has value";
+                case RuleTypes.HasNoValue: return "No value";
+                default: return valueText;
+            }
+        }
+
         private static string ResolveCategoryLabel(IEnumerable<ElementId> categoryIds, Document doc)
         {
-            var catList = categoryIds?.ToList() ?? new List<ElementId>();
-            if (!catList.Any())
+            // Alphabetical, so "Ducts, Pipes" and "Pipes, Ducts" give the same name and the same filter is
+            // reused; beyond three, "Ducts +4" says how many more (it used to be "Ducts +" for every set).
+            var names = (categoryIds ?? Enumerable.Empty<ElementId>())
+                .Select(id => Category.GetCategory(doc, id)?.Name)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (names.Count == 0)
                 return string.Empty;
 
-            var names = new List<string>();
-            foreach (ElementId catId in catList.Take(3))
-            {
-                Category cat = Category.GetCategory(doc, catId);
-                if (cat != null)
-                    names.Add(cat.Name);
-            }
-
-            if (!names.Any())
-                return string.Empty;
-
-            return catList.Count > 3
-                ? names[0] + " +"
+            return names.Count > 3
+                ? $"{names[0]} +{names.Count - 1}"
                 : string.Join(", ", names);
         }
 

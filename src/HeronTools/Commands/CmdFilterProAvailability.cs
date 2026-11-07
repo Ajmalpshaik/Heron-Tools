@@ -1,37 +1,11 @@
-#region Metadata
-/*
- * Tool Name     : Filter Pro
- * File Name     : CmdFilterProAvailability.cs
- * Purpose       : Controls ribbon button availability — enabled only in filter-capable views.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.0
- *
- * Created Date  : 2025-12-10
- * Last Updated  : 2026-06-29
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API
- *
- * Input         : Active View
- * Output        : Boolean availability state for the ribbon button
- *
- * Notes         :
- * - Targets Revit 2020 through latest.
- * - 2020 = .NET Fx 4.7.2; 2021-2024 = .NET Fx (verify 4.8 if required); 2025-2026 = .NET 8; 2027+ = verify Autodesk SDK.
- * - Verify the newest Revit version's required .NET target before building.
- * - Production-ready implementation.
- *
- * Changelog     :
- * v1.0.0 (2025-12-10) - Initial release.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Controls ribbon button availability — enabled only in filter-capable views.
 
 using System;
 using Autodesk.Revit.DB;
@@ -81,14 +55,32 @@ namespace HeronTools.Commands
 
             if (view == null)
             {
-                reason = "Active view is null.";
+                reason = "There is no active view.";
                 return false;
             }
 
             if (view.IsTemplate)
             {
-                reason = "View templates do not host filters.";
+                reason = "A view template is open. Open a model view instead.";
                 return false;
+            }
+
+            // The cheap view-type test first: this check runs every time Revit refreshes the ribbon, and the
+            // overrides call below can throw on sheets and schedules.
+            switch (view.ViewType)
+            {
+                case ViewType.FloorPlan:
+                case ViewType.CeilingPlan:
+                case ViewType.EngineeringPlan:   // structural plan
+                case ViewType.AreaPlan:
+                case ViewType.Section:
+                case ViewType.Detail:            // section callout / detail view
+                case ViewType.Elevation:
+                case ViewType.ThreeD:
+                    break;
+                default:
+                    reason = "Filter Pro works in plan, ceiling, structural, area, section, detail, elevation and 3D views.";
+                    return false;
             }
 
             bool overridesAllowed;
@@ -96,36 +88,18 @@ namespace HeronTools.Commands
             {
                 overridesAllowed = view.AreGraphicsOverridesAllowed();
             }
-            catch (Exception ex)
+            catch (Exception ex) // read-only check; any failure just means "no"
             {
-                // This call can throw on some unsupported views (schedules, sheets).
-                reason = $"Could not check overrides: {ex.Message}";
-                overridesAllowed = false;
-            }
-
-            // Explicitly allow Plan, Section, Elevation, and 3D views as requested.
-            switch (view.ViewType)
-            {
-                case ViewType.FloorPlan:
-                case ViewType.CeilingPlan:
-                case ViewType.AreaPlan:
-                case ViewType.Section:
-                case ViewType.Elevation:
-                case ViewType.ThreeD:
-                    break;
-                default:
-                    reason = $"Filter Pro is only available in Plan, Section, Elevation, and 3D views.";
-                    return false;
+                reason = "Revit could not say whether this view takes graphic overrides: " + ex.Message;
+                return false;
             }
 
             if (!overridesAllowed)
             {
-                if (string.IsNullOrEmpty(reason))
-                    reason = "Graphics overrides are disabled for this view.";
+                reason = "This view does not allow graphic overrides, so it cannot take filters.";
                 return false;
             }
 
-            reason = string.Empty;
             return true;
         }
     }

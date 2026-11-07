@@ -1,39 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Heron Tools shared helper
- * File Name     : ElementIdExtensions.cs
- * Purpose       : Version-safe ElementId numeric-value extension methods across Revit 2020 -> 2027.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.0
- *
- * Created Date  : 2026-07-07
- * Last Updated  : 2026-07-07
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / .NET Fx 4.8 (2021-2024) | .NET 8 (2025-2026) | .NET 10 (2027 - verify SDK)
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API
- *
- * Input         : ElementId
- * Output        : Numeric value of the ElementId (int or long), version-safe.
- *
- * Notes         :
- * - Revit 2024 changed ElementId storage from 32-bit to 64-bit: ElementId.IntegerValue was deprecated
- *   (Revit 2024-2025) and REMOVED in Revit 2026 in favour of ElementId.Value (long).
- * - IntValue() reproduces the exact int result call sites relied on before (safe for real project ids and
- *   BuiltInCategory/BuiltInParameter values, all well within int range) by delegating to ElementIdHelper.
- * - LongValue() returns the full 64-bit value for any code that must store or compare ids beyond 32 bits.
- * - The single version branch lives in ElementIdHelper / here so call sites read cleanly as id.IntValue().
- *
- * Changelog     :
- * v1.0.0 (2026-07-07) - Initial release: id.IntValue()/id.LongValue() replacing direct ElementId.IntegerValue.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Version-safe ElementId numeric-value extension methods across Revit 2020 -> 2027.
+
 using Autodesk.Revit.DB;
 
 namespace HeronTools.Utils

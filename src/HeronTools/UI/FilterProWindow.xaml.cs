@@ -1,48 +1,12 @@
-﻿#region Metadata
-/*
- * Tool Name     : Filter Pro
- * File Name     : FilterProWindow.xaml.cs
- * Purpose       : WPF code-behind for the Filter Pro window — handles category/parameter/value
- *                 selection, naming preview, graphics options, multi-view targeting, and delegates
- *                 all Revit API work to FilterCreator, FilterApplier, and FilterReorderer.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.2
- *
- * Created Date  : 2025-12-10
- * Last Updated  : 2026-10-12
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API, System.Windows, System.Threading.Tasks
- *
- * Input         : Active View (filter-capable); active Project document
- * Output        : Filter Pro window shown modally; HasChanges = true if filters were created or applied
- *
- * Notes         :
- * - Targets Revit 2020 through latest.
- * - 2020 = .NET Fx 4.7.2; 2021-2024 = .NET Fx (verify 4.8 if required); 2025-2026 = .NET 8; 2027+ = verify Autodesk SDK.
- * - Modal WPF window — all Revit API calls run on the Revit UI thread (no ExternalEvent needed).
- * - Parameter and value loading runs on the Revit UI thread (Revit API calls must stay there);
- *   `await Task.Yield()` only lets the "Loading" overlay paint before the work starts.
- * - Production-ready implementation.
- *
- * Changelog     :
- * v1.0.0 (2025-12-10) - Initial release.
- * v1.0.1 (2026-06-30) - Added mandatory metadata block; confirmed 2020-latest version coverage.
- * v1.0.2 (2026-10-12) - Fixes: (1) Apply To View / Shuffle Colors no longer force "Update Existing
- *                        Filters" on - the toggle is honoured and its real value is what gets
- *                        remembered, so it no longer reopens switched on. (2) Typing in a search box
- *                        no longer silently deselects picked categories/parameter/values that the
- *                        search hides - picked items stay listed, so the run uses everything picked.
- *                        (3) Corrected the loading and Close-button notes.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// WPF code-behind for the Filter Pro window — handles category/parameter/value selection, naming preview, graphics options, multi-view targeting, and delegates all Revit API work to FilterCreator, FilterApplier, and FilterReorderer.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -159,8 +123,13 @@ namespace HeronTools.UI
                 }
             };
 
-            values_listbox.SelectionChanged += (s, e) => UpdateNamePreview();
+            values_listbox.SelectionChanged += (s, e) => { UpdateNamePreview(); UpdateCounts(); };
             views_listbox.SelectionChanged += (s, e) => UpdateApplyScopeLabel();
+            categories_listbox.SelectionChanged += (s, e) => UpdateCounts();
+            parameters_listbox.SelectionChanged += (s, e) => { UpdateCounts(); UpdateRuleAvailability(); };
+
+            values_select_all_button.Click += (s, e) => values_listbox.SelectAll();
+            values_clear_button.Click += (s, e) => values_listbox.UnselectAll();
 
             // Naming convention changes
             prefix_textbox.TextChanged += (s, e) => UpdateNamePreview();
@@ -410,6 +379,7 @@ namespace HeronTools.UI
                 IncludeCategory = include_cat_checkbox.IsChecked == true,
                 IncludeParameter = include_param_checkbox.IsChecked == true,
                 Separator = separator,
+                RuleType = GetSelectedRuleType(),
                 CaseSensitive = false
             };
 
@@ -430,23 +400,100 @@ namespace HeronTools.UI
 
         private void UpdateApplyScopeLabel()
         {
-            if (apply_scope_text == null || apply_tab == null) return;
+            if (apply_scope_text == null) return;
 
             if (apply_active_radio.IsChecked == true)
             {
-                string viewName = _activeView != null ? _activeView.Name : "None";
-                apply_scope_text.Text = $"Apply: Active View ({viewName})";
-                apply_tab.Header = "Apply (Active View)";
+                string viewName = _activeView != null ? _activeView.Name : "none";
+                apply_scope_text.Text = $"Apply to: active view ({viewName})";
                 views_listbox.IsEnabled = false;
             }
             else
             {
                 int count = views_listbox.SelectedItems.Count;
-                apply_scope_text.Text = count > 0
-                    ? $"Apply: {count} selected view(s)"
-                    : "Apply: Selected Views (none)";
-                apply_tab.Header = count > 0 ? $"Apply ({count} Views)" : "Apply (Selected Views)";
+                apply_scope_text.Text = count == 0
+                    ? "Apply to: picked views - none picked yet"
+                    : count == 1 ? "Apply to: 1 picked view" : $"Apply to: {count} picked views";
                 views_listbox.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// The "N of M picked" line under each step title, so the modeller always sees what the run will use.
+        /// </summary>
+        private void UpdateCounts()
+        {
+            if (categories_count_text == null) return;
+
+            int catTotal = _allCategories.Count;
+            int catPicked = categories_listbox.SelectedItems.Count;
+            categories_count_text.Text = catPicked == 0
+                ? $"None picked - {catTotal} available"
+                : $"{catPicked} of {catTotal} picked";
+
+            int paramTotal = _allParameters.Count;
+            var param = parameters_listbox.SelectedItem as FilterParameterItem;
+            parameters_count_text.Text = catPicked == 0
+                ? "Pick categories first"
+                : param == null
+                    ? $"None picked - {paramTotal} shared"
+                    : $"{param.Name} - {DescribeStorage(param)}";
+
+            int valueTotal = _currentValues.Count;
+            int valuePicked = values_listbox.SelectedItems.Count;
+            values_count_text.Text = param == null
+                ? "Pick a parameter first"
+                : valuePicked == 0
+                    ? $"None picked - {valueTotal} found"
+                    : valuePicked == 1
+                        ? $"1 of {valueTotal} picked - 1 filter"
+                        : $"{valuePicked} of {valueTotal} picked - {valuePicked} filters";
+        }
+
+        private static string DescribeStorage(FilterParameterItem param)
+        {
+            if (param.Id == SpecialParameterIds.FamilyAndType)
+                return "family + type";
+
+            switch (param.StorageType)
+            {
+                case StorageType.String: return "text";
+                case StorageType.Integer: return "whole number or Yes/No";
+                case StorageType.Double: return "number";
+                case StorageType.ElementId: return "element (type, level, system...)";
+                default: return "value";
+            }
+        }
+
+        /// <summary>
+        /// Switches off the rules the picked parameter cannot do, so the modeller cannot choose a rule that
+        /// would only be refused later: text rules (Contains, Begins With...) need a text parameter, and
+        /// "Family and Type" can only be matched with Equals. If the ticked rule is switched off, Equals is
+        /// ticked instead and the status line says so.
+        /// </summary>
+        private void UpdateRuleAvailability()
+        {
+            var param = parameters_listbox.SelectedItem as FilterParameterItem;
+            bool isFamilyAndType = param != null && param.Id == SpecialParameterIds.FamilyAndType;
+            bool isText = param == null || (param.StorageType == StorageType.String && !isFamilyAndType);
+
+            foreach (var rb in new[] { radio_contains, radio_not_contains, radio_starts, radio_not_starts, radio_ends, radio_not_ends })
+                rb.IsEnabled = isText;
+
+            radio_not_equals.IsEnabled = !isFamilyAndType;
+            radio_has_value.IsEnabled = !isFamilyAndType;
+            radio_not_has_value.IsEnabled = !isFamilyAndType;
+
+            var ticked = new[]
+            {
+                radio_equals, radio_not_equals, radio_contains, radio_not_contains, radio_starts,
+                radio_not_starts, radio_ends, radio_not_ends, radio_has_value, radio_not_has_value
+            }.FirstOrDefault(r => r.IsChecked == true);
+
+            if (ticked != null && !ticked.IsEnabled)
+            {
+                radio_equals.IsChecked = true;
+                UpdateStatus($"'{ticked.Content}' does not work with '{param?.Name}', so the rule was set to Equals.");
             }
         }
 
@@ -498,7 +545,7 @@ namespace HeronTools.UI
             {
                 if (_activeView == null)
                 {
-                    TaskDialog.Show("Filter Pro", "There is no active view to apply filters.");
+                    ShowProblem("There is no active view. Open a plan, section, elevation or 3D view and try again.");
                     return results;
                 }
 
@@ -510,7 +557,7 @@ namespace HeronTools.UI
             var selectedItems = views_listbox.SelectedItems.Cast<ApplyViewItem>().ToList();
             if (!selectedItems.Any())
             {
-                TaskDialog.Show("Filter Pro", "Please select at least one view when using 'Selected Views'.");
+                ShowProblem("Pick at least one view in Apply > Picked views, or switch to Active view.");
                 return results;
             }
 
@@ -523,7 +570,7 @@ namespace HeronTools.UI
             }
 
             if (!results.Any())
-                TaskDialog.Show("Filter Pro", "Selected views could not be resolved.");
+                ShowProblem("The picked views were not found any more. Click Refresh in the Apply tab and pick again.");
 
             return results;
         }
@@ -554,6 +601,8 @@ namespace HeronTools.UI
                 _restoringState = false;
             }
 
+            UpdateCounts();
+            UpdateRuleAvailability();
             UpdateStatus(restoredMessage);
         }
 
@@ -610,7 +659,8 @@ namespace HeronTools.UI
             separator_textbox.Text = string.IsNullOrEmpty(lastState.Separator) ? "_" : lastState.Separator;
             include_cat_checkbox.IsChecked = lastState.IncludeCategory;
             include_param_checkbox.IsChecked = lastState.IncludeParameter;
-            override_existing_checkbox.IsChecked = lastState.OverrideExisting;
+            // Never restored ON: it rewrites same-named filters project-wide, so each run asks for it afresh.
+            override_existing_checkbox.IsChecked = false;
         }
 
         private void RestoreGraphicOverrides(FilterProState lastState)
@@ -689,12 +739,8 @@ namespace HeronTools.UI
         private string BuildResultStatus(int totalChecked, int applied, IList<string> skipped)
         {
             int skippedCount = skipped?.Count ?? 0;
-            string status = $"Checked: {totalChecked} | Applied: {applied} | Skipped: {skippedCount}";
-
-            if (skippedCount > 0)
-                status += $"  —  {string.Join("; ", skipped)}";
-
-            return status;
+            string summary = $"Checked {totalChecked}  |  Made or applied {applied}  |  Skipped {skippedCount}";
+            return skippedCount > 0 ? summary + " (see the list above)" : summary;
         }
 
         private FilterSelection BuildFilterSelection(
@@ -711,14 +757,14 @@ namespace HeronTools.UI
                 .ToList();
             if (!catIds.Any())
             {
-                TaskDialog.Show("Filter Pro", "Please select at least one category.");
+                ShowProblem("Pick at least one category (step 1).");
                 return null;
             }
 
             var param = parameters_listbox.SelectedItem as FilterParameterItem;
             if (param == null)
             {
-                TaskDialog.Show("Filter Pro", "Please select a parameter.");
+                ShowProblem("Pick a parameter (step 2).");
                 return null;
             }
 
@@ -731,7 +777,7 @@ namespace HeronTools.UI
                 ruleType != RuleTypes.HasValue &&
                 ruleType != RuleTypes.HasNoValue)
             {
-                TaskDialog.Show("Filter Pro", "Please select at least one value for the chosen rule.");
+                ShowProblem("Pick at least one value (step 3), or use the rule Has a value / Has no value.");
                 return null;
             }
 
@@ -746,7 +792,8 @@ namespace HeronTools.UI
                 ? "_"
                 : separator_textbox.Text;
 
-            var valuesForCreation = selectedValues.Count == 0
+            bool presenceRule = ruleType == RuleTypes.HasValue || ruleType == RuleTypes.HasNoValue;
+            var valuesForCreation = presenceRule || selectedValues.Count == 0
                 ? new List<FilterValueItem>
                   {
                       new FilterValueItem("Any", null, param.StorageType)
@@ -846,12 +893,14 @@ namespace HeronTools.UI
                     TaskDialog.Show(
                         "Filter Pro",
                         "Nothing was changed - the whole run was undone.\n\n" + reason);
-                    UpdateStatus("Nothing was changed. " + reason);
+                    ShowReport(null);
+                    ShowProblem("Nothing was changed. " + reason);
                     return;
                 }
             }
 
             RememberState(selection);
+            ShowReport(skipped);
             UpdateStatus(affected == 0
                 ? "Nothing needed changing. " + BuildResultStatus(selection.Values.Count, affected, skipped)
                 : BuildResultStatus(selection.Values.Count, affected, skipped));
@@ -882,6 +931,7 @@ namespace HeronTools.UI
 
                 categories_listbox.DisplayMemberPath = "Name";
                 ApplyCategoryFilters();
+                UpdateCounts();
             }
             catch (Exception ex)
             {
@@ -924,6 +974,8 @@ namespace HeronTools.UI
 
                 parameters_listbox.DisplayMemberPath = "Name";
                 ApplyParameterFilters();
+                UpdateCounts();
+                UpdateRuleAvailability();
 
                 UpdateStatus("Select a parameter to load its values.");
                 await LoadValues();
@@ -982,6 +1034,7 @@ namespace HeronTools.UI
 
                 values_listbox.ItemsSource = collectedValues;
                 values_listbox.DisplayMemberPath = "Display";
+                UpdateCounts();
 
                 if (hitScanLimit)
                     UpdateStatus($"Loaded {collectedValues.Count} unique value(s). Stopped after scanning 10,000 elements for performance.");
@@ -1011,6 +1064,36 @@ namespace HeronTools.UI
                 return;
 
             status_text.Text = message;
+            status_text.Foreground = (System.Windows.Media.Brush)FindResource("TextSecondary");
+        }
+
+        /// <summary>
+        /// Something the modeller must fix before the run can start: shown in the status line in the
+        /// Warning colour - no pop-up, nothing changed.
+        /// </summary>
+        private void ShowProblem(string message)
+        {
+            status_text.Text = message;
+            status_text.Foreground = (System.Windows.Media.Brush)FindResource("AccentWarning");
+        }
+
+        /// <summary>
+        /// Lists what a run skipped, and why, in the report strip above the footer. Hidden when nothing
+        /// was skipped.
+        /// </summary>
+        private void ShowReport(IList<string> skipped)
+        {
+            var lines = (skipped ?? new List<string>()).Distinct().ToList();
+            if (lines.Count == 0)
+            {
+                report_panel.Visibility = System.Windows.Visibility.Collapsed;
+                report_items.ItemsSource = null;
+                return;
+            }
+
+            report_title_text.Text = lines.Count == 1 ? "1 item skipped - why:" : $"{lines.Count} items skipped - why:";
+            report_items.ItemsSource = lines;
+            report_panel.Visibility = System.Windows.Visibility.Visible;
         }
 
         private void ApplyViewButton_Click(object sender, RoutedEventArgs e)

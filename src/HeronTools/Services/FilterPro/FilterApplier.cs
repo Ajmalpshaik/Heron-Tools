@@ -1,48 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Filter Pro
- * File Name     : FilterApplier.cs
- * Purpose       : Applies parameter filters to views with graphic colour overrides, fill pattern
- *                 assignment, halftone, and view-template protection checks.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.3
- *
- * Created Date  : 2025-12-10
- * Last Updated  : 2026-10-12
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API, System.Linq
- *
- * Input         : Active View, FilterSelection (graphics options), ElementId of filter and solid fill pattern
- * Output        : View filter graphics updated — colour, pattern, halftone, visibility
- *
- * Notes         :
- * - Targets Revit 2020 through latest.
- * - 2020 = .NET Fx 4.7.2; 2021-2024 = .NET Fx (verify 4.8 if required); 2025-2026 = .NET 8; 2027+ = verify Autodesk SDK.
- * - OverrideGraphicSettings surface/cut pattern API (SetSurfaceForegroundPatternId etc.) verified
- *   unchanged across Revit 2020-2027 against the per-version RevitAPI reference assemblies (2026-07-23).
- * - Read-only service — all model writes occur inside a Transaction managed by the caller.
- * - Production-ready implementation.
- *
- * Changelog     :
- * v1.0.0 (2025-12-10) - Initial release.
- * v1.0.1 (2026-06-30) - Added mandatory metadata block; confirmed 2020-latest version coverage.
- * v1.0.2 (2026-07-23) - Compatibility audit: every Revit API member used here verified present on
- *                        2020-2027 against the per-version RevitAPI reference assemblies. No code
- *                        changes needed.
- * v1.0.3 (2026-10-12) - Fix: copying a filter's overrides kept only 7 of its 21 settings, so line
- *                        weights/patterns, background patterns, transparency and detail level were
- *                        wiped whenever Filter Pro reordered or recoloured filters. Now a full copy
- *                        (Revit's own copy constructor); applying a colour pattern still makes it visible.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Applies parameter filters to views with graphic colour overrides, fill pattern assignment, halftone, and view-template protection checks.
+
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
@@ -78,7 +42,7 @@ namespace HeronTools.Services.FilterPro
 
             if (IsViewControlledByTemplate(view))
             {
-                skipped?.Add($"View '{view.Name}' uses a view template. Filters were not modified.");
+                skipped?.Add(TemplateSkipMessage(view));
                 return;
             }
 
@@ -175,12 +139,27 @@ namespace HeronTools.Services.FilterPro
         }
 
         /// <summary>True if the view has a view template applied.</summary>
+        /// <summary>The one message for a view whose template controls its filters.</summary>
+        internal static string TemplateSkipMessage(View view) =>
+            $"View '{view.Name}': its view template controls filters, so it was not changed. Edit the template, or untick Filters in it.";
+
+        /// <summary>
+        /// True when the view's FILTERS are controlled by its view template, so they cannot be changed in the
+        /// view. A template that leaves "V/G Overrides Filters" unticked does not control them, and such a
+        /// view is no longer skipped (it used to be, whenever it had any template at all).
+        /// </summary>
         internal static bool IsViewControlledByTemplate(View view)
         {
-            if (view == null)
+            if (view == null || view.IsTemplate || view.ViewTemplateId == ElementId.InvalidElementId)
                 return false;
 
-            return !view.IsTemplate && view.ViewTemplateId != ElementId.InvalidElementId;
+            if (!(view.Document.GetElement(view.ViewTemplateId) is View template))
+                return false;
+
+            var filtersParam = new ElementId(BuiltInParameter.VIS_GRAPHICS_FILTERS);
+            bool filtersLeftToView = template.GetNonControlledTemplateParameterIds()
+                .Any(id => id == filtersParam);
+            return !filtersLeftToView;
         }
 
         /// <summary>
@@ -204,7 +183,7 @@ namespace HeronTools.Services.FilterPro
         private static Color GetColor(FilterSelection selection, ElementId filterId)
         {
             return selection.RandomColors
-                ? ColorPalette.GetRandomColor()
+                ? ColorPalette.GetShuffledColorFor(filterId)
                 : ColorPalette.GetColorFor(filterId);
         }
 

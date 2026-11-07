@@ -1,3 +1,10 @@
+# Heron-Agent:  none
+# Heron-Step:   1
+# Heron-Status: DRAFT
+# Heron-Since:  1.0.0
+# Heron-Layer:  tool
+# See docs/metadata-standard.md
+
 <#
 .SYNOPSIS
     Builds Heron Tools for every Revit release and installs it into each Revit installed on this PC.
@@ -40,6 +47,13 @@ $productName = 'HeronTools'
 
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw "The .NET SDK (dotnet) is not on this PC's PATH. Install the .NET 10 SDK and run again."
+}
+
+# Same rule as the Heron AI platform: no source file without its five Heron metadata fields.
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-metadata.ps1')
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build stopped: fix the metadata listed above (see docs\metadata-standard.md)." -ForegroundColor Red
+    exit 1
 }
 
 $results = New-Object System.Collections.Generic.List[object]

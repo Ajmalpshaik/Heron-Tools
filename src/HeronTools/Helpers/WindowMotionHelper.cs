@@ -1,81 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Heron Tools - shared UI
- * File Name     : WindowMotionHelper.cs
- * Purpose       : One shared entrance animation for Heron Tools working dialogs, so every window opens
- *                 with the same motion instead of snapping into place.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.1.0
- *
- * Created Date  : 2026-08-05
- * Last Updated  : 2026-08-05
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in (WPF)
- *
- * Dependencies  : WPF (PresentationFramework)
- *
- * Input         : The owning Window. Call once, after InitializeComponent().
- * Output        : A fade + short rise when the window is first shown. No layout or behaviour change.
- *
- * Notes         :
- * - TIMING IS DELIBERATELY SHORT. This is the "working dialog" tier: a settings window opened many
- *   times a day must feel instant. The staged ~750ms reveal on AboutWindow is the "showcase" tier and
- *   is intentionally NOT reused here - copying it onto a everyday dialog turns polish into waiting.
- * - Entrance easing decelerates (CubicEase EaseOut): fast start, soft landing, so the window is
- *   readable well before it finishes settling.
- * - Animates the window's ROOT CONTENT element, never Window.Opacity: Window.Opacity only has a visual
- *   effect when AllowsTransparency="True", which most Heron Tools windows do not set. Animating the content
- *   works on every window regardless of chrome style.
- * - Skips any window whose root already uses a RenderTransform, so a window doing its own transform
- *   work is never fought over.
- * - Purely cosmetic: every failure path restores the window to its normal, fully visible state.
- *
- * EXIT MOTION - READ THIS BEFORE TOUCHING AttachStandardExit:
- * An exit animation cannot just play and then close. It has to CANCEL the window's own Closing, animate,
- * and re-issue the close. That has two traps, both of which are handled below and both of which were
- * measured on real WPF dialogs (2026-08-05), not assumed:
- *
- * 1. WPF THROWS DialogResult AWAY WHEN A CLOSE IS CANCELLED. Measured: a dialog that sets
- *    DialogResult = true and then has its Closing cancelled returns FALSE from ShowDialog() once it
- *    finally closes. Every Heron Tools command does `if (window.ShowDialog() == true) { ...do the work... }`,
- *    so the naive version would make every Run button silently behave like Cancel - the tool would open,
- *    close, and do nothing. The fix is to CAPTURE window.DialogResult before cancelling and RESTORE it
- *    afterwards; restoring it re-issues the close by itself. Verified to match the no-animation control
- *    exactly for Run(true), Cancel(false), plain Close(), and the double-close case below.
- *
- * 2. A Button that is BOTH Click="Handler" (handler closes) AND IsCancel="True" raises Closing TWICE per
- *    click, because WPF's cancel logic then sets DialogResult = false, whose setter calls Close() again.
- *    A single "already handled" flag lets the second pass through and kills the window mid-animation.
- *    Hence THREE pieces of state: IsExitPlaying (a close is in flight - keep cancelling), IsReadyToClose
- *    (our own completion callback asked for the real close - let it through) and IsFinished (the close
- *    is issued once and only once). GameKeySettingsWindow's Cancel button is exactly this shape.
- *
- * A third hazard has no clever fix, only a backstop: if the animation never completes, the window can
- * never close, and a dialog the user cannot dismiss is far worse than no animation. So a DispatcherTimer
- * is armed BEFORE the animation starts and forces the close regardless. Whichever fires first wins.
- *
- * Windows with their own Closing logic will run it once per pass (2-3 times). Audited 2026-08-05: only
- * PipeSizingWindow has any, and it is a full-overwrite SaveState() - idempotent, so repeats are harmless.
- * Check this again before attaching the exit to any NEW window whose Closing does something with a side
- * effect (appending to a log, prompting, counting).
- *
- * Changelog     :
- * v1.1.0 (2026-08-05) - Added AttachStandardExit: content fades out over 150ms while sinking 6px,
- *                       CubicEase EaseIn, so closing accelerates away where opening decelerates in.
- *                       Shorter than the entrance on purpose - users care more about what appears than
- *                       what leaves. Carries the DialogResult capture/restore and the double-Closing
- *                       guard described above, plus the timer backstop.
- * v1.0.0 (2026-08-05) - Initial release. Rolled out across the Heron Tools dialogs so window entrances are
- *                       consistent; AboutWindow keeps its own showcase motion and Game Mode's HUD is
- *                       excluded (real-time overlay with its own animation).
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// One shared entrance animation for Heron Tools working dialogs, so every window opens with the same motion instead of snapping into place.
+
 using System;
 using System.ComponentModel;
 using System.Windows;

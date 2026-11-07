@@ -12,6 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Revit-2020%20to%202027-FD641A?style=flat-square" alt="Revit 2020 to 2027">
   <img src="https://img.shields.io/badge/licence-all%20rights%20reserved-0F0F10?style=flat-square" alt="Licence: all rights reserved">
+  <a href="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml"><img src="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml/badge.svg" alt="Gates"></a>
 </p>
 
 Heron Tools is a stand-alone Revit add-in. It does not need Heron AI and uses none of Heron AI's code.
@@ -20,7 +21,13 @@ side on one **Heron** tab.
 
 | Tool | Panel | What it does |
 |---|---|---|
-| **Filter Pro** | View | Pick categories, a parameter and its values. Filter Pro makes one view filter per value, names it, colours it and adds it to the active view (or to other views you pick). Each button press is one Undo step. |
+| **Filter Pro** | View | Pick categories, a parameter and its values. Filter Pro makes one view filter per value, names it for you (the name says the rule, e.g. "Not 300", "Has value") and adds it to the active view or views you pick, first in the filter list. Shuffle colours gives every filter its own colour. Each button press is one Undo step. |
+
+**The Filter Pro window** reads left to right in the order you work: **1 Categories - 2 Parameter - 3 Values**,
+each with a count ("2 of 10 picked"), a search box and an empty-list hint. On the right, the live **name
+preview** sits above four tabs - **Rule** (rules that do not suit the picked parameter are switched off),
+**Name**, **Apply** (active view or picked views) and **Colours**. Anything a run skipped is listed with the
+reason; a missing pick is said in the status line, never in a pop-up. Only **Apply to view** is orange.
 
 ![Filter Pro window](docs/filter-pro-window.png)
 
@@ -107,6 +114,13 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 `View` (Heron AI uses other panel names).
 
 ## Rules this code follows
+
+- **Same file standard as the Heron AI platform.** Every source file starts with the five Heron metadata
+  fields (`Heron-Agent`, `Heron-Step`, `Heron-Status`, `Heron-Since`, `Heron-Layer`) - see
+  [docs/metadata-standard.md](docs/metadata-standard.md). `build/check-metadata.ps1` checks them, and
+  `build.ps1` will not build while a file is missing them.
+- **Gates on every push** (GitHub Actions, `Gates`): the metadata check, then a compile against every
+  Revit release 2020-2027. A compile is not a Revit test.
 
 - Every button that changes the model runs as **one named transaction** - one Undo entry, named
   `Filter Pro: ...`. If anything in that run fails, the whole run is rolled back and the modeller is

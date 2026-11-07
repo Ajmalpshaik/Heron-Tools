@@ -1,3 +1,10 @@
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
 // Heron Tools - pictures built into the DLL (ribbon icons, the Heron app icon).
 
 using System.IO;

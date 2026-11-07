@@ -1,4 +1,10 @@
 <!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
 ==================================================
 Heron Tools - shared window theme (Heron brand, dark)
 Used by every Heron Tools window. Brush KEY names are what windows bind to; values come
@@ -53,6 +59,8 @@ only the colours and font changed.
     <SolidColorBrush x:Key="AccentWarning" Color="#FFF5A524"/>    <!-- Warning -->
     <SolidColorBrush x:Key="AccentGray" Color="#24F7F5F2"/>       <!-- Mist 14 %: quiet button fill -->
     <SolidColorBrush x:Key="AccentDanger" Color="#FFFF5A4E"/>     <!-- Error -->
+    <SolidColorBrush x:Key="AccentSoft" Color="#29FD641A"/>       <!-- Accent 16 %: picked row -->
+    <SolidColorBrush x:Key="AccentEdge" Color="#B3FD641A"/>       <!-- Accent 70 %: picked row edge -->
 
     <!-- Text -->
     <SolidColorBrush x:Key="TextPrimary" Color="#EBF7F5F2"/>      <!-- Mist 92 % -->
@@ -191,7 +199,7 @@ only the colours and font changed.
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -199,12 +207,12 @@ only the colours and font changed.
                         </Border>
                         <!-- Hover lift: a soft white wash. Works over every button colour (blue, grey,
                              green, red, and anything a window sets from code-behind). -->
-                        <Border x:Name="HoverGlow" CornerRadius="4" Background="#1FFFFFFF"
+                        <Border x:Name="HoverGlow" CornerRadius="6" Background="#1FFFFFFF"
                                 Opacity="0" IsHitTestVisible="False"/>
                         <!-- Press shade: matches the old 0.7-opacity dim, but eased. -->
-                        <Border x:Name="PressShade" CornerRadius="4" Background="#33000000"
+                        <Border x:Name="PressShade" CornerRadius="6" Background="#33000000"
                                 Opacity="0" IsHitTestVisible="False"/>
-                        <Border x:Name="FocusRing" CornerRadius="4" BorderBrush="#99FFFFFF" BorderThickness="1"
+                        <Border x:Name="FocusRing" CornerRadius="6" BorderBrush="#99FFFFFF" BorderThickness="1"
                                 Opacity="0" IsHitTestVisible="False"/>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -435,18 +443,18 @@ only the colours and font changed.
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                               TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
-                        <Border x:Name="HoverGlow" CornerRadius="4" Background="#1FFFFFFF"
+                        <Border x:Name="HoverGlow" CornerRadius="6" Background="#1FFFFFFF"
                                 Opacity="0" IsHitTestVisible="False"/>
-                        <Border x:Name="OpenRing" CornerRadius="4"
+                        <Border x:Name="OpenRing" CornerRadius="6"
                                 BorderBrush="{StaticResource Accent}" BorderThickness="1"
                                 Opacity="0" IsHitTestVisible="False"/>
-                        <Border x:Name="FocusRing" CornerRadius="4"
+                        <Border x:Name="FocusRing" CornerRadius="6"
                                 BorderBrush="#99FFFFFF" BorderThickness="1"
                                 Opacity="0" IsHitTestVisible="False"/>
                     </Grid>
@@ -543,13 +551,13 @@ only the colours and font changed.
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="6"
                                 SnapsToDevicePixels="True">
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
                         </Border>
-                        <Border x:Name="HoverRing" CornerRadius="4" BorderThickness="1"
+                        <Border x:Name="HoverRing" CornerRadius="6" BorderThickness="1"
                                 BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>
-                        <Border x:Name="FocusRing" CornerRadius="4" BorderThickness="1"
+                        <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="1"
                                 BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -609,7 +617,7 @@ only the colours and font changed.
                 Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
-                CornerRadius="4"
+                CornerRadius="6"
                 SnapsToDevicePixels="True">
             <Grid>
                 <Path x:Name="ComboArrow"
@@ -873,9 +881,10 @@ only the colours and font changed.
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource Accent}"/>
-                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+                            <!-- Picked: Accent at 16 % with an Accent edge (brand: Accent used sparingly). -->
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource AccentSoft}"/>
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource AccentEdge}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Trigger.EnterActions>
@@ -996,16 +1005,16 @@ only the colours and font changed.
                             <Grid.RenderTransform>
                                 <ScaleTransform x:Name="BoxPressScale" ScaleX="1" ScaleY="1"/>
                             </Grid.RenderTransform>
-                            <Border x:Name="Box" CornerRadius="4"
+                            <Border x:Name="Box" CornerRadius="6"
                                     Background="{StaticResource BackgroundDark}"
                                     BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"/>
                             <!-- The accent fill fades in rather than snapping, and owns only IsChecked. -->
-                            <Border x:Name="BoxFill" CornerRadius="4"
+                            <Border x:Name="BoxFill" CornerRadius="6"
                                     Background="{StaticResource Accent}" Opacity="0"/>
-                            <Border x:Name="BoxHover" CornerRadius="4"
+                            <Border x:Name="BoxHover" CornerRadius="6"
                                     BorderBrush="{StaticResource Accent}" BorderThickness="1"
                                     Opacity="0" IsHitTestVisible="False"/>
-                            <Border x:Name="BoxFocus" CornerRadius="4"
+                            <Border x:Name="BoxFocus" CornerRadius="6"
                                     BorderBrush="#99FFFFFF" BorderThickness="1"
                                     Opacity="0" IsHitTestVisible="False"/>
                             <Path x:Name="Tick"
@@ -1161,18 +1170,18 @@ only the colours and font changed.
                             <Grid.RenderTransform>
                                 <ScaleTransform x:Name="BoxPressScale" ScaleX="1" ScaleY="1"/>
                             </Grid.RenderTransform>
-                            <Border x:Name="Box" CornerRadius="4"
+                            <Border x:Name="Box" CornerRadius="6"
                                     Background="{StaticResource BackgroundDark}"
                                     BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"/>
-                            <Border x:Name="BoxFill" CornerRadius="4"
+                            <Border x:Name="BoxFill" CornerRadius="6"
                                     Background="{StaticResource Accent}" Opacity="0"/>
-                            <Border x:Name="BoxHover" CornerRadius="4"
+                            <Border x:Name="BoxHover" CornerRadius="6"
                                     BorderBrush="{StaticResource Accent}" BorderThickness="1"
                                     Opacity="0" IsHitTestVisible="False"/>
                             <!-- This style inherits FocusVisualStyle="{x:Null}" from ModernCheckBox, so
                                  without this ring a keyboard user would have NO indication of where
                                  they are. Nulling the OS focus rectangle obliges us to draw our own. -->
-                            <Border x:Name="BoxFocus" CornerRadius="4"
+                            <Border x:Name="BoxFocus" CornerRadius="6"
                                     BorderBrush="#99FFFFFF" BorderThickness="1"
                                     Opacity="0" IsHitTestVisible="False"/>
                             <Path x:Name="Tick"
@@ -1675,11 +1684,11 @@ only the colours and font changed.
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"/>
+                                CornerRadius="6"/>
                         <Border x:Name="PART_Indicator"
                                 HorizontalAlignment="Left"
                                 Background="{TemplateBinding Foreground}"
-                                CornerRadius="4"/>
+                                CornerRadius="6"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsIndeterminate" Value="True">
@@ -1711,6 +1720,356 @@ only the colours and font changed.
         <Setter Property="HeadersVisibility" Value="Column"/>
         <Setter Property="AutoGenerateColumns" Value="False"/>
         <Setter Property="SelectionMode" Value="Single"/>
+    </Style>
+
+
+    <!-- ============================================================
+         Heron layout pieces (2026-11-07 redesign). Same palette, nothing new:
+         Ink / Surface / Mist shades / one Accent. Radius: cards 12, controls 6, tiles 11.
+         ============================================================ -->
+
+    <!-- Header -->
+    <Style x:Key="HeaderTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="ExtraBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+    <Style x:Key="HeaderSubtitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Margin" Value="0,3,0,0"/>
+    </Style>
+
+    <!-- A small rounded label: "Active view  Level 1". -->
+    <Style x:Key="Chip" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BackgroundLight}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="Padding" Value="14,7"/>
+    </Style>
+    <Style x:Key="ChipLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="ChipValue" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Cards -->
+    <Style x:Key="StepCard" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BackgroundMedium}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <!-- The preview card carries a thin Accent edge on the left: the one place the eye should go first. -->
+    <Style x:Key="PreviewCard" TargetType="Border" BasedOn="{StaticResource StepCard}">
+        <Setter Property="Padding" Value="16,14"/>
+    </Style>
+    <!-- The short bar that marks a card: Accent for the preview, Warning for the skipped list. -->
+    <Style x:Key="CardMark" TargetType="Border">
+        <Setter Property="Width" Value="3"/>
+        <Setter Property="CornerRadius" Value="1.5"/>
+        <Setter Property="Background" Value="{StaticResource Accent}"/>
+        <Setter Property="Margin" Value="0,2,12,2"/>
+    </Style>
+
+    <Style x:Key="ReportCard" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BackgroundMedium}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="16,12"/>
+    </Style>
+    <Style x:Key="ReportTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
+    <!-- Step number. Outline while the step is empty; filled Accent once something is picked
+         (Tag is bound to the list's SelectedItem). -->
+    <Style x:Key="StepBadge" TargetType="Border">
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+        <Setter Property="Background" Value="{StaticResource Accent}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="{x:Null}">
+                <Setter Property="BorderBrush" Value="{StaticResource BorderStrong}"/>
+                <Setter Property="Background" Value="Transparent"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="StepBadgeText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="ExtraBold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{StaticResource TextOnAccent}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=Border}}" Value="{x:Null}">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="StepTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+    <Style x:Key="StepCount" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+        <Setter Property="Margin" Value="0,1,0,0"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Section text -->
+    <Style x:Key="Overline" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+    </Style>
+    <Style x:Key="PreviewName" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Margin" Value="0,6,0,0"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="SectionLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style x:Key="HelpText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Margin" Value="0,0,0,5"/>
+    </Style>
+
+    <!-- Shown over an empty list (Tag bound to the list's HasItems). -->
+    <Style x:Key="EmptyHint" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="20"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Visibility" Value="Collapsed"/>
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="False">
+                <Setter Property="Visibility" Value="Visible"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Search box: the field with a search glyph and a hint (Tag) while empty. -->
+    <Style x:Key="SearchTextBox" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+        <Setter Property="Padding" Value="30,6,8,6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Grid SnapsToDevicePixels="True">
+                        <Border x:Name="FieldFill"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"/>
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   Foreground="{StaticResource TextDisabled}"
+                                   VerticalAlignment="Center" HorizontalAlignment="Left" Margin="11,0,0,0"
+                                   IsHitTestVisible="False"/>
+                        <TextBlock x:Name="Hint" Text="{TemplateBinding Tag}" FontSize="12"
+                                   Foreground="{StaticResource TextDisabled}"
+                                   VerticalAlignment="Center" Margin="31,0,8,0"
+                                   IsHitTestVisible="False" Visibility="Collapsed"/>
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                        <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="1"
+                                BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Hint" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="FocusRing" Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="FocusRing" Property="Opacity" Value="1"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Text-only button for small actions (Select all, Clear, Refresh). -->
+    <Style x:Key="LinkButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="Transparent" Padding="2,2">
+                        <ContentPresenter x:Name="Content" RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Content" Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Content" Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Quiet button with no fill (Close). -->
+    <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrong}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+    </Style>
+
+    <!-- Tabs inside the right-hand card: flat headers with an Accent underline on the open one. -->
+    <Style x:Key="RailTabs" TargetType="TabControl">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="10,0">
+                            <TabPanel IsItemsHost="True"/>
+                        </Border>
+                        <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"/>
+                    </DockPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="RailTab" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Grid Margin="6,0">
+                        <ContentPresenter ContentSource="Header" Margin="6,12,6,11"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        <Border x:Name="Underline" Height="2" VerticalAlignment="Bottom" CornerRadius="1"
+                                Background="{StaticResource Accent}" Opacity="0"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Underline" Property="Opacity" Value="1"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
+    <!-- Scroll bars: a slim Mist thumb on a clear track, wider while hovered. No arrows. -->
+    <Style x:Key="HeronScrollThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="ThumbFill" CornerRadius="3" Background="{StaticResource BorderStrong}"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbFill" Property="Background" Value="{StaticResource TextDisabled}"/>
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbFill" Property="Background" Value="{StaticResource TextSecondary}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="MinWidth" Value="8"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="Transparent" Margin="1,2">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource HeronScrollThumb}"/>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="MinWidth" Value="0"/>
+                <Setter Property="Height" Value="8"/>
+                <Setter Property="MinHeight" Value="8"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Grid Background="Transparent" Margin="2,1">
+                                <Track x:Name="PART_Track" IsDirectionReversed="False">
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource HeronScrollThumb}"/>
+                                    </Track.Thumb>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

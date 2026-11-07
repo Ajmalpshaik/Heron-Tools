@@ -1,3 +1,10 @@
+# Heron-Agent:  none
+# Heron-Step:   1
+# Heron-Status: DRAFT
+# Heron-Since:  1.0.0
+# Heron-Layer:  tool
+# See docs/metadata-standard.md
+
 <#
 .SYNOPSIS
     Removes Heron Tools from every Revit year on this PC - and nothing else.

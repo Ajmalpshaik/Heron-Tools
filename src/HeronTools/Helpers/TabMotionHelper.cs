@@ -1,53 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Heron Tools - shared UI
- * File Name     : TabMotionHelper.cs
- * Purpose       : One shared transition for switching tabs, so a tab change reads as the panel arriving
- *                 rather than the window hard-cutting to different content.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.0
- *
- * Created Date  : 2026-08-05
- * Last Updated  : 2026-08-05
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in (WPF)
- *
- * Dependencies  : WPF (PresentationFramework)
- *
- * Input         : The owning Window. Call once, after InitializeComponent().
- * Output        : Every TabControl in the window fades and rises its content on a tab change.
- *                 No layout, no selection behaviour, no result changes.
- *
- * Notes         :
- * - Companion to WindowMotionHelper and deliberately shorter than it: a window opens once, but a tab
- *   gets clicked over and over in one sitting, so this has to stay well under the entrance timing.
- *   180ms fade / 220ms rise over 8px, same CubicEase EaseOut as everything else in the suite.
- * - THE TRAP THIS EXISTS TO AVOID: Selector.SelectionChanged is a ROUTED event, so a ComboBox or ListBox
- *   sitting INSIDE a tab bubbles its own selection change up to the TabControl. Hooking the event
- *   naively replays the whole tab transition every time the user picks a value from a dropdown inside
- *   the tab. The handler below only reacts when the TabControl itself is the original source.
- * - Attaches by walking the visual tree on Loaded rather than by x:Name, so no XAML has to change and a
- *   window with two TabControls gets both. Walking on Loaded is what makes Template.FindName reliable -
- *   the template is guaranteed applied by then.
- * - PART_SelectedContentHost is the content host in both the default WPF TabControl template and in
- *   GraphicsOverrideWindow's own custom one, which is why one helper covers every tabbed window here.
- *   If a future window templates its TabControl differently, the helper simply finds nothing and does
- *   nothing - it never throws and never blocks the tab from switching.
- * - The handler never sets e.Handled, so any existing SelectionChanged logic in a window keeps running
- *   exactly as before.
- * - Purely cosmetic: every failure path leaves the content fully visible.
- *
- * Changelog     :
- * v1.0.0 (2026-08-05) - Initial release. Wired into the five tabbed windows: Colorize, Duct Standards
- *                       Manager, Filter Pro, Graphics Settings Manager, Location Data Assigner.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// One shared transition for switching tabs, so a tab change reads as the panel arriving rather than the window hard-cutting to different content.
+
 using System;
 using System.Windows;
 using System.Windows.Controls;

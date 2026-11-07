@@ -1,45 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Filter Pro
- * File Name     : FilterReorderer.cs
- * Purpose       : Reorders filters in a view so newly created filters appear first, while
- *                 preserving the graphic overrides and visibility of all pre-existing filters.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.2
- *
- * Created Date  : 2025-12-10
- * Last Updated  : 2026-10-12
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API, System.Linq
- *
- * Input         : Active View, list of newly processed filter ElementIds, FilterSelection (graphics options)
- * Output        : View filter order updated; graphics and visibility of existing filters preserved
- *
- * Notes         :
- * - Targets Revit 2020 through latest.
- * - 2020 = .NET Fx 4.7.2; 2021-2024 = .NET Fx (verify 4.8 if required); 2025-2026 = .NET 8; 2027+ = verify Autodesk SDK.
- * - View.GetFilters() order is not guaranteed in Revit 2020; a per-view cache (_lastKnownOrderByView)
- *   is maintained to track the intended UI order across calls.
- * - All writes occur inside a Transaction managed by the caller.
- * - Production-ready implementation.
- *
- * Changelog     :
- * v1.0.0 (2025-12-10) - Initial release.
- * v1.0.1 (2026-06-30) - Added mandatory metadata block; confirmed 2020-latest version coverage.
- * v1.0.2 (2026-10-12) - Fix: reordering removes and re-adds every filter, and Revit re-adds a filter
- *                        enabled, so filters the user had switched off ("Enable Filter" unticked) came
- *                        back switched on. Each filter's enabled tick is now saved and put back
- *                        (Revit 2021+; 2020 has no such setting). Ordering logic unchanged.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Reorders filters in a view so newly created filters appear first, while preserving the graphic overrides and visibility of all pre-existing filters.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -98,7 +65,7 @@ namespace HeronTools.Services.FilterPro
 
             if (FilterApplier.IsViewControlledByTemplate(view))
             {
-                skipped?.Add($"View '{view.Name}' uses a view template. Filters were not modified.");
+                skipped?.Add(FilterApplier.TemplateSkipMessage(view));
                 return false;
             }
 

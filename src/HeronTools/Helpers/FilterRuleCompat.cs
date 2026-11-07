@@ -1,39 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Heron Tools shared helper
- * File Name     : FilterRuleCompat.cs
- * Purpose       : Version-safe ParameterFilterRuleFactory string rules across Revit 2020 -> 2027.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.0
- *
- * Created Date  : 2026-07-07
- * Last Updated  : 2026-07-07
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / .NET Fx 4.8 (2021-2024) | .NET 8 (2025-2026) | .NET 10 (2027 - verify SDK)
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API
- *
- * Input         : Parameter ElementId, comparison text, requested case sensitivity.
- * Output        : A version-correct string FilterRule.
- *
- * Notes         :
- * - Revit 2020-2022: string rule factory methods take (ElementId, string, bool caseSensitive).
- * - Revit 2023: string comparisons became case-insensitive only; a 2-argument (ElementId, string)
- *   overload was added and the 3-argument overload deprecated, then REMOVED in Revit 2026.
- * - Filter Pro always requested case-insensitive matching (caseSensitive = false), so dropping the flag
- *   on 2023+ preserves the exact matching behaviour. The requested flag is still honoured on 2020-2022.
- * - The version branch lives ONLY here so FilterPro rule building stays one clean code path.
- *
- * Changelog     :
- * v1.0.0 (2026-07-07) - Initial release: string FilterRule factory bridged for Revit 2020 -> 2027.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Version-safe ParameterFilterRuleFactory string rules across Revit 2020 -> 2027.
+
 using Autodesk.Revit.DB;
 
 namespace HeronTools.Utils

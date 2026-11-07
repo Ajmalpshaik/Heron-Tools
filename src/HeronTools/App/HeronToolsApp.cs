@@ -1,3 +1,10 @@
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
 // Heron Tools - the add-in's start-up class. Builds its panel on the shared "Heron" ribbon tab.
 
 using System;
@@ -68,9 +75,9 @@ namespace HeronTools.App
                 ToolTip = "Create view filters quickly from a category, a parameter and its values, then apply them to the active view.",
                 LongDescription =
                     "Pick one or more categories, a parameter and the values you want. Filter Pro makes one view " +
-                    "filter per value, names them for you, gives each a colour and adds them to the active view " +
-                    "(or to other views you pick). Each run is a single Undo step.\n\n" +
-                    "Works in plan, ceiling, area, section, elevation and 3D views that are not controlled by a view template.",
+                    "filter per value, names it for you and adds it to the active view (or to views you pick), first " +
+                    "in the filter list. Shuffle Colours then gives every filter its own colour. Each run is one Undo step.\n\n" +
+                    "Works in plan, ceiling, structural, area, section, detail, elevation and 3D views.",
                 AvailabilityClassName = typeof(CmdFilterProAvailability).FullName,
                 Image = BrandImages.Load("FilterPro16.png"),
                 LargeImage = BrandImages.Load("FilterPro32.png"),

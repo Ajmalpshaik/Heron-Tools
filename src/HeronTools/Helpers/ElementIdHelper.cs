@@ -1,55 +1,12 @@
-#region Metadata
-/*
- * Tool Name     : Heron Tools shared helper
- * File Name     : ElementIdHelper.cs
- * Purpose       : Version-safe access to Revit ElementId numeric value across Revit 2020 -> latest.
- *
- * Author        : Ajmal P.S.
- * Version       : 1.0.0
- *
- * Created Date  : 2026-06-27
- * Last Updated  : 2026-06-27
- *
- * Target Revit  : 2020 - latest (A: 2020-2024 / B: 2025-2026 / C: 2027+ - verify newest)
- * Framework     : .NET Fx 4.7.2 (2020) / verify 4.8 (2021-2024) | .NET 8 (2025-2026) | 2027+ verify Autodesk SDK
- * Platform      : C# Revit Add-in
- *
- * Dependencies  : Autodesk Revit API
- *
- * Input         : ElementId
- * Output        : Integer/string representation of the ElementId, validity check.
- *
- * Notes         :
- * - Revit 2024+ deprecated ElementId.IntegerValue in favour of ElementId.Value (long).
- * - This helper centralises the difference so call sites never branch on Revit version.
- * - Under the current build (Revit 2020) the helper compiles to ElementId.IntegerValue.
- * - Under future Revit 2024+ builds (REVIT2024_OR_GREATER defined) it compiles to (int)ElementId.Value.
- * - Casting long -> int is safe for normal Revit project ElementIds (well below int.MaxValue).
- * - Revit 2024 also widened the BuiltInCategory/BuiltInParameter enums from Int32 to Int64. Calling
- *   Enum.IsDefined(typeof(BuiltInCategory), someInt) with a boxed `int` on 2024+ THROWS
- *   "Enum underlying type and the object must be same type..." because Enum.IsDefined requires the
- *   boxed value's type to exactly match the enum's underlying type. IsDefinedBuiltInCategory/
- *   IsDefinedBuiltInParameter box using the enum's actual (reflected) underlying type, so they are
- *   correct regardless of which Revit version's enum width is active - no version #if needed.
- * - ElementId(int) itself was deprecated in Revit 2024 (when ElementId(long) was added) and
- *   CONFIRMED REMOVED by Revit 2027 (checked against the real installed RevitAPI.dll, not just
- *   docs - only BuiltInParameter/BuiltInCategory/Int64 constructors remain). FromInt(int) switches
- *   to the long constructor starting 2024 (matching GetIntegerValue's own switch point above), so
- *   it is correct for the entire 2024-2027 range regardless of exactly which point release actually
- *   dropped the int overload - never call `new ElementId(someInt)` directly at a call site.
- *
- * Changelog     :
- * v1.0.0 (2026-06-27) - Initial release.
- * v1.1.0 (2026-07-07) - Added IsDefinedBuiltInCategory/IsDefinedBuiltInParameter to fix an
- *                       Enum.IsDefined boxing-type mismatch that threw in Revit 2024+.
- * v1.2.0 (2026-07-07) - Added FromInt(int) - ElementId(int) constructor confirmed removed in
- *                       Revit 2027 (checked against the real installed API, not just docs); every
- *                       `new ElementId(someInt)` call site in the codebase now routes through this.
- *
- * License       : All Rights Reserved
- * Repo          : Heron Tools (moved from AJ-Tools on 2026-11-07)
- */
-#endregion
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.0.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Version-safe access to Revit ElementId numeric value across Revit 2020 -> latest.
+
 using System;
 using Autodesk.Revit.DB;
 

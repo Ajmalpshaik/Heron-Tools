@@ -1,0 +1,35 @@
+# Heron-Agent:  none
+# Heron-Step:   1
+# Heron-Status: DRAFT
+# Heron-Since:  1.0.0
+# Heron-Layer:  tool
+# See docs/metadata-standard.md
+#
+# The Heron Tools gates, the same idea as the Heron AI platform's: every source file carries its Heron
+# metadata, and the add-in compiles against EVERY Revit release it claims (2020 to 2027). Runs on every
+# push and pull request. A compile is not a Revit test - that is still done by hand in Revit.
+
+name: Gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    name: Metadata + the C# compiles, 2020 to 2027
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: check-metadata
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\check-metadata.ps1
+
+      - name: Compile against every Revit release (no install)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\build.ps1 -NoInstall

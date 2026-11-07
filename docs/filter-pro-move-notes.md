@@ -74,14 +74,34 @@ colours or White/Shadow at an opacity, which the brand allows.
 | Build/uninstall scripts could empty a linked folder's target, or stop half-way on a locked file. | A linked HeronTools folder is skipped; a locked file gives a FAIL row and the other years continue. |
 | `TryGetBuiltInParameter` accepted -1 (invalid). | -1 is refused. |
 
+## Third round (full audit + UI redesign, 2026-11-07)
+
+| Problem | Fix |
+|---|---|
+| The rule was not in the filter name: "Has value" and "Has no value" (both "Any"), or "Equals A" and "Does not equal A", got one name - a later run reused the OPPOSITE filter. | The name carries the rule when it is not Equals: "Not A", "Contains A", "Has value", "No value". |
+| Has value / Has no value with values picked made one identical filter per value. | Always one filter. |
+| Restoring the last picks after a Has value run picked a real value "0" (the stand-in was saved as the number 0). | The stand-in is never saved. |
+| Parameters missing from the list: the storage type was read from the FIRST element and FIRST type of each category only (slow, and a shared parameter not in that first family vanished; an empty model listed almost nothing). | Built-in parameters: storage from Revit itself (`Document.get_TypeOfStorage`). Others: up to 25 elements and 25 types per category, read once. |
+| Text rules (Contains...) on element parameters (Level, System Type) were silently built as Equals. | Refused with a message, and switched off in the window. |
+| Yes/No and other whole-number values showed as 0/1. | Shown as Revit shows them ("Yes"/"No"); the rule still uses the number. |
+| Values could be read from a different parameter with the same NAME. | Read by the parameter itself only. |
+| Any view with a template was skipped, even when the template leaves Filters to the view. | Skipped only when the template really controls V/G Filters. |
+| Structural plans and detail/callout views were refused; the availability check called Revit before the cheap view-type test (it runs on every ribbon refresh). | Both view types allowed; view type checked first. |
+| Shuffle colours picked at random with repeats (two of five filters often shared a colour). | A shuffled deck per run: no repeat until all 20 colours are used; a filter keeps its colour across the run's views. |
+| Category part of the name followed click order ("Ducts, Pipes" vs "Pipes, Ducts"); more than three categories all became "Ducts +". | Alphabetical; "Ducts +4" says how many more. |
+| "Update existing filters" was remembered ON between runs. | Always starts off. |
+| Window: three tabs across the whole window, validation pop-ups, one long status line. | Redesigned on the brand: steps 1-2-3 side by side with counts and search, live preview, Rule/Name/Apply/Colours tabs, rules switched off when unsuitable, in-window messages, a skipped-items list, one Accent button, slim dark scroll bars. |
+
+Every source file now carries the Heron metadata header (see `metadata-standard.md`), checked by
+`build/check-metadata.ps1` in every build and in the GitHub `Gates` check.
+
 ## Still owed
 
 - **Real Revit tests** (see the PR): tab alone / with Heron AI, every button, Undo in one step, a
   failure rolls back, 2020 vs 2021+ reorder, decimal Equals.
-- **Suspected, not changed:** a view whose template does *not* control V/G filters is still skipped
-  as "uses a view template" (Heron writes and then reads back instead). Needs a decision.
-- **Low, not changed:** with Has Value / Has No Value, picking several values makes one identical
-  filter per value (only the names differ). Could collapse to one filter.
+- **Not changed (by design for now):** Apply to view does not colour filters - Shuffle colours does.
+  Reusing an existing same-named filter with "Update existing filters" off does not compare its rule
+  with the one asked for; the rule in the name now makes such a clash rare.
 - **Remove Filter Pro from AJ-Tools** - only after the Heron Tools version passes in Revit, and only on
   Ajmal's word. Careful: AJ-Tools' **Colorize** tool reuses part of Filter Pro, so these must STAY in
   AJ-Tools: `FilterProDataProvider` (ColorizeWindow), `FilterCreator` and `FilterApplier`
