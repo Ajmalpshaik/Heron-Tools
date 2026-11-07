@@ -70,10 +70,6 @@
                                    FontSize="26"
                                    FontWeight="ExtraBold"
                                    Foreground="{StaticResource TextPrimary}"/>
-                        <TextBlock Text="Heron Tools - by Ajmal PS"
-                                   FontSize="12"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   Margin="0,2,0,0"/>
                         <TextBlock Text="Create and manage Revit filters from parameter values"
                                    FontSize="13"
                                    Foreground="{StaticResource TextSecondary}"
