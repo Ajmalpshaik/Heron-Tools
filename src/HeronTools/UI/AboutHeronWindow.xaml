@@ -35,7 +35,7 @@
     <Grid Background="{StaticResource BackgroundDark}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -53,7 +53,9 @@
             </StackPanel>
         </Border>
 
-        <StackPanel Grid.Row="1" Margin="24,20,24,20">
+        <!-- The middle scrolls when the window is held to the screen height (ScreenFit), so the buttons stay in view. -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,20,24,20">
 
             <!-- This add-in -->
             <Border Style="{StaticResource PreviewCard}">
@@ -99,6 +101,7 @@
             <TextBlock Margin="2,14,0,0" Style="{StaticResource HelpText}"
                        Text="Free and open source under the Apache License 2.0. The Heron name and mark are not covered by the licence. Autodesk and Revit are trademarks of Autodesk, Inc."/>
         </StackPanel>
+        </ScrollViewer>
 
         <!-- Footer -->
         <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"

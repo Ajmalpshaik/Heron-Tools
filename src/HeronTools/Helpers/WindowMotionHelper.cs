@@ -53,6 +53,9 @@ namespace HeronTools.Utils
             if (window == null)
                 return;
 
+            // Every Heron window opens fully on screen, bottom buttons included (ScreenFit).
+            ScreenFit.Attach(window);
+
             try
             {
                 var root = window.Content as FrameworkElement;

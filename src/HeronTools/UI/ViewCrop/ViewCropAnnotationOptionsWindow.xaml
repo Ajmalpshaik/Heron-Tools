@@ -37,7 +37,7 @@
     <Grid Background="{StaticResource BackgroundDark}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>   <!-- header -->
-            <RowDefinition Height="Auto"/>   <!-- body -->
+            <RowDefinition Height="*"/>   <!-- body -->
             <RowDefinition Height="Auto"/>   <!-- footer -->
         </Grid.RowDefinitions>
 
@@ -65,7 +65,9 @@
         </Border>
 
         <!-- ============ BODY ============ -->
-        <StackPanel Grid.Row="1" Margin="24,20,24,16">
+        <!-- The middle scrolls when the window is held to the screen height (ScreenFit), so the buttons stay in view. -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,20,24,16">
             <Border Style="{StaticResource StepCard}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="Views" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
@@ -102,6 +104,7 @@
                 </Grid>
             </Border>
         </StackPanel>
+        </ScrollViewer>
 
         <!-- ============ FOOTER ============ -->
         <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
