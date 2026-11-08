@@ -50,7 +50,7 @@
     <Grid Background="{StaticResource BackgroundDark}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>   <!-- header -->
-            <RowDefinition Height="Auto"/>   <!-- body -->
+            <RowDefinition Height="*"/>   <!-- body -->
             <RowDefinition Height="Auto"/>   <!-- footer -->
         </Grid.RowDefinitions>
 
@@ -78,7 +78,9 @@
         </Border>
 
         <!-- ============ BODY ============ -->
-        <Grid Grid.Row="1" Margin="24,20,24,16">
+        <!-- The middle scrolls when the window is held to the screen height (ScreenFit), so the buttons stay in view. -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="24,20,24,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="16"/>
@@ -187,6 +189,7 @@
                 </Grid>
             </Border>
         </Grid>
+        </ScrollViewer>
 
         <!-- ============ FOOTER ============ -->
         <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
