@@ -1,19 +1,31 @@
+<!-- One banner picture that reads on GitHub's light AND dark theme (a <picture> switching on
+     prefers-color-scheme follows the computer, not GitHub, and can show a white logo on a white page).
+     Made by build/make-readme-banner.ps1, the same recipe as Heron AI's banner. -->
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/heron-mark-white.svg">
-    <img src="docs/brand/heron-mark-ink.svg" alt="Heron" width="120">
-  </picture>
+  <img src="docs/brand/heron-tools-readme-banner.png" alt="Heron Tools - Design Automate Deliver" width="643">
 </p>
 
-<h1 align="center">Heron Tools</h1>
-
-<p align="center">Everyday Revit tools for BIM modellers, on the <b>Heron</b> ribbon tab.</p>
-
 <p align="center">
-  <img src="https://img.shields.io/badge/Revit-2020%20to%202027-FD641A?style=flat-square" alt="Revit 2020 to 2027">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-Apache%202.0-0F0F10?style=flat-square" alt="Licence: Apache 2.0"></a>
-  <a href="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml"><img src="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml/badge.svg" alt="Gates"></a>
+  <a href="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml"><img src="https://github.com/Ajmalpshaik/Heron-Tools/actions/workflows/build.yml/badge.svg?branch=main" alt="Gates on main"></a>
+  <a href="#supported-revit-versions"><img src="https://img.shields.io/badge/compiles%20for%20Revit-2020%20to%202027-FD641A?style=flat-square" alt="Compiles for Revit 2020 to 2027"></a>
+  <a href="#tools"><img src="https://img.shields.io/badge/status-in%20development-FD641A?style=flat-square" alt="Status: in development"></a>
 </p>
+
+<p align="center">
+  <a href="#tools">Tools</a> ·
+  <a href="#supported-revit-versions">Revit versions</a> ·
+  <a href="#build-and-install">Install</a> ·
+  <a href="#rules-this-code-follows">Safety</a> ·
+  <a href="#project-documents">Docs</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+# Heron Tools
+
+Everyday Revit tools for BIM modellers, on the **Heron** ribbon tab.
+
+## Tools
 
 Heron Tools is a stand-alone Revit add-in. It does not need Heron AI and uses none of Heron AI's code.
 The two only share the name of the ribbon tab, so when both are installed their buttons sit side by
