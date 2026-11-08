@@ -1,0 +1,118 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  View Crop - "Crop and show why" report: which elements set each edge of every new crop, so a stray,
+  huge or far-away element that pushed the crop out can be found. Read-only text, copy to clipboard.
+  Design: Heron brand kit via HeronStyles.xaml (same layout language as Filter Pro).
+-->
+<Window x:Class="HeronTools.UI.ViewCrop.ViewCropDiagnosticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Crop Report - Heron Tools"
+        Width="680"
+        Height="640"
+        MinWidth="520"
+        MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="*"/>      <!-- report -->
+            <RowDefinition Height="Auto"/>   <!-- footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ============ HEADER ============ -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="11"
+                        Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Crop report" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="The outermost elements that set each edge of every new crop."
+                               Style="{StaticResource HeaderSubtitle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ REPORT ============ -->
+        <Border Grid.Row="1" Margin="24,20,24,16" Style="{StaticResource StepCard}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Style="{StaticResource HelpText}" Margin="0,0,0,10"
+                           Text="A crop that came out too big is usually pushed by one stray, huge or far-away element. Find it here, fix it, and crop again."/>
+                <Border Grid.Row="1" Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" CornerRadius="8" Padding="6">
+                    <TextBox x:Name="DiagnosticsTextBox"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto"
+                             Background="Transparent"
+                             Foreground="{StaticResource TextPrimary}"
+                             CaretBrush="{StaticResource Accent}"
+                             SelectionBrush="{StaticResource Accent}"
+                             BorderThickness="0"
+                             FontFamily="Consolas"
+                             FontSize="12"
+                             Padding="4"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ============ FOOTER ============ -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="NotificationText" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0"
+                           Foreground="{StaticResource TextSecondary}" FontSize="12" TextWrapping="Wrap"
+                           Visibility="Collapsed"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Copy report" Style="{StaticResource PrimaryButton}" MinWidth="140"
+                            Margin="0,0,16,0" Click="OnCopyReport"
+                            ToolTip="Copy the whole report, to paste into an email or a message"/>
+                    <Button Content="Close" Style="{StaticResource GhostButton}" MinWidth="88"
+                            IsCancel="True" Click="OnClose"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

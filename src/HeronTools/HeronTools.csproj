@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Heron Tools - one project, every Revit release from 2020.
+    The Revit release comes from -p:RevitVersion=<year>; Directory.Build.props at the repo
+    root maps it to the right .NET runtime, output folder and REVIT<year> symbols.
+
+    Stands alone: references no Heron AI assembly. It only shares the "Heron" ribbon tab name.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>$(HeronToolsTfm)</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>HeronTools</RootNamespace>
+    <AssemblyName>HeronTools</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <Company>Ajmal PS</Company>
+    <Product>Heron Tools</Product>
+    <Copyright>Copyright 2026 Ajmal PS. Licensed under the Apache License 2.0.</Copyright>
+    <Version>1.0.0</Version>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+  </PropertyGroup>
+
+  <!--
+    Revit API references, matched to the Revit release being built.
+    Autodesk's DLLs are never committed and never copied into the output:
+    ExcludeAssets="runtime" is Copy Local = false - Revit supplies them at run time.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" ExcludeAssets="runtime" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" Condition="$(TargetFramework.StartsWith('net4'))" />
+  </ItemGroup>
+
+  <!-- Ribbon icons, built into the DLL so they can never go missing beside it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Icons\*.png" LogicalName="HeronTools.Icons.%(Filename)%(Extension)" />
+    <!-- The brand font, built into the DLL so every PC shows it (no font install). SIL Open Font
+         License 1.1 - its text ships beside it (Resources\Fonts\OFL.txt) and is named in NOTICE. -->
+    <Resource Include="Resources\Fonts\*.ttf" />
+  </ItemGroup>
+
+</Project>

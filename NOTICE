@@ -1,0 +1,36 @@
+Heron Tools
+Copyright 2026 Ajmal PS
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full licence text.
+
+---
+
+The Heron name, the heron mark and the Heron app icon (docs/brand/) are not
+licensed under the Apache License. Section 6 of that licence grants no right to
+use the project's names or marks; they may be used to refer to Heron Tools, but
+not to present another product as Heron.
+
+---
+
+The Manrope typeface (src/HeronTools/Resources/Fonts/, built into HeronTools.dll)
+is Copyright 2018 The Manrope Project Authors and is licensed under the SIL Open
+Font License, Version 1.1 - see src/HeronTools/Resources/Fonts/OFL.txt. It is
+not licensed under the Apache License.
+
+---
+
+Heron Tools integrates with Autodesk Revit through the Revit API.
+
+Autodesk and Revit are trademarks or registered trademarks of Autodesk, Inc.
+Heron Tools is not affiliated with, endorsed by, or sponsored by Autodesk, Inc.
+
+The Autodesk Revit API assemblies (RevitAPI.dll, RevitAPIUI.dll) are the
+property of Autodesk, Inc. and are NOT redistributed with this software. They
+are referenced at build time and supplied by the user's Revit installation at
+runtime.
+
+---
+
+Heron Tools changes live Revit project models. It is provided without warranty
+of any kind. See DISCLAIMER.md before use on any project.

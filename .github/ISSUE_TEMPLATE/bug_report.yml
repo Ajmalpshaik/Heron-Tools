@@ -1,0 +1,49 @@
+name: Bug report
+description: A Heron Tools tool did not do what you expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not report security problems here** - see [SECURITY.md](https://github.com/Ajmalpshaik/Heron-Tools/blob/main/SECURITY.md).
+
+        **Never attach a real client model or project data.** Describe the model, or make a small test model.
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Which tool
+      options: [Filter Pro, Colorize, Crop View by Elements, Annotation Crop by View Crop, Unhide All, Toggle Links, Highlight Selection, Ribbon / start-up, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: revit
+    attributes:
+      label: Revit version
+      options: ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027"]
+    validations:
+      required: true
+  - type: input
+    id: view
+    attributes:
+      label: View type
+      placeholder: e.g. floor plan with a view template, 3D view, section
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What you did and what happened
+      placeholder: |
+        Picked Ducts, System Type, 3 values, pressed Apply to view.
+        Only 2 filters were made; the status line said "1 skipped".
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Skipped list / message shown
+      description: Copy the skipped-items list or the message text, if there was one.

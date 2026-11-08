@@ -1,0 +1,24 @@
+name: Feature request
+description: A new tool, or a better way for an existing one
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: job
+    attributes:
+      label: The job you want to do in Revit
+      description: In modeller's words - what you do by hand today, and how long it takes.
+    validations:
+      required: true
+  - type: textarea
+    id: flow
+    attributes:
+      label: How the tool should work
+      placeholder: |
+        I click ..., I pick ..., the model changes ..., I undo it by ...
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Anything version- or standard-specific
+      description: Revit versions, company or Qatar/ISO standards it must follow.

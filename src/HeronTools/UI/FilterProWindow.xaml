@@ -1,0 +1,475 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+  Tool Name     : Filter Pro (Heron Tools)
+  File Name     : FilterProWindow.xaml
+  Purpose       : The Filter Pro window. Left: the three picks in order (categories, parameter, values).
+                  Right: what the filters will be called and where they go (Rule / Name / Apply), with a live
+                  name preview. Footer: honest status on the left, the actions on the right.
+  Author        : Ajmal PS
+  Design        : Heron brand kit (heron.pdf) - Ink background, Surface cards, Mist text shades, ONE Accent
+                  action, Manrope (Segoe UI fallback), rounded cards. Theme: HeronStyles.xaml.
+  Notes         : Every x:Name used by FilterProWindow.xaml.cs is kept. rule_type_panel must stay a Panel whose
+                  children are StackPanels of RadioButtons (the code finds the rule radios that way).
+  Repo          : Heron Tools
+-->
+<Window x:Class="HeronTools.UI.FilterProWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Filter Pro - Heron Tools"
+        Width="1240"
+        Height="780"
+        MinWidth="1080"
+        MinHeight="680"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="*"/>      <!-- picks + settings -->
+            <RowDefinition Height="Auto"/>   <!-- report (only when something was skipped) -->
+            <RowDefinition Height="Auto"/>   <!-- footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ============ HEADER ============ -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1"
+                Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Heron mark in an Ink tile with the brand corner radius, like the app icon. -->
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="11"
+                        Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1"
+                        VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Filter Pro" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="One view filter per value - named for you and added to your views."
+                               Style="{StaticResource HeaderSubtitle}"/>
+                </StackPanel>
+
+                <!-- Where Apply goes by default: the active view. -->
+                <Border Grid.Column="2" Style="{StaticResource Chip}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Active view" Style="{StaticResource ChipLabel}"/>
+                        <TextBlock x:Name="active_view_name_text" Text="(none)" Style="{StaticResource ChipValue}"
+                                   MaxWidth="320" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ============ BODY ============ -->
+        <Grid Grid.Row="1" Margin="24,20,24,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="360"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: the three picks -->
+            <Grid Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Step 1: categories -->
+                <Border Grid.Column="0" Style="{StaticResource StepCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="True">
+                            <Border DockPanel.Dock="Left" Tag="{Binding SelectedItem, ElementName=categories_listbox}" Style="{StaticResource StepBadge}">
+                                <TextBlock Text="1" Style="{StaticResource StepBadgeText}"/>
+                            </Border>
+                            <StackPanel Margin="10,0,0,0">
+                                <TextBlock Text="Categories" Style="{StaticResource StepTitle}"/>
+                                <TextBlock x:Name="categories_count_text" Text="None picked" Style="{StaticResource StepCount}"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <Grid Grid.Row="1" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="78"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="category_search_textbox" Grid.Column="0"
+                                     Style="{StaticResource SearchTextBox}" Tag="Search categories"
+                                     ToolTip="Type to narrow the list. Picked categories stay listed."/>
+                            <ComboBox x:Name="category_sort_combobox" Grid.Column="2" SelectedIndex="0" ToolTip="Sort order">
+                                <ComboBoxItem Content="A - Z" Tag="az"/>
+                                <ComboBoxItem Content="Z - A" Tag="za"/>
+                            </ComboBox>
+                        </Grid>
+                        <ListBox x:Name="categories_listbox" Grid.Row="2"
+                                 Style="{StaticResource ModernListBox}"
+                                 ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                 SelectionMode="Extended"
+                                 ToolTip="Click to pick. Ctrl+click or Shift+click to pick several."/>
+                        <TextBlock Grid.Row="2" Text="No filterable categories found in this model."
+                                   Tag="{Binding HasItems, ElementName=categories_listbox}" Style="{StaticResource EmptyHint}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Step 2: parameter -->
+                <Border Grid.Column="2" Style="{StaticResource StepCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                            <Border DockPanel.Dock="Left" Tag="{Binding SelectedItem, ElementName=parameters_listbox}" Style="{StaticResource StepBadge}">
+                                <TextBlock Text="2" Style="{StaticResource StepBadgeText}"/>
+                            </Border>
+                            <StackPanel Margin="10,0,0,0">
+                                <TextBlock Text="Parameter" Style="{StaticResource StepTitle}"/>
+                                <TextBlock x:Name="parameters_count_text" Text="Pick categories first" Style="{StaticResource StepCount}"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <Grid Grid.Row="1" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="78"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="parameter_search_textbox" Grid.Column="0"
+                                     Style="{StaticResource SearchTextBox}" Tag="Search parameters"
+                                     ToolTip="Type to narrow the list. Only parameters Revit can filter for ALL picked categories are listed."/>
+                            <ComboBox x:Name="parameter_sort_combobox" Grid.Column="2" SelectedIndex="0" ToolTip="Sort order">
+                                <ComboBoxItem Content="A - Z" Tag="az"/>
+                                <ComboBoxItem Content="Z - A" Tag="za"/>
+                            </ComboBox>
+                        </Grid>
+                        <ListBox x:Name="parameters_listbox" Grid.Row="2"
+                                 Style="{StaticResource ModernListBox}"
+                                 ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                 SelectionMode="Single"/>
+                        <TextBlock Grid.Row="2" Text="Pick one or more categories to see the parameters they share."
+                                   Tag="{Binding HasItems, ElementName=parameters_listbox}" Style="{StaticResource EmptyHint}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Step 3: values -->
+                <Border Grid.Column="4" Style="{StaticResource StepCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                            <Border DockPanel.Dock="Left" Tag="{Binding SelectedItem, ElementName=values_listbox}" Style="{StaticResource StepBadge}">
+                                <TextBlock Text="3" Style="{StaticResource StepBadgeText}"/>
+                            </Border>
+                            <StackPanel Margin="10,0,0,0">
+                                <TextBlock Text="Values" Style="{StaticResource StepTitle}"/>
+                                <TextBlock x:Name="values_count_text" Text="Pick a parameter first" Style="{StaticResource StepCount}"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <Grid Grid.Row="1" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="78"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="value_search_textbox" Grid.Column="0"
+                                     Style="{StaticResource SearchTextBox}" Tag="Search values"
+                                     ToolTip="Type to narrow the list. Picked values stay listed."/>
+                            <ComboBox x:Name="value_sort_combobox" Grid.Column="2" SelectedIndex="0" ToolTip="Sort order">
+                                <ComboBoxItem Content="A - Z" Tag="az"/>
+                                <ComboBoxItem Content="Z - A" Tag="za"/>
+                            </ComboBox>
+                        </Grid>
+                        <ListBox x:Name="values_listbox" Grid.Row="2"
+                                 Style="{StaticResource ModernListBox}"
+                                 ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                 SelectionMode="Extended"
+                                 VirtualizingStackPanel.IsVirtualizing="True"
+                                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                 ScrollViewer.CanContentScroll="True"
+                                 ToolTip="One filter is made for each value you pick."/>
+                        <TextBlock Grid.Row="2" Text="Pick a parameter to list the values used in this model."
+                                   Tag="{Binding HasItems, ElementName=values_listbox}" Style="{StaticResource EmptyHint}"/>
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button x:Name="values_select_all_button" Content="Select all" Style="{StaticResource LinkButton}"
+                                    ToolTip="Pick every value in the list"/>
+                            <TextBlock Text="·" Foreground="{StaticResource TextDisabled}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button x:Name="values_clear_button" Content="Clear" Style="{StaticResource LinkButton}"
+                                    ToolTip="Un-pick all values"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- RIGHT: what it will be called and where it goes -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Live preview: the first thing the eye lands on, so it carries the one Accent line. -->
+                <Border Grid.Row="0" Style="{StaticResource PreviewCard}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Left" Style="{StaticResource CardMark}"/>
+                        <StackPanel>
+                            <TextBlock Text="FILTER NAME PREVIEW" Style="{StaticResource Overline}"/>
+                            <TextBlock x:Name="preview_text" Text="Filter_Name" Style="{StaticResource PreviewName}"/>
+                            <TextBlock x:Name="apply_scope_text" Text="Apply to: active view" Style="{StaticResource StepCount}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource StepCard}" Padding="0">
+                    <TabControl Style="{StaticResource RailTabs}">
+
+                        <!-- Rule -->
+                        <TabItem Header="Rule" Style="{StaticResource RailTab}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14,16,16">
+                                <StackPanel>
+                                    <TextBlock Text="How each value is matched" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Text="Rules that do not suit the picked parameter are switched off."
+                                               Style="{StaticResource HelpText}" Margin="0,0,0,10"/>
+                                    <Grid x:Name="rule_type_panel">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <RadioButton x:Name="radio_equals" Content="Equals" IsChecked="True"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="equals"/>
+                                            <RadioButton x:Name="radio_contains" Content="Contains"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="contains"/>
+                                            <RadioButton x:Name="radio_starts" Content="Begins with"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="begins_with"/>
+                                            <RadioButton x:Name="radio_ends" Content="Ends with"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="ends_with"/>
+                                            <RadioButton x:Name="radio_has_value" Content="Has a value"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="has_value"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <RadioButton x:Name="radio_not_equals" Content="Does not equal"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="not_equals"/>
+                                            <RadioButton x:Name="radio_not_contains" Content="Does not contain"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="not_contains"/>
+                                            <RadioButton x:Name="radio_not_starts" Content="Does not begin with"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="not_begins_with"/>
+                                            <RadioButton x:Name="radio_not_ends" Content="Does not end with"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="not_ends_with"/>
+                                            <RadioButton x:Name="radio_not_has_value" Content="Has no value"
+                                                         Style="{StaticResource ModernRadioButton}" GroupName="RuleTypeGroup" Tag="has_no_value"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Name -->
+                        <TabItem Header="Name" Style="{StaticResource RailTab}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14,16,16">
+                                <StackPanel>
+                                    <TextBlock Text="Filter name" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Text="Prefix + category + parameter + value + suffix. Watch the preview above."
+                                               Style="{StaticResource HelpText}" Margin="0,0,0,12"/>
+
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="10"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Prefix" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="prefix_textbox" Style="{StaticResource ModernTextBox}"
+                                                     ToolTip="Text put at the start of every filter name, e.g. M"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Suffix" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="suffix_textbox" Style="{StaticResource ModernTextBox}"
+                                                     ToolTip="Text put at the end of every filter name"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <DockPanel Margin="0,0,0,14">
+                                        <TextBox x:Name="separator_textbox" DockPanel.Dock="Right" Text="_" Width="64"
+                                                 Style="{StaticResource ModernTextBox}" HorizontalContentAlignment="Center"
+                                                 ToolTip="Put between the parts of the name. Empty means _"/>
+                                        <TextBlock Text="Separator between the parts" Style="{StaticResource FieldLabel}"
+                                                   VerticalAlignment="Center" Margin="0"/>
+                                    </DockPanel>
+
+                                    <CheckBox x:Name="include_cat_checkbox" Content="Include the category name" IsChecked="True"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                    <CheckBox x:Name="include_param_checkbox" Content="Include the parameter name" IsChecked="True"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <!-- Apply -->
+                        <TabItem x:Name="apply_tab" Header="Apply" Style="{StaticResource RailTab}">
+                            <Grid Margin="16,14,16,16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Apply to" Style="{StaticResource SectionLabel}"/>
+                                <DockPanel Grid.Row="1" Margin="0,6,0,10">
+                                    <Button x:Name="refresh_views_button" DockPanel.Dock="Right" Content="Refresh"
+                                            Style="{StaticResource LinkButton}" VerticalAlignment="Center"
+                                            ToolTip="Reload the view list (after adding or renaming views)"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton x:Name="apply_active_radio" Content="Active view" IsChecked="True"
+                                                     Style="{StaticResource ModernRadioButton}" Margin="0,0,16,0"/>
+                                        <RadioButton x:Name="apply_multiple_radio" Content="Picked views"
+                                                     Style="{StaticResource ModernRadioButton}"/>
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <Grid Grid.Row="2">
+                                    <ListBox x:Name="views_listbox"
+                                             Style="{StaticResource ModernListBox}"
+                                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                             SelectionMode="Extended"
+                                             IsEnabled="False"
+                                             DisplayMemberPath="Display"
+                                             VirtualizingStackPanel.IsVirtualizing="True"
+                                             VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                             ScrollViewer.CanContentScroll="True"
+                                             ToolTip="Only views that can take filters are listed. Ctrl+click to pick several."/>
+                                    <TextBlock Text="No views in this model can take filters."
+                                               Tag="{Binding HasItems, ElementName=views_listbox}" Style="{StaticResource EmptyHint}"/>
+                                </Grid>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- Colours -->
+                        <TabItem Header="Colours" Style="{StaticResource RailTab}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14,16,16">
+                                <StackPanel>
+                                    <TextBlock Text="What Shuffle colours paints" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Text="Each filter gets its own colour from the palette; click Shuffle colours again for a new set."
+                                               Style="{StaticResource HelpText}" Margin="0,0,0,12"/>
+                                    <CheckBox x:Name="color_proj_lines_checkbox" Content="Projection lines" IsChecked="True" Style="{StaticResource ModernCheckBox}"/>
+                                    <CheckBox x:Name="color_proj_patterns_checkbox" Content="Projection / surface patterns" Style="{StaticResource ModernCheckBox}"/>
+                                    <CheckBox x:Name="color_cut_lines_checkbox" Content="Cut lines" IsChecked="True" Style="{StaticResource ModernCheckBox}"/>
+                                    <CheckBox x:Name="color_cut_patterns_checkbox" Content="Cut patterns" Style="{StaticResource ModernCheckBox}"/>
+                                    <CheckBox x:Name="color_halftone_checkbox" Content="Halftone" Style="{StaticResource ModernCheckBox}"/>
+
+                                    <TextBlock Text="Pattern" Style="{StaticResource FieldLabel}" Margin="0,14,0,5"/>
+                                    <ComboBox x:Name="pattern_combo" IsEditable="False" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                              ToolTip="Fill pattern used when a pattern colour is ticked (Solid fill by default)"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
+                </Border>
+            </Grid>
+
+            <!-- Loading cover over the picks while Revit is read. -->
+            <Border x:Name="loading_indicator" Grid.Column="0" Grid.ColumnSpan="3"
+                    Background="{StaticResource OverlayBackground}" CornerRadius="12" Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="180" Height="4" Margin="0,0,0,14"/>
+                    <TextBlock Text="Reading the model..." FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============ REPORT (shown only when something was skipped) ============ -->
+        <Border x:Name="report_panel" Grid.Row="2" Margin="24,0,24,16" Visibility="Collapsed" Style="{StaticResource ReportCard}">
+            <DockPanel>
+                <Border DockPanel.Dock="Left" Style="{StaticResource CardMark}" Background="{StaticResource AccentWarning}"/>
+                <TextBlock x:Name="report_title_text" DockPanel.Dock="Top" Text="Skipped" Style="{StaticResource ReportTitle}"/>
+                <ScrollViewer MaxHeight="96" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                    <ItemsControl x:Name="report_items">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,2">
+                                    <TextBlock DockPanel.Dock="Left" Text="•" Margin="0,0,8,0" Foreground="{StaticResource AccentWarning}"/>
+                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- ============ FOOTER ============ -->
+        <Border Grid.Row="3" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="status_text" Grid.Column="0" Text="Ready" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,20,0"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="override_existing_checkbox" Content="Update existing filters"
+                              Style="{StaticResource ToggleSwitchCheckBox}" Margin="0,0,20,0" VerticalAlignment="Center"
+                              ToolTip="On: a filter that already has the same name gets the new categories and rule.&#x0a;Off: it is used as it is, untouched."/>
+                    <Button x:Name="create_button" Content="Create filters" Style="{StaticResource SecondaryButton}"
+                            MinWidth="128" Margin="0,0,8,0"
+                            ToolTip="Make the filters in the project only - no view is changed."/>
+                    <Button x:Name="shuffle_colors_button" Content="Shuffle colours" Style="{StaticResource SecondaryButton}"
+                            MinWidth="128" Margin="0,0,8,0"
+                            ToolTip="Give the filters new random colours in the target views. Click again to re-shuffle."/>
+                    <Button x:Name="apply_view_button" Content="Apply to view" Style="{StaticResource PrimaryButton}"
+                            MinWidth="140" Margin="0,0,16,0"
+                            ToolTip="Make the filters and add them to the target views, first in the list."/>
+                    <Button x:Name="close_button" Content="Close" Style="{StaticResource GhostButton}"
+                            MinWidth="88" IsCancel="True" ToolTip="Close Filter Pro (Esc)"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

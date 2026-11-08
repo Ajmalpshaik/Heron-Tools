@@ -1,0 +1,290 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Quick Menu Settings: choose which Heron Tools button or Revit command sits in each slot of the quick
+  wheel, how many slots there are and how big the wheel opens. Left card: every tool, with a search box.
+  Right card: the wheel itself, drawn in code exactly like the real one, and the drop target for tools.
+  Footer: honest status on the left, ONE Accent action (Save) on the right.
+  Heron brand design (UI/HeronStyles.xaml) - same patterns as Filter Pro and Colorize.
+  Every x:Name and event used by QuickMenuSettingsWindow.xaml.cs is kept.
+-->
+<Window x:Class="HeronTools.UI.QuickMenu.QuickMenuSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Quick Menu Settings - Heron Tools"
+        Width="1020"
+        Height="790"
+        MinWidth="960"
+        MinHeight="780"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/HeronTools;component/UI/HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="*"/>      <!-- tools + wheel -->
+            <RowDefinition Height="Auto"/>   <!-- footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ============ HEADER ============ -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1"
+                Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Heron mark in an Ink tile with the brand corner radius, like the app icon. -->
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="11"
+                        Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1"
+                        VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Quick Menu Settings" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Your favourite tools in a ring around the pointer. Drag a tool onto a slot - slot 1 is at the top, the rest follow clockwise."
+                               Style="{StaticResource HeaderSubtitle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ BODY ============ -->
+        <Grid Grid.Row="1" Margin="24,20,24,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="404"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Step 1: everything that can go in a slot - Heron Tools buttons and Revit's own commands -->
+            <Border Grid.Column="0" Style="{StaticResource StepCard}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                        <Border DockPanel.Dock="Left" Tag="{Binding SelectedItem, ElementName=ToolList}" Style="{StaticResource StepBadge}">
+                            <TextBlock Text="1" Style="{StaticResource StepBadgeText}"/>
+                        </Border>
+                        <StackPanel Margin="10,0,0,0">
+                            <TextBlock Text="Pick a tool" Style="{StaticResource StepTitle}"/>
+                            <TextBlock x:Name="ToolCountText" Text="0 tools" Style="{StaticResource StepCount}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="SearchBox" Grid.Column="0"
+                                 Style="{StaticResource SearchTextBox}" Tag="Search tools"
+                                 ToolTip="Type part of a name - spaces do not matter, so 'visibilitygraphics' finds Visibility Graphics."
+                                 TextChanged="OnSearchTextChanged"/>
+                        <ComboBox x:Name="SourceFilterCombo" Grid.Column="2"
+                                  ToolTip="Show everything, only Heron Tools buttons, or only Revit's own commands."
+                                  SelectionChanged="OnSourceFilterChanged"/>
+                    </Grid>
+
+                    <ListBox x:Name="ToolList" Grid.Row="2"
+                             Style="{StaticResource ModernListBox}"
+                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                             AllowDrop="True"
+                             ToolTip="Drag a tool onto the wheel, or double-click it to put it in the picked slot. Drop a slot here to empty it."
+                             ToolTipService.InitialShowDelay="1200"
+                             MouseDoubleClick="OnToolListDoubleClick"
+                             PreviewMouseLeftButtonDown="OnToolListMouseDown"
+                             MouseMove="OnToolListMouseMove"
+                             DragOver="OnToolListDragOver"
+                             Drop="OnToolListDrop"/>
+                </Grid>
+            </Border>
+
+            <!-- The same jobs as dragging, for anyone who prefers buttons -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,14,0">
+                <Button x:Name="AssignButton"
+                        Content="Set  &#x2192;"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="112"
+                        Margin="0,0,0,8"
+                        ToolTip="Put the picked tool in the picked slot."
+                        Click="OnAssignClick"/>
+                <Button x:Name="ClearButton"
+                        Content="Clear slot"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="112"
+                        Margin="0,0,0,24"
+                        ToolTip="Empty the picked slot."
+                        Click="OnClearClick"/>
+                <TextBlock Text="ORDER" Style="{StaticResource Overline}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <Button x:Name="MoveUpButton"
+                        Content="Move back"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="112"
+                        Margin="0,0,0,8"
+                        ToolTip="Swap the picked slot with the one before it (anticlockwise)."
+                        Click="OnMoveUpClick"/>
+                <Button x:Name="MoveDownButton"
+                        Content="Move on"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="112"
+                        ToolTip="Swap the picked slot with the one after it (clockwise)."
+                        Click="OnMoveDownClick"/>
+            </StackPanel>
+
+            <!-- Step 2: the wheel itself - what the quick menu will look like, and the drop target -->
+            <Border Grid.Column="2" Style="{StaticResource StepCard}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                        <Border DockPanel.Dock="Left" Tag="set" Style="{StaticResource StepBadge}">
+                            <TextBlock Text="2" Style="{StaticResource StepBadgeText}"/>
+                        </Border>
+                        <StackPanel Margin="10,0,0,0">
+                            <TextBlock Text="Place it on the wheel" Style="{StaticResource StepTitle}"/>
+                            <TextBlock Text="Drag slot to slot to swap them"
+                                       Style="{StaticResource StepCount}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Slots" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="SlotCountCombo" Grid.Column="1"
+                                  ToolTip="How many slots the wheel has. Tools in slots you take away are dropped."
+                                  SelectionChanged="OnSlotCountChanged"/>
+                        <TextBlock Grid.Column="3" Text="Size" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="WheelSizeCombo" Grid.Column="4"
+                                  ToolTip="How big the wheel opens on screen."
+                                  SelectionChanged="OnWheelSizeChanged"/>
+                    </Grid>
+
+                    <!-- Drawn in code so it matches the real wheel exactly, same as QuickMenuWindow does. -->
+                    <Canvas x:Name="WheelCanvas" Grid.Row="2"
+                            Width="352"
+                            Height="352"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            AllowDrop="True"
+                            PreviewMouseLeftButtonDown="OnWheelMouseDown"
+                            MouseMove="OnWheelMouseMove"
+                            MouseLeave="OnWheelMouseLeave"
+                            DragOver="OnWheelDragOver"
+                            DragLeave="OnWheelDragLeave"
+                            Drop="OnWheelDrop"/>
+
+                    <TextBlock x:Name="WheelHintText" Grid.Row="3"
+                               Margin="0,8,0,0"
+                               TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}"/>
+
+                    <TextBlock x:Name="ShortcutHintText" Grid.Row="4"
+                               Margin="0,6,0,0"
+                               Style="{StaticResource HelpText}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Text="Tip: give the Quick Menu button a Revit keyboard shortcut so the wheel opens right under your pointer."/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ============ FOOTER ============ -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Status line. The calm note shows until there is a problem; then ErrorText (an inline
+                     message for a failed save or an unreadable layout file - house rule: no popup, the window
+                     stays open) takes its place. -->
+                <Grid Grid.Column="0" Margin="0,0,20,0" VerticalAlignment="Center">
+                    <TextBlock Text="Saved for you on this PC. Nothing in the model is changed."
+                               FontSize="12" Foreground="{StaticResource TextSecondary}"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Visibility, ElementName=ErrorText}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="ErrorText"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource AccentDanger}"
+                               Visibility="Collapsed"/>
+                </Grid>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="SaveButton"
+                            Content="Save"
+                            Style="{StaticResource PrimaryButton}"
+                            MinWidth="120"
+                            Margin="0,0,8,0"
+                            ToolTip="Save this layout. The wheel uses it the next time it opens."
+                            Click="OnSaveClick"/>
+                    <Button Content="Cancel"
+                            Style="{StaticResource GhostButton}"
+                            IsCancel="True"
+                            MinWidth="88"
+                            ToolTip="Close without saving (Esc)"
+                            Click="OnCancelClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

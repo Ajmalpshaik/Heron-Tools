@@ -1,0 +1,126 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  View Crop - settings and scope for "Set Annotation Crop by View Crop".
+  Which views, and how far outside the view crop the annotation crop sits.
+  Design: Heron brand kit via HeronStyles.xaml (same layout language as Filter Pro).
+-->
+<Window x:Class="HeronTools.UI.ViewCrop.ViewCropAnnotationOptionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Set Annotation Crop - Heron Tools"
+        Width="560"
+        MinWidth="520"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="Auto"/>   <!-- body -->
+            <RowDefinition Height="Auto"/>   <!-- footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ============ HEADER ============ -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="11"
+                        Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Set Annotation Crop" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Turn on the annotation crop and set it an even distance outside each view's crop."
+                               Style="{StaticResource HeaderSubtitle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ BODY ============ -->
+        <StackPanel Grid.Row="1" Margin="24,20,24,16">
+            <Border Style="{StaticResource StepCard}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Views" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="ActiveViewOnlyRadio" Content="Active view" IsChecked="True"
+                                     Style="{StaticResource ModernRadioButton}" Margin="0,0,20,0"
+                                     Checked="OnApplyScopeChanged" Unchecked="OnApplyScopeChanged"/>
+                        <RadioButton x:Name="MultipleViewsRadio" Content="Pick several views"
+                                     Style="{StaticResource ModernRadioButton}"
+                                     Checked="OnApplyScopeChanged" Unchecked="OnApplyScopeChanged"/>
+                    </StackPanel>
+                    <TextBlock Text="With several views, the next window lists the views to pick from."
+                               Style="{StaticResource HelpText}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource StepCard}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="120"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Offset outside the view crop" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="The same distance on all four sides, in millimetres on the sheet."
+                                   Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <TextBlock Text="Offset on paper (mm)" Style="{StaticResource FieldLabel}"/>
+                        <TextBox x:Name="OffsetTextBox" Style="{StaticResource ModernTextBox}"
+                                 ToolTip="How far outside the view crop the annotation crop sits, in millimetres"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </StackPanel>
+
+        <!-- ============ FOOTER ============ -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ErrorText" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0"
+                           Foreground="{StaticResource AccentWarning}" FontSize="12" TextWrapping="Wrap"
+                           Visibility="Collapsed"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="RunButton" Content="Set annotation crop" Style="{StaticResource PrimaryButton}"
+                            MinWidth="170" Margin="0,0,16,0" Click="OnRun"/>
+                    <Button Content="Cancel" Style="{StaticResource GhostButton}" MinWidth="88"
+                            IsCancel="True" Click="OnCancel"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

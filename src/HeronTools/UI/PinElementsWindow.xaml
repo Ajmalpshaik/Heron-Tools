@@ -1,0 +1,211 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Pin / Unpin (Heron Tools): tick groups of elements (title blocks, views on sheets, ducts, pipes, grids,
+  levels...) and pin or unpin them all in one Undo step. On a sheet: this sheet or all sheets.
+  Heron brand theme (HeronStyles.xaml).
+-->
+<Window x:Class="HeronTools.UI.PinElementsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pin / Unpin - Heron Tools"
+        Width="560"
+        MinWidth="500"
+        MinHeight="500"
+        MaxHeight="780"
+        SizeToContent="Height"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- One group: tick box + name, a one-line description under it, and how many elements it has. -->
+            <DataTemplate x:Key="CategoryItemTemplate">
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <CheckBox Content="{Binding Name}"
+                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                  Style="{StaticResource ModernCheckBox}"
+                                  Margin="0"/>
+                        <TextBlock Text="{Binding Description}"
+                                   Style="{StaticResource HelpText}"
+                                   Margin="26,2,0,0"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding CandidateCount, StringFormat={}{0} found}"
+                               Margin="12,1,4,0"
+                               FontSize="12"
+                               VerticalAlignment="Top"
+                               Foreground="{StaticResource TextSecondary}"/>
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="44" Height="44" CornerRadius="11" Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Pin / Unpin" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Pin or unpin whole groups of elements in one go."
+                               Style="{StaticResource HeaderSubtitle}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Body -->
+        <Grid Grid.Row="1" Margin="24,20,24,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Where you are, and (on a sheet) which sheets -->
+            <Border Grid.Row="0" Style="{StaticResource StepCard}">
+                <StackPanel>
+                    <TextBlock x:Name="ContextText"
+                               Style="{StaticResource SectionLabel}"
+                               TextWrapping="Wrap"/>
+                    <StackPanel x:Name="SheetScopePanel" Margin="0,8,0,0">
+                        <TextBlock Text="Which sheets" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <RadioButton x:Name="ActiveSheetOnlyRadioButton"
+                                         Content="This sheet only"
+                                         IsChecked="True"
+                                         Style="{StaticResource ModernRadioButton}"
+                                         Margin="0,0,20,0"/>
+                            <RadioButton x:Name="AllSheetsRadioButton"
+                                         Content="All sheets"
+                                         Style="{StaticResource ModernRadioButton}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- The groups -->
+            <Border Grid.Row="1" Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="SelectAllButton" Content="Select all" Style="{StaticResource LinkButton}"
+                                    Click="OnSelectAllClick" ToolTip="Tick every group"/>
+                            <TextBlock Text="·" Foreground="{StaticResource TextDisabled}" Margin="8,0" VerticalAlignment="Center"/>
+                            <Button x:Name="ClearAllButton" Content="Clear" Style="{StaticResource LinkButton}"
+                                    Click="OnClearAllClick" ToolTip="Untick every group"/>
+                        </StackPanel>
+                        <TextBlock Text="Groups" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <TextBlock x:Name="SelectionSummaryText"
+                               Grid.Row="1"
+                               Style="{StaticResource StepCount}"
+                               Margin="0,0,0,8"/>
+
+                    <ScrollViewer Grid.Row="2"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="0,0,4,0">
+                            <Grid x:Name="SheetItemsGroupBox">
+                                <ListBox x:Name="SheetCategoryListBox"
+                                         Style="{StaticResource ModernListBox}"
+                                         ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                         ItemTemplate="{StaticResource CategoryItemTemplate}"
+                                         PreviewMouseWheel="OnListBoxPreviewMouseWheel"/>
+                            </Grid>
+                            <Grid x:Name="ModelItemsGroupBox">
+                                <ListBox x:Name="ModelCategoryListBox"
+                                         Style="{StaticResource ModernListBox}"
+                                         ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                         ItemTemplate="{StaticResource CategoryItemTemplate}"
+                                         PreviewMouseWheel="OnListBoxPreviewMouseWheel"/>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText"
+                           Grid.Column="0"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource TextSecondary}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,16,0"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="PinButton"
+                            Content="Pin"
+                            Style="{StaticResource PrimaryButton}"
+                            MinWidth="96"
+                            Margin="0,0,8,0"
+                            Click="OnPinClick"
+                            ToolTip="Pin every element in the ticked groups (one Undo step)"/>
+                    <Button x:Name="UnpinButton"
+                            Content="Unpin"
+                            Style="{StaticResource SecondaryButton}"
+                            MinWidth="96"
+                            Margin="0,0,8,0"
+                            Click="OnUnpinClick"
+                            ToolTip="Unpin every element in the ticked groups (one Undo step)"/>
+                    <Button Content="Close"
+                            Style="{StaticResource GhostButton}"
+                            IsCancel="True"
+                            MinWidth="88"
+                            Click="OnCloseClick"
+                            ToolTip="Close (Esc)"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Heron Tools - add-in manifest for Revit 2021.
+
+  build/build.ps1 copies this file to %AppData%\Autodesk\Revit\Addins\2021\HeronTools.addin
+  and the DLL to the HeronTools folder beside it. The Assembly path below is relative to
+  this manifest, so it points into that folder.
+
+  The AddInId is unique to Heron Tools for Revit 2021. Never reuse it in another product.
+  Only these elements: the Revit 2026 isolation settings element crashes Revit 2025 and older.
+-->
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Heron Tools</Name>
+    <Assembly>HeronTools\HeronTools.dll</Assembly>
+    <AddInId>3CBF51B5-BA86-41A2-BF99-5A3D7E6FC9E4</AddInId>
+    <FullClassName>HeronTools.App.HeronToolsApp</FullClassName>
+    <VendorId>AJPS</VendorId>
+    <VendorDescription>Ajmal PS - Heron Tools</VendorDescription>
+  </AddIn>
+</RevitAddIns>
