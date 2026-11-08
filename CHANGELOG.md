@@ -21,6 +21,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   overrides, this view or picked views, counted first), and Restore Last Reset - every reset keeps a copy first.
 - **Every window remembers your last choices**, also after Revit restarts (`%AppData%\HeronTools\memory-<tool>.txt`):
   remembered by name, applied only where the model has them.
+- **Every window stays fully on screen**, bottom buttons included: it is moved inside the screen it opens on
+  (taskbar excluded) and, on a small or scaled laptop screen, held to the screen height with its middle scrolling.
 - Heron brand design for every window; Heron mark and app icon; brand ribbon icons; the Manrope
   brand font built into the DLL (SIL Open Font License 1.1, `Resources/Fonts/OFL.txt`).
 - The Heron metadata standard on every source file, checked by `build/check-metadata.ps1`, and a GitHub

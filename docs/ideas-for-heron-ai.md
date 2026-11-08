@@ -23,6 +23,7 @@ accepted would be built Heron AI's own way, never copied across.
 | 12 | **Datum extents: change only the 3D extent.** | Worth checking `maximize-datum-extents`. | AJ-Tools forced both ends to 3D in every view before setting the curve, wiping every 2D level end project-wide. Setting only the `Model` curve leaves 2D ends alone; take the offset from the two level lines, not `Level.Elevation` (it depends on the type's elevation base). |
 | 13 | **Pipe top/bottom from the Outside Diameter.** | `align-mep-elevation` uses the nominal diameter too. | Revit's own Top/Bottom Elevation uses `RBS_PIPE_OUTER_DIAMETER`; DN100 steel lands ~7 mm off with the nominal size. |
 | 14 | **One Undo step for a pick loop.** | Heron AI runs from chat, so rarely loops on picks. | A `TransactionGroup` may stay open across `PickObject` calls; each pick commits so it shows, and the group is assimilated at the end (rolled back if nothing changed). |
+| 15 | **Keep every window fully on screen.** | Worth checking any Heron AI window that is taller than a laptop screen or opens centred on Revit. | 2026-11-08 the View Crop window opened with its Run and Cancel buttons below the screen edge (Revit not maximised, scaled laptop screen). On Loaded and SizeChanged, read the work area of the window's own monitor (`MonitorFromWindow` + `GetMonitorInfo`, converted to WPF units), cap `MaxHeight`/`MaxWidth` to it, move `Top`/`Left` inside it, and let the window's middle row scroll (`*` row in a `ScrollViewer`). |
 
 ## Not taken from AJ-Tools (left behind on purpose)
 
