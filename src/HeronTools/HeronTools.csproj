@@ -37,6 +37,9 @@
   <!-- Ribbon icons, built into the DLL so they can never go missing beside it. -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\Icons\*.png" LogicalName="HeronTools.Icons.%(Filename)%(Extension)" />
+    <!-- The brand font, built into the DLL so every PC shows it (no font install). SIL Open Font
+         License 1.1 - its text ships beside it (Resources\Fonts\OFL.txt) and is named in NOTICE. -->
+    <Resource Include="Resources\Fonts\*.ttf" />
   </ItemGroup>
 
 </Project>

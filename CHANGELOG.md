@@ -17,7 +17,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - **Modify** panel: Match Elevation (centre/top/bottom), Reassign Level, Pin / Unpin, Smart Selection.
 - **Coordination** panel: ID of a Picked Element, Find by Element ID, 3D Views by Workset, Link Workset.
 - **About Heron** - one About for the Heron family: version, Revit and .NET, links to both products.
-- Heron brand design for every window; Heron mark and app icon; brand ribbon icons.
+- Heron brand design for every window; Heron mark and app icon; brand ribbon icons; the Manrope
+  brand font built into the DLL (SIL Open Font License 1.1, `Resources/Fonts/OFL.txt`).
 - The Heron metadata standard on every source file, checked by `build/check-metadata.ps1`, and a GitHub
   `Gates` check that compiles every Revit year.
 - `build/build.ps1` (build all years, install into each installed Revit) and `build/uninstall.ps1`, with

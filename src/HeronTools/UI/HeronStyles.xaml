@@ -23,7 +23,8 @@ Shades are see-through versions of these, never new colours: Mist over Ink at 92
 72 % secondary, 55 % quiet, 14 % a line, 8 % / 4 % a faint fill.
 Never add a colour here that is not in that list - ask first.
 
-Font: Manrope, falling back to Segoe UI when Manrope is not installed on the PC.
+Font: Manrope, built into HeronTools.dll (Resources/Fonts, SIL Open Font License 1.1), with Segoe UI as
+the fallback.
 
 Templates and motion were carried over from the AJ-Tools theme (Filter Pro move, 2026-11-07); only
 the colours and font changed. A few keys (DataGrid, Success/Danger buttons, brush aliases) are not used
@@ -33,8 +34,8 @@ by today's windows; they are kept for the next tools moved in, and use brand col
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Brand font, with the Windows system font as the fallback. -->
-    <FontFamily x:Key="BrandFont">Manrope, Segoe UI</FontFamily>
+    <!-- Brand font from inside HeronTools.dll (no install needed), then the Windows system font. -->
+    <FontFamily x:Key="BrandFont">pack://application:,,,/HeronTools;component/Resources/Fonts/#Manrope, Segoe UI</FontFamily>
 
     <!-- The heron mark, exactly as the designer's kit draws it (SVG/Logo_white.svg, 1080 x 1071).
          Same artwork Heron AI shows. Use it inside a Viewbox and fill it with Mist on dark, Ink on light. -->

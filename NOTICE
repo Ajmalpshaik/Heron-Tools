@@ -13,6 +13,13 @@ not to present another product as Heron.
 
 ---
 
+The Manrope typeface (src/HeronTools/Resources/Fonts/, built into HeronTools.dll)
+is Copyright 2018 The Manrope Project Authors and is licensed under the SIL Open
+Font License, Version 1.1 - see src/HeronTools/Resources/Fonts/OFL.txt. It is
+not licensed under the Apache License.
+
+---
+
 Heron Tools integrates with Autodesk Revit through the Revit API.
 
 Autodesk and Revit are trademarks or registered trademarks of Autodesk, Inc.

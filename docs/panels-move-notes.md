@@ -69,6 +69,21 @@ no code shared):
 
 `build/uninstall.ps1` got the same Revit checks, reports all-users copies, and `-RemoveBackups`.
 
+## Removed from AJ-Tools (2026-11-08)
+
+At Ajmal's instruction, every tool moved here was removed from AJ-Tools on its branch
+`claude/move-tools-to-heron-tools` (AJ-Tools v1.59.0): the Quick, View, Datums, Modify and Coordination
+panels' ribbon entries, the 106 source files and 17 icons only they used, and the matching README/USAGE
+lines. Every other AJ-Tools tool is unchanged; it builds clean for Revit 2020-2027. It reaches AJ-Tools'
+`master` (and an installer release) only when that branch is merged.
+
+## Brand font
+
+Manrope is built into `HeronTools.dll` (`Resources/Fonts`, five weights), so every PC shows the brand font
+without installing it; Segoe UI stays the fallback. Manrope is under the SIL Open Font License 1.1 - its text
+ships in `Resources/Fonts/OFL.txt` and is named in `NOTICE`. Proved outside Revit: the About window's text
+is drawn from the font inside the DLL on a PC without Manrope installed.
+
 ## Still needs a real Revit test
 
 Every tool above. In particular: Reassign Level's measured move on ducts, pipes (sloped too), equipment and
