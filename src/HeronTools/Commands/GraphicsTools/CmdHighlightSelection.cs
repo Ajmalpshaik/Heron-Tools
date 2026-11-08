@@ -115,7 +115,7 @@ namespace HeronTools.Commands.GraphicsTools
                 return Result.Cancelled;
             }
 
-            highlightIds = ExpandInsulationAndLining(context.Document, highlightIds, viewKeys);
+            highlightIds = InsulationLining.WithWraps(context.Document, highlightIds, viewKeys);
 
             var highlightKeys = new HashSet<long>(highlightIds.Select(id => id.LongValue()));
             List<ElementId> restIds = elementsInView.Where(id => !highlightKeys.Contains(id.LongValue())).ToList();
@@ -218,79 +218,22 @@ namespace HeronTools.Commands.GraphicsTools
             return false;
         }
 
+        /// <summary>
+        /// The elements Highlight coloured in this view, while the highlight is still on - for Reset Graphics,
+        /// which can leave them to Highlight's own second click (that puts back each element's own colours).
+        /// </summary>
+        internal static List<long> HighlightedIds(Document doc, View view)
+        {
+            if (SavedByView.TryGetValue(ViewKey(doc, view), out Dictionary<long, OverrideGraphicSettings> saved) &&
+                StillHighlighted(doc, view, saved))
+                return saved.Keys.ToList();
+            return new List<long>();
+        }
+
         private static string ViewKey(Document doc, View view)
         {
             string docKey = string.IsNullOrWhiteSpace(doc.PathName) ? doc.Title : doc.PathName;
             return docKey + "|" + view.Id.LongValue();
-        }
-
-        /// <summary>
-        /// Insulation and lining follow their duct or pipe: picking the wrap highlights the host too, and a
-        /// highlighted duct/pipe takes its insulation and lining with it.
-        /// </summary>
-        private static List<ElementId> ExpandInsulationAndLining(
-            Document doc,
-            List<ElementId> selectedIds,
-            HashSet<long> viewKeys)
-        {
-            var expandedKeys = new HashSet<long>(selectedIds.Select(id => id.LongValue()));
-            var expanded = new List<ElementId>(selectedIds);
-
-            // A selected insulation/lining element pulls in its host (DuctInsulation, DuctLining and
-            // PipeInsulation all derive from InsulationLiningBase in 2020-2027).
-            foreach (ElementId selectedId in selectedIds)
-            {
-                if (!(doc.GetElement(selectedId) is InsulationLiningBase wrap))
-                    continue;
-
-                ElementId hostId = wrap.HostElementId;
-                if (hostId == null || hostId == ElementId.InvalidElementId)
-                    continue;
-
-                if (viewKeys.Contains(hostId.LongValue()) && expandedKeys.Add(hostId.LongValue()))
-                    expanded.Add(hostId);
-            }
-
-            // Every highlighted element pulls in its hosted insulation and lining. Wraps appended in the loop
-            // host nothing themselves, so the loop stops at the original count.
-            int hostCandidateCount = expanded.Count;
-            for (int i = 0; i < hostCandidateCount; i++)
-            {
-                AddHostedWrapIds(InsulationLiningBase.GetInsulationIds, doc, expanded[i], viewKeys, expandedKeys, expanded);
-                AddHostedWrapIds(InsulationLiningBase.GetLiningIds, doc, expanded[i], viewKeys, expandedKeys, expanded);
-            }
-
-            return expanded;
-        }
-
-        private static void AddHostedWrapIds(
-            Func<Document, ElementId, ICollection<ElementId>> getWrapIds,
-            Document doc,
-            ElementId hostId,
-            HashSet<long> viewKeys,
-            HashSet<long> expandedKeys,
-            List<ElementId> expanded)
-        {
-            ICollection<ElementId> wrapIds;
-            try
-            {
-                // Revit throws ArgumentException for an element that cannot host insulation/lining; that IS
-                // the category test, so it is the one exception caught here.
-                wrapIds = getWrapIds(doc, hostId);
-            }
-            catch (Autodesk.Revit.Exceptions.ArgumentException)
-            {
-                return;
-            }
-
-            if (wrapIds == null)
-                return;
-
-            foreach (ElementId wrapId in wrapIds)
-            {
-                if (viewKeys.Contains(wrapId.LongValue()) && expandedKeys.Add(wrapId.LongValue()))
-                    expanded.Add(wrapId);
-            }
         }
 
         private static OverrideGraphicSettings BuildSolidOverride(Document doc, GraphicsColorValue color)

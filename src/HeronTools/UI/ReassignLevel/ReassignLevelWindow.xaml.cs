@@ -7,6 +7,8 @@
 
 // Reassign Level window: choose Whole project (From and To level) or Only my selection (To level only, using
 // whatever was already selected in Revit). The window only collects the choice; the command does the change.
+// It reopens with the last scope and the last From / To levels, remembered BY LEVEL NAME (ids differ between
+// models) in %AppData%\HeronTools\memory-reassign-level.txt, saved when Run is pressed.
 
 using System.Collections.Generic;
 using System.Globalization;
@@ -34,6 +36,13 @@ namespace HeronTools.UI.ReassignLevel
     public partial class ReassignLevelWindow : Window
     {
         private const double MetersPerFoot = 0.3048;
+
+        // What this window remembers between uses (also after Revit restarts).
+        private const string MemoryTool = "reassign-level";
+        private const string ScopeKey = "Scope";
+        private const string FromLevelKey = "FromLevel";
+        private const string ToLevelKey = "ToLevel";
+        private readonly WindowMemory _memory = WindowMemory.Load(MemoryTool);
 
         private readonly int _eligibleSelectedCount;
         private bool _loaded;
@@ -85,6 +94,8 @@ namespace HeronTools.UI.ReassignLevel
 
             ToCombo.SelectedIndex = items.Count > 1 ? 1 : 0;
 
+            ApplyRememberedLevels(items);
+
             if (eligibleSelectedCount > 0)
             {
                 SelectionSummaryText.Text = totalSelectedCount == eligibleSelectedCount
@@ -110,7 +121,12 @@ namespace HeronTools.UI.ReassignLevel
             WholeProjectRadio.Checked += OnScopeChanged;
             SelectedElementsRadio.Checked += OnScopeChanged;
 
-            if (eligibleSelectedCount > 0)
+            // Scope: a selection made BEFORE opening the tool always wins - selecting first means "these"
+            // (Ajmal's call, 2026-11-08). With nothing usable selected, Whole project. The remembered scope is
+            // still saved, but only the levels are brought back from it.
+            bool useSelection = eligibleSelectedCount > 0;
+
+            if (useSelection)
             {
                 SelectedElementsRadio.IsChecked = true;
             }
@@ -119,6 +135,52 @@ namespace HeronTools.UI.ReassignLevel
 
             _loaded = true;
             Validate(out _, out _);
+        }
+
+        /// <summary>
+        /// Picks the From and To levels used last time, found by NAME. A name this model does not have is
+        /// skipped (that box keeps its default). From and To are never left on the same level: the
+        /// remembered one stays and the other moves to the first different level.
+        /// </summary>
+        private void ApplyRememberedLevels(IList<LevelChoice> items)
+        {
+            if (items.Count == 0)
+                return;
+
+            int fromIndex = IndexOfLevel(items, _memory.Get(FromLevelKey));
+            int toIndex = IndexOfLevel(items, _memory.Get(ToLevelKey));
+
+            if (fromIndex >= 0)
+                FromCombo.SelectedIndex = fromIndex;
+
+            if (toIndex >= 0)
+                ToCombo.SelectedIndex = toIndex;
+
+            if (items.Count < 2 || FromCombo.SelectedIndex != ToCombo.SelectedIndex)
+                return;
+
+            // Same level in both boxes. Keep the one that came from memory; move the other one.
+            int firstOther = FromCombo.SelectedIndex == 0 ? 1 : 0;
+            if (toIndex >= 0 && fromIndex < 0)
+                FromCombo.SelectedIndex = firstOther;
+            else
+                ToCombo.SelectedIndex = firstOther;
+        }
+
+        /// <summary>Position of the level with this exact name, or -1 (no name, or not in this model).</summary>
+        private static int IndexOfLevel(IList<LevelChoice> items, string levelName)
+        {
+            if (string.IsNullOrEmpty(levelName))
+                return -1;
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                // Trimmed on both sides: the memory file trims what it saves.
+                if (string.Equals(items[i].Level?.Name?.Trim(), levelName.Trim(), System.StringComparison.Ordinal))
+                    return i;
+            }
+
+            return -1;
         }
 
         private void OnScopeChanged(object sender, RoutedEventArgs e)
@@ -166,6 +228,16 @@ namespace HeronTools.UI.ReassignLevel
             Scope = wholeProject ? ReassignScope.WholeProject : ReassignScope.SelectedElements;
             FromLevel = wholeProject ? from : null;
             ToLevel = to;
+
+            // Remember what this run used, by level NAME. The From box is hidden (and unused) for a
+            // selection run, so the From level remembered from the last whole-project run is kept.
+            _memory.Set(ScopeKey, Scope.ToString());
+            if (wholeProject && from != null)
+                _memory.Set(FromLevelKey, from.Name);
+            if (to != null)
+                _memory.Set(ToLevelKey, to.Name);
+            _memory.SaveQuietly();
+
             DialogResult = true;
             Close();
         }

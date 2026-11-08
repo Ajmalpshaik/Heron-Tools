@@ -24,6 +24,9 @@ namespace HeronTools.Models.ViewCrop
 
         internal double OffsetMm { get; set; } = DefaultOffsetMm;
 
+        /// <summary>"Active view" (true, the default) or "Pick several views" (false) - remembered for next time.</summary>
+        internal bool ApplyToActiveViewOnly { get; set; } = true;
+
         /// <summary>The offset in feet ON PAPER, never below Revit's minimum.</summary>
         internal double OffsetInternal => System.Math.Max(OffsetMm * Constants.MM_TO_FEET, 1.0 / 96.0);
 
@@ -31,7 +34,8 @@ namespace HeronTools.Models.ViewCrop
         {
             return new ViewCropAnnotationSettings
             {
-                OffsetMm = OffsetMm
+                OffsetMm = OffsetMm,
+                ApplyToActiveViewOnly = ApplyToActiveViewOnly
             };
         }
     }

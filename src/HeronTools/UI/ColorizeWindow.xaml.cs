@@ -7,7 +7,8 @@
 
 // The Colorize window: the same category / parameter / value picks as Filter Pro, but the colour goes
 // straight onto the matching elements in the target views. Shuffle colours and Restore original each run
-// as one named transaction (one Undo step); the window stays open between clicks.
+// as one named transaction (one Undo step); the window stays open between clicks. It opens with the choices
+// of the last Shuffle, also after Revit restarts (FilterPicksMemory, %AppData%\HeronTools\memory-colorize.txt).
 
 using System;
 using System.Collections.Generic;
@@ -49,6 +50,10 @@ namespace HeronTools.UI
         private bool _reloadParameters;
         private bool _reloadValues;
         private bool _madeChanges;
+        // The last choices (lasting memory, also after a Revit restart); filled in once the window is up.
+        // While they are being filled in, the list handlers must not start their own loads.
+        private FilterProState _stateToRestore;
+        private bool _restoringState;
 
         public ColorizeWindow(Document doc, View activeView)
         {
@@ -72,6 +77,12 @@ namespace HeronTools.UI
             UpdateCounts();
             UpdateRestoreButton();
             UpdateStatus("Pick one or more categories to begin.");
+
+            // Read after the view and pattern lists are loaded: the memory finds its views and pattern by name
+            // in them. Filled in once the window is up (inside ShowDialog's message loop), so the awaits come
+            // back on the window's own thread - the same way Filter Pro restores its picks.
+            _stateToRestore = FilterPicksMemory.Load(FilterPicksMemory.ColorizeTool, _allViews, _patterns, false);
+            Loaded += (s, e) => RestoreLastSelection();
         }
 
         /// <summary>True when at least one click kept changes; CmdColorize then returns Succeeded.</summary>
@@ -91,12 +102,14 @@ namespace HeronTools.UI
             // async void handlers: nothing may escape to Revit's message loop, so each one catches.
             categories_listbox.SelectionChanged += async (s, e) =>
             {
+                if (_restoringState) return;   // the restore loads the lists itself, in order
                 try { await LoadParameters(); }
                 catch (Exception ex) { UpdateStatus("Could not load the parameters for these categories: " + ex.Message); }
                 UpdateCounts();
             };
             parameters_listbox.SelectionChanged += async (s, e) =>
             {
+                if (_restoringState) return;
                 try { await LoadValues(); }
                 catch (Exception ex) { UpdateStatus("Could not load the values for this parameter: " + ex.Message); }
                 UpdateCounts();
@@ -419,6 +432,135 @@ namespace HeronTools.UI
             restore_button.IsEnabled = views.Any(v => ColorizeMemory.HasMemory(_doc, v));
         }
 
+        // ---------------------------------------------------------------- last choices
+
+        /// <summary>
+        /// Fills in the choices of the last Shuffle, in the order the window loads its lists: categories, then
+        /// the parameter list fills and the parameter is picked, then the value list fills and the values are
+        /// ticked. Anything not in this model is skipped quietly; a damaged memory leaves the defaults.
+        /// </summary>
+        private async void RestoreLastSelection()
+        {
+            FilterProState last = _stateToRestore;
+            _stateToRestore = null;   // once only, even if Loaded were raised again
+            if (last == null)
+                return;
+
+            string message = "Opened with your last Colorize choices. Anything not in this model was skipped.";
+            _restoringState = true;
+            try
+            {
+                if (last.CategoryIds != null && last.CategoryIds.Count > 0)
+                {
+                    var wanted = new HashSet<long>(last.CategoryIds.Select(id => id.LongValue()));
+                    categories_listbox.SelectedItems.Clear();
+                    foreach (FilterCategoryItem item in categories_listbox.Items)
+                    {
+                        if (wanted.Contains(item.Id.LongValue()))
+                            categories_listbox.SelectedItems.Add(item);
+                    }
+                    if (categories_listbox.SelectedItems.Count > 0)
+                        await LoadParameters();
+                }
+
+                // The parameter by its built-in number, shared GUID or name - ids differ between models.
+                if (!string.IsNullOrEmpty(last.ParameterKey))
+                {
+                    foreach (FilterParameterItem item in parameters_listbox.Items)
+                    {
+                        if (FilterPicksMemory.SameParameter(_doc, item.Id, last.ParameterKey))
+                        {
+                            parameters_listbox.SelectedItem = item;
+                            break;
+                        }
+                    }
+                    if (parameters_listbox.SelectedItem != null)
+                        await LoadValues();
+                }
+
+                // Values by their text, only under the remembered parameter (found above).
+                if (parameters_listbox.SelectedItem != null && last.ValueTexts != null && last.ValueTexts.Count > 0)
+                {
+                    var wanted = FilterPicksMemory.ValueTextSet(last.ValueTexts);
+                    values_listbox.SelectedItems.Clear();
+                    foreach (FilterValueItem item in values_listbox.Items)
+                    {
+                        if (FilterPicksMemory.MatchesValueText(item, wanted))
+                            values_listbox.SelectedItems.Add(item);
+                    }
+                }
+
+                color_proj_lines_checkbox.IsChecked = last.ColorProjectionLines;
+                color_proj_patterns_checkbox.IsChecked = last.ColorProjectionPatterns;
+                color_cut_lines_checkbox.IsChecked = last.ColorCutLines;
+                color_cut_patterns_checkbox.IsChecked = last.ColorCutPatterns;
+                color_halftone_checkbox.IsChecked = last.ColorHalftone;
+                if (last.PatternId != null && last.PatternId != ElementId.InvalidElementId)
+                {
+                    PatternItem pattern = _patterns.FirstOrDefault(p => p.Id != null && p.Id.LongValue() == last.PatternId.LongValue());
+                    if (pattern != null)
+                        pattern_combo.SelectedItem = pattern;
+                }
+
+                // Picked views only when some of them are in this model; otherwise the active view.
+                if (!last.ApplyToActiveView && last.TargetViewIds != null && last.TargetViewIds.Count > 0)
+                {
+                    apply_multiple_radio.IsChecked = true;
+                    var wantedViews = new HashSet<long>(last.TargetViewIds.Select(id => id.LongValue()));
+                    views_listbox.SelectedItems.Clear();
+                    foreach (ApplyViewItem item in views_listbox.Items)
+                    {
+                        if (wantedViews.Contains(item.Id.LongValue()))
+                            views_listbox.SelectedItems.Add(item);
+                    }
+                }
+                else
+                {
+                    apply_active_radio.IsChecked = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                // async void, started from Loaded: nothing may escape to Revit. The window still works; only
+                // the last choices are not filled in.
+                message = "Could not fill in your last choices (" + ex.Message + "). Pick again.";
+            }
+            finally
+            {
+                _restoringState = false;
+            }
+
+            UpdateApplyScopeLabel();
+            UpdateRestoreButton();
+            UpdateCounts();
+            UpdateStatus(message);
+        }
+
+        /// <summary>Remembers the picks a Shuffle just used, for the next time the window opens.</summary>
+        private void RememberChoices(FilterSelection selection, List<View> targetViews)
+        {
+            var state = new FilterProState
+            {
+                CategoryIds = selection.CategoryIds?.ToList() ?? new List<ElementId>(),
+                ParameterId = selection.Parameter?.Id,
+                ApplyToActiveView = apply_active_radio.IsChecked == true,
+                TargetViewIds = targetViews.Select(v => v.Id).ToList(),
+                ColorProjectionLines = selection.ColorProjectionLines,
+                ColorProjectionPatterns = selection.ColorProjectionPatterns,
+                ColorCutLines = selection.ColorCutLines,
+                ColorCutPatterns = selection.ColorCutPatterns,
+                ColorHalftone = selection.ColorHalftone
+            };
+
+            FilterPicksMemory.Save(
+                FilterPicksMemory.ColorizeTool,
+                _doc,
+                state,
+                (selection.Values ?? new List<FilterValueItem>()).Select(v => v.Display),
+                (pattern_combo?.SelectedItem as PatternItem)?.Name,
+                false);
+        }
+
         // ---------------------------------------------------------------- actions
 
         private void ShuffleColorsButton_Click(object sender, RoutedEventArgs e)
@@ -449,6 +591,9 @@ namespace HeronTools.UI
 
             if (summary.HasChanges)
                 _madeChanges = true;
+
+            // The run went through (even if nothing matched): these are the choices to open with next time.
+            RememberChoices(selection, targetViews);
 
             ShowReport(skipped);
             UpdateRestoreButton();
@@ -494,6 +639,10 @@ namespace HeronTools.UI
             // The memory is kept: if the restore is undone, Restore original still works.
             if (restored > 0)
                 _madeChanges = true;
+
+            // Restore uses only where to work (not the category / parameter picks), so only that is remembered.
+            FilterPicksMemory.SaveScope(FilterPicksMemory.ColorizeTool, _doc, apply_active_radio.IsChecked == true,
+                                        targetViews.Select(v => v.Id).ToList());
 
             ShowReport(null);
             UpdateRestoreButton();

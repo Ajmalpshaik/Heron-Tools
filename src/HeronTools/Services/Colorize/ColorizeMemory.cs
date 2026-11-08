@@ -109,6 +109,24 @@ namespace HeronTools.Services.Colorize
         /// many elements were restored. The memory is kept (see <see cref="HasMemory"/>), so an Undo of the
         /// restore can be restored again; a later Shuffle drops it once nothing coloured is left.
         /// </summary>
+        /// <summary>
+        /// The elements still carrying a Colorize colour in this view (their overrides differ from the remembered
+        /// original) - for Reset Graphics, which can leave Heron's own colours to Colorize's Restore original.
+        /// </summary>
+        internal static List<long> StillColoured(Document doc, View view)
+        {
+            var ids = new List<long>();
+            if (!Saved.TryGetValue(Key(doc, view), out Dictionary<long, OverrideGraphicSettings> perView))
+                return ids;
+            foreach (KeyValuePair<long, OverrideGraphicSettings> entry in perView)
+            {
+                ElementId id = ElementIdHelper.FromLong(entry.Key);
+                if (doc.GetElement(id) != null && Differs(view.GetElementOverrides(id), entry.Value))
+                    ids.Add(entry.Key);
+            }
+            return ids;
+        }
+
         internal static int Restore(Document doc, View view)
         {
             if (!Saved.TryGetValue(Key(doc, view), out Dictionary<long, OverrideGraphicSettings> perView))

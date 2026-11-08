@@ -65,7 +65,8 @@ namespace HeronTools.Services.ViewCrop
 
                 ViewCropAnnotationSettings settings = optionsWindow.SelectedSettings ?? new ViewCropAnnotationSettings();
 
-                // This tracker is in-memory only (no disk store), so the save cannot fail.
+                // Remembered on disk for next time (also after a Revit restart). A lost memory is not worth
+                // an error box - this run still uses the settings, the window just reopens with defaults.
                 settingsTracker.Save(settings, out _);
 
                 IList<View> targetViews = ViewCropCommandService.ResolveTargetViews(

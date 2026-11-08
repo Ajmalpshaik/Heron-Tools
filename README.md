@@ -39,6 +39,7 @@ side on one **Heron** tab.
 | **Unhide All** | View | Shows everything hidden one by one in the view and turns Temporary Hide/Isolate off. |
 | **Toggle Links** | View | Turns the RVT Links category off or on in the view, and says if some links stay hidden one by one. |
 | **Highlight** | View | Selection in red, the rest grey. **Click again to put the view back** - every element's own overrides are remembered. |
+| **Reset Graphics** | View | **Reset Selected** clears the selected elements' overrides in one click (with their insulation and lining). **Reset Graphics...** clears element overrides, category (V/G) overrides or both, in this view or picked views - it counts first, and can leave Colorize and Highlight colours alone. **Restore Last Reset** puts everything back. |
 | **Quick Menu** | Quick | A tool wheel that opens around the mouse pointer with your favourite Heron Tools buttons and Revit commands; **Quick Menu Settings** chooses what sits in each slot. |
 | **Reset Datums to 3D** | Datums | Put grid and/or level ends in the view back to their 3D extents. |
 | **Level Extents** | Datums | Match level extents to another level, or stretch them to the section box. |

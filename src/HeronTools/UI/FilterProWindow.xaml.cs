@@ -44,6 +44,10 @@ namespace HeronTools.UI
         private List<ApplyViewItem> _allViews = new List<ApplyViewItem>();
         private List<PatternItem> _patterns = new List<PatternItem>();
         private bool _madeChanges;
+        // What the window opens with: the same-session picks when this model was used before in this Revit
+        // session, otherwise the lasting memory (after a restart, or in another model). Null = defaults.
+        private FilterProState _stateToRestore;
+        private bool _restoringFromLastingMemory;
 
         public FilterProWindow(Document doc, View activeView)
         {
@@ -71,11 +75,21 @@ namespace HeronTools.UI
             LoadCategories();
             LoadViewsForApply();
             LoadPatterns();
+
+            // Read after the view and pattern lists are loaded: the lasting memory finds its views and pattern
+            // by name in them.
+            _stateToRestore = _stateTracker.LastState;
+            if (_stateToRestore == null)
+            {
+                _stateToRestore = FilterPicksMemory.Load(FilterPicksMemory.FilterProTool, _allViews, _patterns, true);
+                _restoringFromLastingMemory = _stateToRestore != null;
+            }
+
             // Restored once the window is up (inside ShowDialog's message loop), so its awaits come back on the
             // window's own thread.
             Loaded += (s, e) => RestoreLastSelection();
 
-            if (_stateTracker.LastState == null)
+            if (_stateToRestore == null)
                 UpdateStatus("Select categories to begin.");
 
             UpdateApplyScopeLabel();
@@ -584,10 +598,13 @@ namespace HeronTools.UI
 
         private async void RestoreLastSelection()
         {
-            var lastState = _stateTracker.LastState;
+            var lastState = _stateToRestore;
+            _stateToRestore = null;   // once only, even if Loaded were raised again
             if (lastState == null) return;
 
-            string restoredMessage = "Restored previous Filter Pro selection.";
+            string restoredMessage = _restoringFromLastingMemory
+                ? "Opened with your last Filter Pro choices. Anything not in this model was skipped."
+                : "Restored previous Filter Pro selection.";
             _restoringState = true;
             try
             {
@@ -629,11 +646,16 @@ namespace HeronTools.UI
                     await LoadParameters();
             }
 
-            if (lastState.ParameterId != null)
+            if (lastState.ParameterId != null || !string.IsNullOrEmpty(lastState.ParameterKey))
             {
                 foreach (FilterParameterItem item in parameters_listbox.Items)
                 {
-                    if (item.Id.LongValue() == lastState.ParameterId.LongValue())
+                    // Same session: the id. Lasting memory: ids differ between models, so the parameter is
+                    // found by its built-in number, shared GUID or name.
+                    bool same = lastState.ParameterId != null
+                        ? item.Id.LongValue() == lastState.ParameterId.LongValue()
+                        : FilterPicksMemory.SameParameter(_doc, item.Id, lastState.ParameterKey);
+                    if (same)
                     {
                         parameters_listbox.SelectedItem = item;
                         break;
@@ -653,6 +675,19 @@ namespace HeronTools.UI
                 foreach (FilterValueItem valueItem in values_listbox.Items)
                 {
                     if (FilterValueKeyMatcher.MatchesValue(valueItem, lastState.Values))
+                        values_listbox.SelectedItems.Add(valueItem);
+                }
+            }
+            else if (lastState.ValueTexts != null && lastState.ValueTexts.Any() &&
+                     parameters_listbox.SelectedItem != null)
+            {
+                // Lasting memory: values by their text, and only when the remembered parameter was found
+                // (otherwise the same text could mean something else under another parameter).
+                var wanted = FilterPicksMemory.ValueTextSet(lastState.ValueTexts);
+                values_listbox.SelectedItems.Clear();
+                foreach (FilterValueItem valueItem in values_listbox.Items)
+                {
+                    if (FilterPicksMemory.MatchesValueText(valueItem, wanted))
                         values_listbox.SelectedItems.Add(valueItem);
                 }
             }
@@ -741,6 +776,16 @@ namespace HeronTools.UI
                 apply_active_radio.IsChecked == true,
                 GetSelectedViewIds(),
                 false);
+
+            // The lasting memory too, so the next Revit session (or another model) opens with these picks.
+            // The "Any" stand-in of Has a value / Has no value has no real value and is not remembered.
+            FilterPicksMemory.Save(
+                FilterPicksMemory.FilterProTool,
+                _doc,
+                _stateTracker.LastState,
+                (selection?.Values ?? new List<FilterValueItem>()).Where(v => v?.RawValue != null).Select(v => v.Display),
+                (pattern_combo?.SelectedItem as PatternItem)?.Name,
+                true);
         }
 
         private string BuildResultStatus(int totalChecked, int applied, IList<string> skipped)
