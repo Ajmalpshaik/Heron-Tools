@@ -24,6 +24,10 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - `build/build.ps1` (build all years, install into each installed Revit) and `build/uninstall.ps1`, with
   the Heron AI installer's safeguards: DLL .NET check per year, deps.json check, ManifestSettings check,
   open/unknown Revit refusal, kept previous install with `-Rollback`, byte-for-byte check.
+- **`HeronToolsInstaller.exe`** - one-file setup window in the Heron AI installer's look: finds Revit 2020-2027,
+  installs, replaces or removes Heron Tools per version, waits while Revit is open, keeps the replaced
+  install, checks every file; `/install`, `/uninstall`, `/status` without a window. Made by
+  `build/build-installer.ps1`, and by the Gates check on every change.
 - Licensed under the Apache License 2.0 (`LICENSE`, `NOTICE`), like the Heron AI platform.
 
 ### Changed (compared with the AJ-Tools versions these tools came from)

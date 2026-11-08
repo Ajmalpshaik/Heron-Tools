@@ -33,3 +33,14 @@ jobs:
       - name: Compile against every Revit release (no install)
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File build\build.ps1 -NoInstall
+
+      - name: Make the installer (the builds above, packed into one .exe)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\build-installer.ps1 -SkipBuild
+
+      - name: Keep the installer as a download on this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: HeronToolsInstaller
+          path: dist/HeronToolsInstaller.exe
+          if-no-files-found: error

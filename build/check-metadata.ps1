@@ -12,7 +12,7 @@
 .DESCRIPTION
     The same five fields the Heron AI platform uses (Heron-Agent, Heron-Step, Heron-Status,
     Heron-Since, Heron-Layer), read the same way: in the file's first 41 lines, on a comment line.
-    Checks every .cs, .ps1 and .xaml file under src\ and build\ (skipping bin, obj and .vs).
+    Checks every .cs, .ps1 and .xaml file under src\, build\ and installer\ (skipping bin, obj and .vs).
     Exits 1 and names each file and missing field when anything is wrong. build.ps1 runs it first,
     so a file without its header stops the build.
 
@@ -29,7 +29,7 @@ $fields   = 'Heron-Agent', 'Heron-Step', 'Heron-Status', 'Heron-Since', 'Heron-L
 $statuses = 'DISCOVERED', 'DRAFT', 'TESTING', 'VALIDATED', 'SHADOW', 'PROVEN', 'PRODUCTION', 'DEPRECATED', 'ARCHIVED'
 $layers   = 'bridge', 'revit', 'brain', 'platform', 'test', 'tool'
 
-$files = foreach ($dir in 'src', 'build') {
+$files = foreach ($dir in 'src', 'build', 'installer') {
     $full = Join-Path $repoRoot $dir
     if (Test-Path $full) {
         Get-ChildItem -Path $full -Recurse -File -Include *.cs, *.ps1, *.xaml |

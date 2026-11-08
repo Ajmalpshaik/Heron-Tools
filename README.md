@@ -82,7 +82,39 @@ Revit 2028 ships: confirm its .NET target in the Autodesk SDK, then add it in th
 AddInId), and the year list in `build/build.ps1`. The build stops with a clear message for any year
 it does not know.
 
-## Build and install
+## Install (for modellers)
+
+Run **`HeronToolsInstaller.exe`** - one file, nothing else to install first (it runs on the .NET Framework
+that every Windows 10 and 11 already has). It finds every Revit 2020 to 2027 on the PC, and installs Heron
+Tools into the ones you tick, for your Windows user only - no administrator needed.
+
+<p align="center">
+  <img src="docs/installer/installer-window.png" alt="The Heron Tools installer window" width="560">
+</p>
+
+- **Install** puts Heron Tools in (or replaces it - there is no separate Update or Repair).
+- **Untick Heron Tools** and press Install to **remove** it from the ticked versions (it asks first).
+- If one of those Revit versions is open, it **waits** and says so, and carries on by itself once Revit is
+  closed. It never closes Revit.
+- It keeps the install it replaces (`%LocalAppData%\HeronTools\install-backup\<year>`), puts it back by
+  itself if a copy fails, and checks every file it writes against the build it carries.
+
+For an office rolling it out to many PCs, the same file runs without a window:
+
+```powershell
+HeronToolsInstaller.exe /install                     # every Revit found on this PC
+HeronToolsInstaller.exe /install /years 2024,2026    # only these
+HeronToolsInstaller.exe /uninstall
+HeronToolsInstaller.exe /status
+```
+
+Add `/log <file>` to keep what it did. Exit code 0 = done, 1 = something failed, 2 = nothing to do.
+
+To make the installer yourself: `powershell -ExecutionPolicy Bypass -File build\build-installer.ps1` builds
+Heron Tools for every Revit year, packs them in, and writes `dist\HeronToolsInstaller-<version>.exe`. The
+GitHub **Gates** check makes the same file on every change (download it from the run's artifacts).
+
+## Build and install (for developers)
 
 You need the **.NET 10 SDK** (it builds every target, including the old .NET Framework ones). Revit's
 own DLLs are not needed and are never committed: the project references Autodesk's API through the
@@ -202,7 +234,8 @@ src/HeronTools/          the add-in (one project, every Revit year)
   UI/                    windows and the brand theme (HeronStyles.xaml)
   Resources/Icons/       16 and 32 px ribbon icons
 manifests/               one .addin manifest per Revit year
-build/                   build.ps1, uninstall.ps1, check-metadata.ps1
+installer/               HeronToolsInstaller.exe - the setup window (.NET Framework 4.8, one file)
+build/                   build.ps1, build-installer.ps1, uninstall.ps1, check-metadata.ps1, picture makers
 docs/                    notes (what was moved and fixed, metadata standard, ideas for Heron AI), pictures
 Directory.Build.props    Revit year -> .NET runtime, output folders, compile symbols
 ```

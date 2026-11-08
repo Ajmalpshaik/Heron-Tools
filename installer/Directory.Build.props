@@ -1,0 +1,14 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  platform
+  See docs/metadata-standard.md
+
+  Stops the repository's Directory.Build.props from reaching the installer. That file maps a Revit year to
+  a .NET and sends output into per-year folders; the installer is not a Revit add-in and is built once, for
+  every year, so none of that applies to it.
+-->
+<Project>
+</Project>
