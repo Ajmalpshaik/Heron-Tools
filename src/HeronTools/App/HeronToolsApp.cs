@@ -114,6 +114,30 @@ namespace HeronTools.App
                 "a new set. The colour replaces the elements' own overrides until you click Restore original, which puts " +
                 "them back. Each run is one Undo step."));
 
+            // Reset: clear graphic overrides - the selection in one click, or a view / many views in the window -
+            // and bring the last reset back. Each keeps a copy first, so nothing set by hand is lost.
+            var reset = new PulldownButtonData("HeronTools_ResetGraphicsGroup", "Reset\nGraphics")
+            {
+                ToolTip = "Clear graphic overrides - of the selected elements, or of whole views and categories - and bring them back if needed.",
+                Image = BrandImages.Load("ResetGraphics16.png"),
+                LargeImage = BrandImages.Load("ResetGraphics32.png"),
+            };
+            var resetButton = (PulldownButton)panel.AddItem(reset);
+            resetButton.AddPushButton(Button(assemblyPath, "HeronTools_ResetSelected", "Reset Selected",
+                typeof(Commands.GraphicsTools.CmdResetSelected), typeof(CmdGraphicalViewAvailability), "ResetGraphics",
+                "Clear the graphic overrides of the selected elements in the active view - one click, no window.",
+                "Select elements first (or pick them when asked). Their insulation and lining are reset with them. One Undo " +
+                "step, and Restore Last Reset can bring them back."));
+            resetButton.AddPushButton(Button(assemblyPath, "HeronTools_ResetGraphics", "Reset Graphics...",
+                typeof(Commands.GraphicsTools.CmdResetGraphics), typeof(CmdGraphicalViewAvailability), "ResetGraphics",
+                "Clear element overrides, category (V/G) overrides or both - in this view or in views you pick.",
+                "Shows how many it found before you press Reset. Can leave Colorize and Highlight colours alone. Views whose " +
+                "template controls V/G keep their category overrides. One Undo step; Restore Last Reset brings it back."));
+            resetButton.AddPushButton(Button(assemblyPath, "HeronTools_RestoreLastReset", "Restore Last Reset",
+                typeof(Commands.GraphicsTools.CmdRestoreLastReset), typeof(CmdGraphicalViewAvailability), "ResetGraphics",
+                "Put back every override the last reset in this model cleared.",
+                "Works while Revit stays open, even after other work (where Undo would also undo that work). One Undo step."));
+
             // View Crop: two related tools under one button.
             var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View\nCrop")
             {

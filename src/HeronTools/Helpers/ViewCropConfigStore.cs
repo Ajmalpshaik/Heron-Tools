@@ -90,6 +90,11 @@ namespace HeronTools.Utils
                                 Enum.IsDefined(typeof(HeronTools.Models.ViewCrop.ViewCropExtentSource), source))
                                 settings.ExtentSource = source;
                             break;
+                        case "applytoactiveviewonly":
+                            // "Active view" or "Pick several views" - so the window reopens on the last choice.
+                            if (bool.TryParse(val, out bool activeOnly))
+                                settings.ApplyToActiveViewOnly = activeOnly;
+                            break;
                     }
                 }
             }
@@ -133,6 +138,7 @@ namespace HeronTools.Utils
                     writer.WriteLine($"ShowDiagnostics={settings.ShowDiagnostics}");
                     writer.WriteLine($"IncludeCoordinationModels={settings.IncludeCoordinationModels}");
                     writer.WriteLine($"ExtentSource={settings.ExtentSource}");
+                    writer.WriteLine($"ApplyToActiveViewOnly={settings.ApplyToActiveViewOnly}");
                 }
 
                 return true;

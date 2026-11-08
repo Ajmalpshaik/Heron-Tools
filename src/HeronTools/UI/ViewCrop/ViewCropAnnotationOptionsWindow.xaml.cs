@@ -37,6 +37,10 @@ namespace HeronTools.UI.ViewCrop
             ViewCropAnnotationSettings settings = (initialSettings ?? new ViewCropAnnotationSettings()).Clone();
             OffsetTextBox.Text = settings.OffsetMm.ToString("0.###", CultureInfo.CurrentCulture);
 
+            // The views choice used last time ("Active view" is the XAML default).
+            if (!settings.ApplyToActiveViewOnly)
+                MultipleViewsRadio.IsChecked = true;
+
             SelectedSettings = settings;
             UpdateRunButtonText();
         }
@@ -76,7 +80,8 @@ namespace HeronTools.UI.ViewCrop
 
             SelectedSettings = new ViewCropAnnotationSettings
             {
-                OffsetMm = offsetMm
+                OffsetMm = offsetMm,
+                ApplyToActiveViewOnly = ApplyToActiveViewOnly
             };
 
             DialogResult = true;

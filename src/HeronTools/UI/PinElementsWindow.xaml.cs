@@ -7,6 +7,9 @@
 
 // Pin / Unpin window: the modeller ticks groups (title blocks, views on sheets, ducts, grids...) and pins or
 // unpins them. The model change itself is PinElementsService.ApplyPinState (one named transaction).
+// It reopens with the groups ticked last time (sheet groups and model groups kept apart) and the last
+// "This sheet only / All sheets" choice - saved in %AppData%\HeronTools\memory-pin-unpin.txt when Pin or
+// Unpin runs. Groups are saved by their fixed names in this tool, never by element ids.
 
 using System;
 using System.Collections.Generic;
@@ -34,6 +37,13 @@ namespace HeronTools.UI
         private readonly ObservableCollection<PinCategoryItem> _sheetItems = new ObservableCollection<PinCategoryItem>();
         private readonly ObservableCollection<PinCategoryItem> _modelItems = new ObservableCollection<PinCategoryItem>();
 
+        // What this window remembers between uses (also after Revit restarts).
+        private const string MemoryTool = "pin-unpin";
+        private const string SheetGroupsKey = "SheetGroups";
+        private const string ModelGroupsKey = "ModelGroups";
+        private const string AllSheetsKey = "AllSheets";
+        private readonly WindowMemory _memory = WindowMemory.Load(MemoryTool);
+
         public PinElementsWindow(Document doc)
         {
             _doc = doc ?? throw new ArgumentNullException(nameof(doc));
@@ -47,6 +57,11 @@ namespace HeronTools.UI
 
             SheetCategoryListBox.ItemsSource = _sheetItems;
             ModelCategoryListBox.ItemsSource = _modelItems;
+
+            // Set the remembered sheet scope BEFORE the scope handlers are wired and the lists are filled,
+            // so the "found" counts are counted for that scope straight away (and no reload runs twice).
+            if (_memory.GetBool(AllSheetsKey, false) && AllSheetsRadioButton != null)
+                AllSheetsRadioButton.IsChecked = true;
 
             if (ActiveSheetOnlyRadioButton != null)
                 ActiveSheetOnlyRadioButton.Checked += OnSheetScopeChanged;
@@ -92,10 +107,13 @@ namespace HeronTools.UI
                 ? _sheetItems.ToDictionary(item => item.Group, item => item.IsChecked)
                 : null;
 
+            IList<PinTargetDefinition> definitions = PinElementsService.GetSheetTargetDefinitions().ToList();
+            HashSet<PinTargetGroup> remembered = preserveSelection ? null : RememberedGroups(SheetGroupsKey, definitions);
+
             UnwireItemEvents(_sheetItems);
             _sheetItems.Clear();
 
-            foreach (PinTargetDefinition definition in PinElementsService.GetSheetTargetDefinitions())
+            foreach (PinTargetDefinition definition in definitions)
             {
                 int candidateCount = PinElementsService.CountCandidates(
                     _doc,
@@ -103,7 +121,7 @@ namespace HeronTools.UI
                     definition.Group,
                     IncludeAllSheets);
 
-                bool isChecked = definition.DefaultSelected;
+                bool isChecked = remembered != null ? remembered.Contains(definition.Group) : definition.DefaultSelected;
                 if (previousSelection != null && previousSelection.TryGetValue(definition.Group, out bool wasChecked))
                     isChecked = wasChecked;
 
@@ -121,10 +139,13 @@ namespace HeronTools.UI
 
         private void LoadModelItems()
         {
+            IList<PinTargetDefinition> definitions = PinElementsService.GetModelTargetDefinitions().ToList();
+            HashSet<PinTargetGroup> remembered = RememberedGroups(ModelGroupsKey, definitions);
+
             UnwireItemEvents(_modelItems);
             _modelItems.Clear();
 
-            foreach (PinTargetDefinition definition in PinElementsService.GetModelTargetDefinitions())
+            foreach (PinTargetDefinition definition in definitions)
             {
                 int candidateCount = PinElementsService.CountCandidates(_doc, _activeView, definition.Group);
                 var item = new PinCategoryItem(
@@ -132,11 +153,49 @@ namespace HeronTools.UI
                     definition.Name,
                     definition.Description,
                     candidateCount,
-                    definition.DefaultSelected);
+                    remembered != null ? remembered.Contains(definition.Group) : definition.DefaultSelected);
 
                 item.PropertyChanged += OnItemPropertyChanged;
                 _modelItems.Add(item);
             }
+        }
+
+        /// <summary>
+        /// The groups ticked last time in this list, or null to use today's defaults: nothing remembered yet,
+        /// or none of the remembered names is a group this list still offers (renamed in a later version).
+        /// </summary>
+        private HashSet<PinTargetGroup> RememberedGroups(string key, IEnumerable<PinTargetDefinition> offered)
+        {
+            var offeredGroups = new HashSet<PinTargetGroup>(offered.Select(d => d.Group));
+            var remembered = new HashSet<PinTargetGroup>();
+
+            foreach (string name in _memory.GetList(key))
+            {
+                // Enum.TryParse also accepts plain numbers - only real group names count.
+                if (Enum.TryParse(name, false, out PinTargetGroup group) &&
+                    Enum.IsDefined(typeof(PinTargetGroup), group) &&
+                    string.Equals(group.ToString(), name, StringComparison.Ordinal) &&
+                    offeredGroups.Contains(group))
+                {
+                    remembered.Add(group);
+                }
+            }
+
+            return remembered.Count > 0 ? remembered : null;
+        }
+
+        /// <summary>
+        /// Remembers the choices this run used. Only the list on screen is updated - the other list (sheet or
+        /// model) keeps what was remembered for it. Best effort: a failed save never stops the run.
+        /// </summary>
+        private void RememberChoices(IEnumerable<PinTargetGroup> tickedGroups)
+        {
+            _memory.Set(_isSheetContext ? SheetGroupsKey : ModelGroupsKey, tickedGroups.Select(g => g.ToString()));
+
+            if (_isSheetContext)
+                _memory.Set(AllSheetsKey, IncludeAllSheets);
+
+            _memory.SaveQuietly();
         }
 
         private void UnwireItemEvents(IEnumerable<PinCategoryItem> items)
@@ -203,6 +262,9 @@ namespace HeronTools.UI
                 UpdateUiState("Tick at least one group first.", isProblem: true);
                 return;
             }
+
+            // Remembered as soon as the run starts: these are the choices the modeller actually used.
+            RememberChoices(selectedGroups);
 
             PinOperationSummary summary;
             try

@@ -1,0 +1,162 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Reset Graphics (Heron Tools): clear graphic overrides - element by element, whole categories (V/G), or both -
+  in this view or in picked views. Counts first, resets in one Undo step, and keeps a copy for Restore Last
+  Reset. Opens with the last choices. Heron brand theme (HeronStyles.xaml).
+-->
+<Window x:Class="HeronTools.UI.ResetGraphicsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Reset Graphics - Heron Tools"
+        Width="560"
+        MinWidth="500"
+        SizeToContent="Height"
+        MaxHeight="900"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="44" Height="44" CornerRadius="11" Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Reset Graphics" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Clear graphic overrides - one element at a time, or whole categories."
+                               Style="{StaticResource HeaderSubtitle}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Body (scrolls on a small screen, so the count line is never cut off) -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,20,24,20">
+
+            <!-- 1 What -->
+            <Border Style="{StaticResource StepCard}">
+                <StackPanel>
+                    <TextBlock Text="What to reset" Style="{StaticResource SectionLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <RadioButton x:Name="ElementsRadio" Content="Element overrides" IsChecked="True"
+                                     Style="{StaticResource ModernRadioButton}" Margin="0,0,20,0"
+                                     ToolTip="Overrides set on single elements (right-click > Override Graphics in View > By Element)."/>
+                        <RadioButton x:Name="CategoriesRadio" Content="Category overrides (V/G)"
+                                     Style="{StaticResource ModernRadioButton}" Margin="0,0,20,0"
+                                     ToolTip="Overrides set on categories in Visibility/Graphics. Visibility ticks are not changed."/>
+                        <RadioButton x:Name="BothRadio" Content="Both" Style="{StaticResource ModernRadioButton}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 2 Where -->
+            <Border Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Where" Style="{StaticResource SectionLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <RadioButton x:Name="ThisViewRadio" IsChecked="True" Style="{StaticResource ModernRadioButton}" Margin="0,0,20,0">
+                            <TextBlock x:Name="ThisViewText" Text="This view"/>
+                        </RadioButton>
+                        <RadioButton x:Name="PickedViewsRadio" Content="Pick views" Style="{StaticResource ModernRadioButton}"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="ViewsPanel" Margin="0,10,0,0" Visibility="Collapsed">
+                        <DockPanel Margin="0,0,0,6">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="SelectAllViewsButton" Content="Select all" Style="{StaticResource LinkButton}"
+                                        ToolTip="Tick every view in the list as it is filtered now"/>
+                                <TextBlock Text="·" Foreground="{StaticResource TextDisabled}" Margin="8,0" VerticalAlignment="Center"/>
+                                <Button x:Name="ClearViewsButton" Content="Clear" Style="{StaticResource LinkButton}"/>
+                            </StackPanel>
+                            <TextBox x:Name="ViewSearchBox" Style="{StaticResource SearchTextBox}" Tag="Search views"/>
+                        </DockPanel>
+                        <Grid>
+                            <ListBox x:Name="ViewsList" Height="170" Style="{StaticResource ModernListBox}"
+                                     ItemContainerStyle="{StaticResource ModernListBoxItem}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,2">
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Kind}" FontSize="12"
+                                                       Foreground="{StaticResource TextSecondary}" Margin="12,0,4,0"
+                                                       VerticalAlignment="Center"/>
+                                            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      Style="{StaticResource ModernCheckBox}"/>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="No view matches the search." Style="{StaticResource EmptyHint}"
+                                       Tag="{Binding HasItems, ElementName=ViewsList}"/>
+                        </Grid>
+                        <TextBlock x:Name="ViewsCountText" Style="{StaticResource StepCount}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 3 Keep -->
+            <Border Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                <StackPanel>
+                    <CheckBox x:Name="KeepHeronCheck" IsChecked="True" Style="{StaticResource ModernCheckBox}"
+                              Content="Leave Heron's own colours (Colorize, Highlight)"/>
+                    <TextBlock Style="{StaticResource HelpText}" Margin="26,2,0,0" TextWrapping="Wrap"
+                               Text="Those tools put back each element's own colours themselves (Restore original, or Highlight's second click)."/>
+                </StackPanel>
+            </Border>
+
+            <!-- What a press would do -->
+            <TextBlock x:Name="FoundText" Margin="2,14,0,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+        </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{StaticResource TextSecondary}"/>
+                    <Button x:Name="RestoreButton" Content="Restore Last Reset" Style="{StaticResource LinkButton}"
+                            HorizontalAlignment="Left" Margin="0,4,0,0"
+                            ToolTip="Put back everything the last reset in this model cleared (one Undo step)."/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="ResetButton" Content="Reset" Style="{StaticResource PrimaryButton}" MinWidth="110" Margin="0,0,8,0"/>
+                    <Button x:Name="CloseButton" Content="Close" Style="{StaticResource GhostButton}" MinWidth="88" IsCancel="True"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -6,6 +6,7 @@
 // See docs/metadata-standard.md
 
 // Tracks and restores last-used Filter Pro UI selections per document across window sessions. Resets automatically when the active document changes.
+// When it has nothing (a new Revit session or another model), the window falls back to the lasting memory in FilterPicksMemory.
 
 using System;
 using System.Collections.Generic;

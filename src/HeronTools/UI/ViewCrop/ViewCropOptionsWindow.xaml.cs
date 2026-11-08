@@ -62,6 +62,10 @@ namespace HeronTools.UI.ViewCrop
             IncludeDatumsCheckBox.IsChecked = settings.IncludeDatums;
             IgnoreHiddenCheckBox.IsChecked = settings.IgnoreHiddenCategories;
 
+            // The views choice used last time ("Active view" is the XAML default).
+            if (!settings.ApplyToActiveViewOnly)
+                MultipleViewsRadio.IsChecked = true;
+
             // Annotation Integration
             ApplyAnnotationCheckBox.IsChecked = settings.ApplyAnnotationCrop;
             _openingAnnotationOffsetMm = settings.AnnotationOffsetMm;
@@ -230,7 +234,8 @@ namespace HeronTools.UI.ViewCrop
                 IncludeCoordinationModels = IncludeCoordinationModelsCheckBox.IsChecked == true,
                 ExtentSource = ModeVisibleRadio.IsChecked == true
                     ? ViewCropExtentSource.ActiveViewElements
-                    : ViewCropExtentSource.AllModelElements
+                    : ViewCropExtentSource.AllModelElements,
+                ApplyToActiveViewOnly = ApplyToActiveViewOnly
             };
 
             return true;

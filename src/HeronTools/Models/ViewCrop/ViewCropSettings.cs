@@ -38,6 +38,9 @@ namespace HeronTools.Models.ViewCrop
 
         internal ViewCropExtentSource ExtentSource { get; set; } = ViewCropExtentSource.AllModelElements;
 
+        /// <summary>"Active view" (true, the default) or "Pick several views" (false) - remembered for next time.</summary>
+        internal bool ApplyToActiveViewOnly { get; set; } = true;
+
         internal double MarginInternal => MarginMm * Constants.MM_TO_FEET;
 
         internal ViewCropSettings Clone()
@@ -53,7 +56,8 @@ namespace HeronTools.Models.ViewCrop
                 AnnotationOffsetMm = AnnotationOffsetMm,
                 ShowDiagnostics = ShowDiagnostics,
                 IncludeCoordinationModels = IncludeCoordinationModels,
-                ExtentSource = ExtentSource
+                ExtentSource = ExtentSource,
+                ApplyToActiveViewOnly = ApplyToActiveViewOnly
             };
         }
     }

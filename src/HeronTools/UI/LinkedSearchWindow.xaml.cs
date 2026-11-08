@@ -7,6 +7,9 @@
 
 // Find by Element ID window: looks an Element ID up in this model and/or loaded links, then selects and
 // zooms to it. Reads only; changes nothing in the model.
+// It reopens with the last "All models" choice, the models ticked last time (BY NAME: "This model" and each
+// link's name - several copies of one link share a name and are ticked together) and the last Element ID,
+// saved in %AppData%\HeronTools\memory-find-by-element-id.txt each time Find runs.
 
 using System;
 using System.Collections.Generic;
@@ -33,6 +36,15 @@ namespace HeronTools.UI
 
         // True while the match list is being filled or cleared in code, so that is not taken as a pick.
         private bool _fillingMatches;
+
+        // What this window remembers between uses (also after Revit restarts). The host model is kept as
+        // its own yes/no, so a link that happens to be called "This model" can never be mistaken for it.
+        private const string MemoryTool = "find-by-element-id";
+        private const string SearchAllKey = "AllModels";
+        private const string ThisModelKey = "ThisModel";
+        private const string LinksKey = "Links";
+        private const string ElementIdKey = "ElementId";
+        private readonly WindowMemory _memory = WindowMemory.Load(MemoryTool);
 
         public LinkedSearchWindow(UIDocument uiDoc, Document hostDoc, View activeView, IEnumerable<RevitLinkInstance> links)
         {
@@ -61,19 +73,68 @@ namespace HeronTools.UI
             }
 
             LinkSelector.ItemsSource = _linkItems;
-            if (_linkItems.Count > 0)
+            if (!ApplyRememberedModels() && _linkItems.Count > 0)
             {
                 LinkSelector.SelectedIndex = 0;
+            }
+
+            SearchAllCheck.IsChecked = _memory.GetBool(SearchAllKey, false);
+
+            // Only a real Element ID is put back - a damaged value is simply left out.
+            string lastId = _memory.Get(ElementIdKey);
+            if (long.TryParse(lastId, NumberStyles.None, CultureInfo.InvariantCulture, out long rememberedId) && rememberedId > 0)
+            {
+                ElementIdBox.Text = lastId;
             }
 
             OnSearchAllChanged(this, null);
             UpdateModelSummary();
         }
 
+        /// <summary>
+        /// Ticks the models ticked last time, found BY NAME. A link that is not loaded now is skipped.
+        /// False when nothing remembered matches this model - the window then uses today's default.
+        /// </summary>
+        private bool ApplyRememberedModels()
+        {
+            bool thisModel = _memory.GetBool(ThisModelKey, false);
+            var linkNames = new HashSet<string>(_memory.GetList(LinksKey), StringComparer.Ordinal);
+            if (!thisModel && linkNames.Count == 0)
+                return false;
+
+            bool any = false;
+            foreach (LinkDisplayItem item in _linkItems)
+            {
+                bool tick = item.IsHost ? thisModel : linkNames.Contains(item.DisplayName.Trim());
+                if (tick)
+                {
+                    LinkSelector.SelectedItems.Add(item);
+                    any = true;
+                }
+            }
+
+            return any;
+        }
+
+        /// <summary>Remembers the choices this Find used. Best effort: a failed save never stops the search.</summary>
+        private void RememberChoices(string elementIdText, bool searchAll)
+        {
+            _memory.Set(ElementIdKey, elementIdText);
+            _memory.Set(SearchAllKey, searchAll);
+
+            // The ticks are kept even while "All models" is on, so unticking it later brings them back.
+            List<LinkDisplayItem> ticked = LinkSelector.SelectedItems.Cast<LinkDisplayItem>().ToList();
+            _memory.Set(ThisModelKey, ticked.Any(i => i.IsHost));
+            _memory.Set(LinksKey, ticked.Where(i => !i.IsHost).Select(i => i.DisplayName).Distinct(StringComparer.Ordinal));
+
+            _memory.SaveQuietly();
+        }
+
         private void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            // Ready to type the ID straight away.
+            // Ready to type the ID straight away; a remembered ID is highlighted so typing replaces it.
             ElementIdBox.Focus();
+            ElementIdBox.SelectAll();
         }
 
         // Enter in the ID box runs the search (the window has no default button, so Enter is handled here).
@@ -141,6 +202,9 @@ namespace HeronTools.UI
                 var selectedSet = new HashSet<LinkDisplayItem>(selectedItems);
                 modelsToSearch = _linkItems.Where(i => selectedSet.Contains(i)).ToList();
             }
+
+            // The search is going ahead with these choices - remember them for next time.
+            RememberChoices(parsedId.ToString(CultureInfo.InvariantCulture), searchAll);
 
             // Element IDs are only unique inside ONE model - the host and every link number their own
             // elements, so the same ID often exists in several of them. Every chosen model is searched
