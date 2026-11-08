@@ -27,6 +27,8 @@
     powershell -ExecutionPolicy Bypass -File build\make-readme-banner.ps1
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build\make-readme-banner.ps1 -Name "Heron AI" -Out C:\temp\check.png
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File build\make-readme-banner.ps1 -LogoOnly -Scale 1 -Out installer\HeronTools.Installer\Resources\heron-tools-logo.png
 #>
 [CmdletBinding()]
 param(
@@ -38,7 +40,10 @@ param(
     [ValidateSet('Medium', 'SemiBold', 'Bold')]
     [string]$Weight = 'SemiBold',
 
-    [double]$Tighten = 0.94
+    [double]$Tighten = 0.94,
+
+    # The logo alone - no card, no orange line, see-through, cropped to the ink - for the installer's top.
+    [switch]$LogoOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -107,10 +112,12 @@ $dc.PushTransform((New-Object Windows.Media.ScaleTransform $Scale, $Scale))
 
 # Card: rounded, Mist, with the orange line clipped into its bottom corners.
 $card = New-Object Windows.Media.RectangleGeometry (New-Object Windows.Rect 0, 0, ($width - 1), ($height - 1)), 24, 24
-$dc.PushClip($card)
-$dc.DrawRectangle($mist, $null, (New-Object Windows.Rect 0, 0, $width, $height))
-$dc.DrawRectangle($accent, $null, (New-Object Windows.Rect 0, 292, $width, 7))
-$dc.Pop()
+if (-not $LogoOnly) {
+    $dc.PushClip($card)
+    $dc.DrawRectangle($mist, $null, (New-Object Windows.Rect 0, 0, $width, $height))
+    $dc.DrawRectangle($accent, $null, (New-Object Windows.Rect 0, 292, $width, 7))
+    $dc.Pop()
+}
 
 # Mark
 $dc.PushTransform((New-Object Windows.Media.TranslateTransform $markX, $markTop))
@@ -141,10 +148,20 @@ $dc.Close()
 
 $bmp = New-Object Windows.Media.Imaging.RenderTargetBitmap ($width * $Scale), ($height * $Scale), 96, 96, ([Windows.Media.PixelFormats]::Pbgra32)
 $bmp.Render($dv)
+$frame = [Windows.Media.Imaging.BitmapSource]$bmp
+if ($LogoOnly) {
+    # Crop to the ink: the mark's left (x 100) to the name's right, the mark's top to its foot, 4 px air.
+    $pad = 4
+    $cropX = [int](($markX - $pad) * $Scale); $cropY = [int](($markTop - $pad) * $Scale)
+    $cropW = [int](($nameX + $nameWidth - $markX + 2 * $pad) * $Scale)
+    $cropH = [int](($markHeight + 2 * $pad) * $Scale)
+    $frame = New-Object Windows.Media.Imaging.CroppedBitmap $bmp, (New-Object Windows.Int32Rect $cropX, $cropY, $cropW, $cropH)
+}
 $enc = New-Object Windows.Media.Imaging.PngBitmapEncoder
-$enc.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bmp))
+$enc.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($frame))
 $fs = [IO.File]::Create($Out); $enc.Save($fs); $fs.Close()
 
 # README width that gives the same card height as Heron AI's (960 x 300 shown 520 wide = 162.5 tall).
 $shownWidth = [Math]::Round($width * 162.5 / $height)
-"Banner: $Out ($($width * $Scale) x $($height * $Scale) px). Show it in the README at width=$shownWidth."
+if ($LogoOnly) { "Logo: $Out ($($frame.PixelWidth) x $($frame.PixelHeight) px)." }
+else { "Banner: $Out ($($width * $Scale) x $($height * $Scale) px). Show it in the README at width=$shownWidth." }

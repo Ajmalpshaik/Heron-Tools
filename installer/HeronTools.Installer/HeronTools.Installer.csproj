@@ -1,0 +1,53 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  platform
+  See docs/metadata-standard.md
+
+  HeronToolsInstaller.exe - the Heron Tools setup window, in the Heron brand like Heron AI's installer
+  (no code shared). NOT a Revit add-in: it never loads into Revit.exe.
+
+  .NET FRAMEWORK 4.8, ON PURPOSE. It is part of every Windows 10 and 11, so the installer opens on any
+  modeller's PC with nothing to install first - also a PC that only has Revit 2020-2024, which brings no
+  .NET 8. 64-bit, so it can read which Revit.exe is running.
+
+  ONE FILE. Everything it needs is packed inside the .exe: the Heron Tools build for every Revit year
+  (installer\payload\HeronTools-payload.zip, made by build\build-installer.ps1), the logo and the icon. Plain
+  Segoe UI text, like the Heron AI installer. Built without a payload (as the Gates check does), it opens and
+  says it has nothing to install.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>HeronToolsInstaller</AssemblyName>
+    <RootNamespace>HeronTools.Installer</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ApplicationIcon>Resources\HeronTools.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Product>Heron Tools Installer</Product>
+    <Company>Ajmal PS</Company>
+    <Copyright>Copyright 2026 Ajmal PS. Licensed under the Apache License 2.0.</Copyright>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\heron-tools-logo.png" />
+    <Resource Include="Resources\HeronTools.ico" />
+    <EmbeddedResource Include="..\payload\HeronTools-payload.zip" LogicalName="HeronTools.Payload.zip"
+                      Condition="Exists('..\payload\HeronTools-payload.zip')" />
+  </ItemGroup>
+
+</Project>

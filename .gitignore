@@ -33,3 +33,7 @@ Desktop.ini
 *.dwg
 *.pdf
 *.log
+
+# Installer: the packed build and the finished .exe are made by build/build-installer.ps1, never committed
+installer/payload/
+dist/
