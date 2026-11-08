@@ -100,7 +100,7 @@ namespace HeronTools.UI.ReassignLevel
                 SelectedElementsRadio.IsEnabled = false;
                 SelectedElementsRadio.ToolTip = totalSelectedCount == 0
                     ? "Select elements in the model first, then run this tool again."
-                    : "None of the selected elements can move (only ducts, pipes and other MEP runs, free-standing families and spaces can).";
+                    : "None of the selected elements can move (only ducts, pipes and other MEP runs, and free-standing families can - not spaces or rooms).";
                 SelectionSummaryText.Text = "Nothing selected that can move.";
             }
 

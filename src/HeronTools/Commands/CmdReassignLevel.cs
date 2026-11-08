@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Reassigns supported MEP elements (MEP curves, free-standing family instances, spaces) from one level to another without moving them physically - either across the whole project (FROM level -> TO level), or just the elements already selected in Revit (TO level only; each element's own current level is used as its FROM).
+// Reassigns supported MEP elements (MEP curves and free-standing family instances - never spaces, rooms or zones) from one level to another without moving them physically - either across the whole project (FROM level -> TO level), or just the elements already selected in Revit (TO level only; each element's own current level is used as its FROM).
 
 using System;
 using System.Collections.Generic;
@@ -181,7 +181,7 @@ namespace HeronTools.Commands
                     "\n\n{0} hosted element(s) skipped - they follow their host (wall, ceiling, face).", hosted);
             if (spaces > 0)
                 text += string.Format(CultureInfo.CurrentCulture,
-                    "\n\n{0} space(s) skipped - a space cannot change level without being re-made, which would lose its tags and zone. Move spaces by hand.", spaces);
+                    "\n\n{0} space(s) skipped - this tool moves elements only, never spaces, rooms or zones.", spaces);
             if (unsupported > 0)
                 text += string.Format(CultureInfo.CurrentCulture,
                     "\n\n{0} selected item(s) skipped - only ducts, pipes, cable trays, conduits and free-standing families with a level can be reassigned.", unsupported);

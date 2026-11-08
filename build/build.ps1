@@ -47,7 +47,9 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
 
-    [int[]]$Years = @(2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027),
+    # Text, not numbers: "powershell -File build.ps1 -Years 2024,2026" hands the list over as ONE piece of
+    # text ("2024,2026"), which an [int[]] parameter refuses. It is split into years just below.
+    [string[]]$Years = @('2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027'),
 
     [switch]$NoInstall,
 
@@ -55,6 +57,17 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+$yearList = @()
+foreach ($part in @($Years | ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ })) {
+    $number = 0
+    if (-not [int]::TryParse($part, [ref]$number) -or $number -lt 2000 -or $number -gt 2100) {
+        Write-Host "'$part' is not a Revit year. Use for example: -Years 2024,2026" -ForegroundColor Red
+        exit 1
+    }
+    $yearList += $number
+}
+$yearList = [int[]]$yearList   # a typed list of years; $Years itself stays text
 
 $repoRoot    = Split-Path -Parent $PSScriptRoot
 $project     = Join-Path $repoRoot 'src\HeronTools\HeronTools.csproj'
@@ -166,7 +179,7 @@ $blockAll = @($runningRevit | Where-Object { $_.Year -eq 0 }).Count -gt 0
 # -Rollback: put back the install the last run replaced. No build.
 # ---------------------------------------------------------------------------------------------------
 if ($Rollback) {
-    foreach ($year in $Years) {
+    foreach ($year in $yearList) {
         $addinsDir  = Join-Path $env:APPDATA "Autodesk\Revit\Addins\$year"
         $productDir = Join-Path $addinsDir $productName
         if ($blockAll) { Add-Result $year 'not built' 'NOT RUN' 'a Revit of unknown year is open'; continue }
@@ -200,7 +213,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-foreach ($year in $Years) {
+foreach ($year in $yearList) {
     Write-Host ""
     Write-Host "=== Revit $year ===" -ForegroundColor Cyan
 
