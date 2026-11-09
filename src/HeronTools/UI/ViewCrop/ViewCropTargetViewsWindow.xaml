@@ -109,7 +109,9 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid Grid.Row="1" Margin="6,0,14,6">
+                <!-- Header margins match the rows below: list border + padding + item padding on the left,
+                     the same plus the scroll bar on the right, so every heading sits over its column. -->
+                <Grid Grid.Row="1" Margin="22,0,23,6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="40"/>
                         <ColumnDefinition Width="3*"/>
