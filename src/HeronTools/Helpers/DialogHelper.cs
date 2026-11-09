@@ -5,15 +5,17 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Dialog Helper
-// Description: Centralized dialog methods for common user interactions.
-// Author: Ajmal P.S.
-// Version: 1.0.0
-// Last Updated: 2025-12-11
-// Revit Version: 2020
-// Dependencies: Autodesk.Revit.UI
+// Every pop-up message in Heron Tools goes through here, so each one wears the Heron look
+// (HeronMessageWindow) instead of Revit's grey TaskDialog. The window is owned by whatever is in front -
+// a Heron window or Revit itself - so it opens centred on it and never hides behind. If the Heron window
+// cannot be shown for any reason, the same text goes out in a plain TaskDialog: a message is never lost.
 
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 using Autodesk.Revit.UI;
+using HeronTools.UI;
 
 namespace HeronTools.Utils
 {
@@ -23,39 +25,50 @@ namespace HeronTools.Utils
     internal static class DialogHelper
     {
         /// <summary>
-        /// Shows an error message dialog.
+        /// Shows an error: the tool could not do what was asked.
         /// </summary>
-        /// <param name="title">The dialog title.</param>
-        /// <param name="message">The error message.</param>
+        /// <param name="title">The tool's name (shown as the title).</param>
+        /// <param name="message">What went wrong and what to do next.</param>
         public static void ShowError(string title, string message)
         {
-            TaskDialog.Show(title, message);
+            Show(MessageKind.Error, title, null, message, null, "Close", null);
         }
 
         /// <summary>
-        /// Shows an information message dialog.
+        /// Shows a note: something the modeller should know, nothing went wrong.
         /// </summary>
-        /// <param name="title">The dialog title.</param>
+        /// <param name="title">The tool's name (shown as the title).</param>
         /// <param name="message">The information message.</param>
         public static void ShowInfo(string title, string message)
         {
-            TaskDialog.Show(title, message);
+            Show(MessageKind.Info, title, null, message, null, "Close", null);
         }
 
         /// <summary>
-        /// Shows a warning message with a Yes/No prompt.
+        /// Shows a warning: the tool ran, but part of it needs the modeller's attention.
         /// </summary>
-        /// <param name="title">The dialog title.</param>
-        /// <param name="message">The warning message.</param>
-        /// <returns>True if user clicked Yes, false otherwise.</returns>
+        public static void ShowWarning(string title, string message)
+        {
+            Show(MessageKind.Warning, title, null, message, null, "Close", null);
+        }
+
+        /// <summary>
+        /// Shows a run report: a heading, a short summary and (optionally) a long list behind "Show details".
+        /// </summary>
+        public static void ShowReport(string title, string heading, string summary, string details, bool needsAttention)
+        {
+            Show(needsAttention ? MessageKind.Warning : MessageKind.Info, title, heading, summary, details, "Close", null);
+        }
+
+        /// <summary>
+        /// Shows a question with Yes / No buttons.
+        /// </summary>
+        /// <param name="title">The tool's name (shown as the title).</param>
+        /// <param name="message">The question.</param>
+        /// <returns>True if the modeller pressed Yes; No, Esc or closing the window give false.</returns>
         public static bool ShowYesNo(string title, string message)
         {
-            TaskDialogResult result = TaskDialog.Show(
-                title,
-                message,
-                TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No);
-
-            return result == TaskDialogResult.Yes;
+            return Show(MessageKind.Question, title, null, message, null, "Yes", "No");
         }
 
         /// <summary>
@@ -73,22 +86,76 @@ namespace HeronTools.Utils
         internal const int LongRunConfirmThreshold = 500;
 
         /// <summary>
-        /// Shows a confirmation dialog with custom buttons.
+        /// Shows a message with a heading and a body.
         /// </summary>
-        /// <param name="title">The dialog title.</param>
-        /// <param name="mainInstruction">The main instruction text.</param>
+        /// <param name="title">The tool's name (shown as the title).</param>
+        /// <param name="mainInstruction">The heading.</param>
         /// <param name="mainContent">The detailed content.</param>
-        /// <returns>The user's selection result.</returns>
+        /// <returns>Always <see cref="TaskDialogResult.Ok"/>: the message has one button.</returns>
         public static TaskDialogResult ShowDialog(string title, string mainInstruction, string mainContent)
         {
-            TaskDialog dialog = new TaskDialog(title)
-            {
-                MainInstruction = mainInstruction,
-                MainContent = mainContent,
-                CommonButtons = TaskDialogCommonButtons.Ok
-            };
-
-            return dialog.Show();
+            Show(MessageKind.Info, title, mainInstruction, mainContent, null, "Close", null);
+            return TaskDialogResult.Ok;
         }
+
+        // ------------------------------------------------------------------ the one way a message is shown
+
+        /// <returns>True when the first button was pressed.</returns>
+        private static bool Show(MessageKind kind, string title, string heading, string message, string details,
+                                 string primaryText, string secondText)
+        {
+            HeronMessageWindow window;
+            try
+            {
+                window = new HeronMessageWindow(kind, title, heading, message, details, primaryText, secondText);
+                IntPtr owner = OwnerWindow();
+                if (owner != IntPtr.Zero)
+                    new WindowInteropHelper(window) { Owner = owner };
+            }
+            catch (Exception)
+            {
+                // The Heron window could not be built (a theme or font failed to load): say it the plain way.
+                return ShowPlain(title, heading, message, details, secondText != null);
+            }
+
+            try
+            {
+                window.ShowDialog();
+                return window.Accepted;
+            }
+            catch (Exception)
+            {
+                return ShowPlain(title, heading, message, details, secondText != null);
+            }
+        }
+
+        private static bool ShowPlain(string title, string heading, string message, string details, bool isQuestion)
+        {
+            var dialog = new TaskDialog(string.IsNullOrWhiteSpace(title) ? "Heron Tools" : title)
+            {
+                MainInstruction = heading ?? "",
+                MainContent = message ?? "",
+                ExpandedContent = details ?? "",
+                CommonButtons = isQuestion ? TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No
+                                           : TaskDialogCommonButtons.Close
+            };
+            return dialog.Show() == TaskDialogResult.Yes;
+        }
+
+        /// <summary>
+        /// The window in front on Revit's own thread: a Heron tool window if one is open, else Revit.
+        /// </summary>
+        private static IntPtr OwnerWindow()
+        {
+            IntPtr active = GetActiveWindow();
+            if (active != IntPtr.Zero)
+                return active;
+
+            using (Process revit = Process.GetCurrentProcess())
+                return revit.MainWindowHandle;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetActiveWindow();
     }
 }

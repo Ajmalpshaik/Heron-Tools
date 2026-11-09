@@ -50,7 +50,12 @@ namespace HeronTools.Commands
                 // nothing was hidden, something was refused, or Revit did not keep the change.
                 bool isolateStuck = result.TemporaryHideIsolateWasActive && !result.TemporaryHideIsolateCleared;
                 if (!result.DidSomething || isolateStuck || result.RefusedCount > 0)
-                    TaskDialog.Show(ToolTitle, result.Summary);
+                {
+                    if (isolateStuck || result.RefusedCount > 0)
+                        DialogHelper.ShowWarning(ToolTitle, result.Summary);
+                    else
+                        DialogHelper.ShowInfo(ToolTitle, result.Summary);
+                }
 
                 return result.DidSomething ? Result.Succeeded : Result.Cancelled;
             }

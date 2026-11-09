@@ -23,6 +23,12 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   remembered by name, applied only where the model has them.
 - **Every window stays fully on screen**, bottom buttons included: it is moved inside the screen it opens on
   (taskbar excluded) and, on a small or scaled laptop screen, held to the screen height with its middle scrolling.
+- **Every pop-up message is a Heron window** (errors, warnings, notes, Yes/No questions, the View Crop report):
+  same dark theme, orange button and Manrope font as the tool windows, a status mark that says what kind of
+  message it is, "Show details" for long lists, and "Copy message" for support. Falls back to Revit's own
+  box only if the Heron window cannot open. (Not the start-up failure box - that stays Revit's own.)
+- **Flip Bubbles** opens a Heron chooser instead of Revit's grey box: two picture cards, Pick one by one or
+  Window select; keys 1 / 2, Enter takes the last-used one (remembered), Esc cancels.
 - Heron brand design for every window; Heron mark and app icon; brand ribbon icons; the Manrope
   brand font built into the DLL (SIL Open Font License 1.1, `Resources/Fonts/OFL.txt`).
 - The Heron metadata standard on every source file, checked by `build/check-metadata.ps1`, and a GitHub

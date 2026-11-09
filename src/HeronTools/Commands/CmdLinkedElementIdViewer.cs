@@ -35,7 +35,7 @@ namespace HeronTools.Commands
 
                 if (uiDoc == null)
                 {
-                    TaskDialog.Show(Title, "Please open a project before running this tool.");
+                    DialogHelper.ShowError(Title, "Please open a project before running this tool.");
                     return Result.Cancelled;
                 }
 
@@ -45,7 +45,7 @@ namespace HeronTools.Commands
 
                 if (pickedReference.ElementId == ElementId.InvalidElementId)
                 {
-                    TaskDialog.Show(Title, "Please select a valid element.");
+                    DialogHelper.ShowError(Title, "Please select a valid element.");
                     return Result.Cancelled;
                 }
 
@@ -62,7 +62,7 @@ namespace HeronTools.Commands
                             out string problem))
                     {
                         // Our own message, then Cancelled - so Revit adds no second, generic failure box.
-                        TaskDialog.Show(Title, problem);
+                        DialogHelper.ShowError(Title, problem);
                         return Result.Cancelled;
                     }
                 }
@@ -76,14 +76,14 @@ namespace HeronTools.Commands
                             out string problem))
                     {
                         // Our own message, then Cancelled - so Revit adds no second, generic failure box.
-                        TaskDialog.Show(Title, problem);
+                        DialogHelper.ShowError(Title, problem);
                         return Result.Cancelled;
                     }
                 }
 
                 if (elementIdToShow == ElementId.InvalidElementId)
                 {
-                    TaskDialog.Show(Title, "Could not determine the Element ID for the selection.");
+                    DialogHelper.ShowError(Title, "Could not determine the Element ID for the selection.");
                     return Result.Cancelled;
                 }
 
@@ -102,7 +102,7 @@ namespace HeronTools.Commands
             }
             catch (Exception ex)
             {
-                TaskDialog.Show(Title, "The Element ID could not be read. Revit said:\n\n" + ex.Message);
+                DialogHelper.ShowError(Title, "The Element ID could not be read. Revit said:\n\n" + ex.Message);
                 return Result.Cancelled;
             }
         }

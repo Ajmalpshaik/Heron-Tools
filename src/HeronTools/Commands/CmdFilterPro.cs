@@ -13,6 +13,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HeronTools.UI;
+using HeronTools.Utils;
 
 namespace HeronTools.Commands
 {
@@ -29,7 +30,7 @@ namespace HeronTools.Commands
 
             if (!ValidateContext(uiDoc, out Document doc, out View activeView, out message))
             {
-                TaskDialog.Show("Filter Pro", message);
+                DialogHelper.ShowError("Filter Pro", message);
                 return Result.Cancelled;
             }
 
@@ -58,7 +59,7 @@ namespace HeronTools.Commands
                 // Revit undoes everything a command kept when it returns Failed. Filters already made by earlier
                 // clicks in this window are kept (Succeeded); otherwise nothing was changed.
                 bool keep = window != null && window.HasChanges;
-                TaskDialog.Show(
+                DialogHelper.ShowError(
                     "Filter Pro",
                     (keep ? "Filter Pro stopped unexpectedly. The filters already made were kept.\n\n"
                           : "Filter Pro stopped unexpectedly. Nothing was changed.\n\n") +
@@ -126,14 +127,11 @@ namespace HeronTools.Commands
 
             if (elementCount > 100_000)
             {
-                TaskDialogResult result = TaskDialog.Show(
+                return DialogHelper.ShowYesNo(
                     "Filter Pro - Large Document",
                     $"This document contains {elementCount:N0} elements.\n" +
                     "Filter operations may take some time.\n\n" +
-                    "Do you want to continue?",
-                    TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No);
-
-                return result == TaskDialogResult.Yes;
+                    "Do you want to continue?");
             }
 
             return true;
