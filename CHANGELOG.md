@@ -49,4 +49,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - 64-bit element ids throughout (Revit 2024+).
 - Many workflow fixes - see `docs/filter-pro-move-notes.md`, `docs/view-tools-move-notes.md` and
   `docs/panels-move-notes.md`.
+- Window polish after a full review of every window: typing fields are the same 34 px height as the drop-downs
+  (the text was set 16 px in and the box was 41 px tall); search hints no longer cut off in Filter Pro and Colorize;
+  the Annotation Crop offset label fits; the Pick views column headings sit over their columns; Reset Graphics'
+  Restore Last Reset link lines up with the buttons.
 - Reassign Level measures every element before and after and no longer re-makes spaces (they are skipped).

@@ -97,7 +97,7 @@
                                    Style="{StaticResource HelpText}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                        <TextBlock Text="Offset on paper (mm)" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="Offset (mm)" Style="{StaticResource FieldLabel}"/>
                         <TextBox x:Name="OffsetTextBox" Style="{StaticResource ModernTextBox}"
                                  ToolTip="How far outside the view crop the annotation crop sits, in millimetres"/>
                     </StackPanel>

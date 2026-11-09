@@ -485,7 +485,10 @@ by today's windows; they are kept for the next tools moved in, and use brand col
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6"
                                 SnapsToDevicePixels="True">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                            <!-- No Margin: the TextBox already puts its Padding inside the content host. Applying it
+                                 twice made every field 41 px tall (34 like the drop-downs is right) and
+                                 pushed the text 16 px in. -->
+                            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
                         </Border>
                         <Border x:Name="HoverRing" CornerRadius="6" BorderThickness="1"
                                 BorderBrush="{StaticResource Accent}" Opacity="0" IsHitTestVisible="False"/>

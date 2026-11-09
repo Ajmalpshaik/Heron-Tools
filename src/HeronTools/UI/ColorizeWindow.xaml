@@ -129,7 +129,7 @@
                                 <ColumnDefinition Width="78"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="category_search_textbox" Grid.Column="0"
-                                     Style="{StaticResource SearchTextBox}" Tag="Search categories"
+                                     Style="{StaticResource SearchTextBox}" Tag="Search"
                                      ToolTip="Type to narrow the list. Picked categories stay listed."/>
                             <ComboBox x:Name="category_sort_combobox" Grid.Column="2" SelectedIndex="0" ToolTip="Sort order">
                                 <ComboBoxItem Content="A - Z" Tag="az"/>
@@ -170,7 +170,7 @@
                                 <ColumnDefinition Width="78"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="parameter_search_textbox" Grid.Column="0"
-                                     Style="{StaticResource SearchTextBox}" Tag="Search parameters"
+                                     Style="{StaticResource SearchTextBox}" Tag="Search"
                                      ToolTip="Type to narrow the list. Only parameters Revit can filter for ALL picked categories are listed."/>
                             <ComboBox x:Name="parameter_sort_combobox" Grid.Column="2" SelectedIndex="0" ToolTip="Sort order">
                                 <ComboBoxItem Content="A - Z" Tag="az"/>
@@ -211,7 +211,7 @@
                                 <ColumnDefinition Width="78"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="value_search_textbox" Grid.Column="0"
-                                     Style="{StaticResource SearchTextBox}" Tag="Search values"
+                                     Style="{StaticResource SearchTextBox}" Tag="Search"
                                      ToolTip="Type to narrow the list. Picked values stay listed."/>
                             <ComboBox x:Name="value_sort_combobox" Grid.Column="2" SelectedIndex="0" ToolTip="Sort order">
                                 <ComboBoxItem Content="A - Z" Tag="az"/>
