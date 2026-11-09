@@ -115,6 +115,12 @@ To make the installer yourself: `powershell -ExecutionPolicy Bypass -File build\
 Heron Tools for every Revit year, packs them in, and writes `dist\HeronToolsInstaller-<version>.exe`. The
 GitHub **Gates** check makes the same file on every change (download it from the run's artifacts).
 
+To release: push a version tag that matches `<Version>` in `src/HeronTools/HeronTools.csproj`
+(`git tag v1.0.0`, then `git push origin v1.0.0`). The **Release** workflow builds every Revit year again,
+refuses a tag that does not match the built version, and makes a **draft** GitHub release with
+`HeronToolsInstaller.exe` attached. A draft is seen only by the owner; publish it after the Revit test.
+A tag with a hyphen (`v1.0.0-beta.1`) is marked pre-release.
+
 ## Build and install (for developers)
 
 You need the **.NET 10 SDK** (it builds every target, including the old .NET Framework ones). Revit's
@@ -239,6 +245,7 @@ installer/               HeronToolsInstaller.exe - the setup window (.NET Framew
 build/                   build.ps1, build-installer.ps1, uninstall.ps1, check-metadata.ps1, picture makers
 docs/                    notes (what was moved and fixed, metadata standard, ideas for Heron AI), pictures
 Directory.Build.props    Revit year -> .NET runtime, output folders, compile symbols
+.github/workflows/       Gates (every change: metadata, every Revit year, installer); Release (a version tag)
 ```
 
 ## Project documents

@@ -15,10 +15,20 @@ on:
   push:
   pull_request:
 
+# Read-only: this check builds and uploads a run artifact, it never writes to the repository.
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request makes the older run pointless: cancel it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gates:
     name: Metadata + the C# compiles, 2020 to 2027
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -39,7 +49,7 @@ jobs:
         run: powershell -NoProfile -ExecutionPolicy Bypass -File build\build-installer.ps1 -SkipBuild
 
       - name: Keep the installer as a download on this run
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: HeronToolsInstaller
           path: dist/HeronToolsInstaller.exe

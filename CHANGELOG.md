@@ -40,6 +40,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   installs, replaces or removes Heron Tools per version, waits while Revit is open, keeps the replaced
   install, checks every file; `/install`, `/uninstall`, `/status` without a window. Made by
   `build/build-installer.ps1`, and by the Gates check on every change.
+- A **Release** workflow (`.github/workflows/release.yml`): a version tag builds every Revit year, checks the tag
+  matches the built version, and makes a draft GitHub release with `HeronToolsInstaller.exe` attached.
 - Licensed under the Apache License 2.0 (`LICENSE`, `NOTICE`), like the Heron AI platform.
 
 ### Changed (compared with the AJ-Tools versions these tools came from)

@@ -1,0 +1,115 @@
+# Heron-Agent:  none
+# Heron-Step:   1
+# Heron-Status: DRAFT
+# Heron-Since:  1.0.0
+# Heron-Layer:  tool
+# See docs/metadata-standard.md
+#
+# Makes a GitHub release from a version tag, with HeronToolsInstaller.exe attached.
+#
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# It runs the same steps as the Gates check (metadata, every Revit year, the installer), then refuses
+# if the tag does not match the version the DLL was built with (<Version> in HeronTools.csproj).
+#
+# THE RELEASE IS A DRAFT. Only the owner sees a draft; publishing it is a person's decision, after the
+# Revit test (CHANGELOG.md says what still needs one). A tag with a hyphen (v1.0.0-beta.1) is also
+# marked pre-release. Nothing here is code-signed yet, so Windows SmartScreen will warn on download.
+#
+# Rehearse without a tag: Actions > Release > Run workflow, leave the tag empty. It builds and keeps
+# the installer as a run artifact, and publishes nothing.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to make a draft release for (it must exist). Leave empty to build only.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write        # creating a release writes to the repository
+
+jobs:
+  release:
+    name: Build the installer and make a draft release
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ inputs.tag != '' && inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name || '') }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.ref }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: check-metadata
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\check-metadata.ps1
+
+      - name: Compile against every Revit release (no install)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\build.ps1 -NoInstall
+
+      - name: Make the installer
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\build-installer.ps1 -SkipBuild
+
+      # The tag must name the version that was built, or the release says one version and installs another.
+      - name: Check the tag matches the built version
+        if: env.TAG != ''
+        shell: powershell
+        run: |
+          $named = Get-ChildItem dist -Filter 'HeronToolsInstaller-*.exe' | Select-Object -First 1
+          if (-not $named) { Write-Host "No dist\HeronToolsInstaller-<version>.exe was made."; exit 1 }
+          $built = $named.BaseName -replace '^HeronToolsInstaller-', ''
+          $tagVersion = ($env:TAG -replace '^v', '') -split '-' | Select-Object -First 1
+          if ($built -ne $tagVersion) {
+            Write-Host "Refused: tag $env:TAG says $tagVersion, but the DLL was built as $built. Change <Version> in src\HeronTools\HeronTools.csproj or the tag."
+            exit 1
+          }
+          Write-Host "Tag $env:TAG matches the built version $built."
+
+      - name: Keep the installer as a download on this run
+        uses: actions/upload-artifact@v7
+        with:
+          name: HeronToolsInstaller
+          path: dist/HeronToolsInstaller*.exe
+          if-no-files-found: error
+
+      - name: Make the draft release
+        if: env.TAG != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          cat > notes.md <<EOF
+          Built by .github/workflows/release.yml from ${GITHUB_SHA}.
+
+          ## Install
+
+          1. Download **HeronToolsInstaller.exe** below.
+          2. Close Revit (or let the installer wait for it).
+          3. Run it, tick your Revit versions (2020 to 2027), press **Install**.
+
+          No administrator rights needed. Not code-signed yet, so Windows may warn on first run.
+
+          ## What is in it
+
+          See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/CHANGELOG.md).
+          EOF
+          gh release create "$TAG" dist/HeronToolsInstaller.exe \
+            --draft $prerelease \
+            --title "Heron Tools $TAG" \
+            --notes-file notes.md \
+            --verify-tag
