@@ -79,7 +79,7 @@ jobs:
           Write-Host "Tag $env:TAG matches the built version $built."
 
       - name: Keep the installer as a download on this run
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: HeronToolsInstaller
           path: dist/HeronToolsInstaller*.exe
