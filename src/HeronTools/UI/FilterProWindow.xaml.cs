@@ -942,7 +942,7 @@ namespace HeronTools.UI
                                   "\nCheck the model, and use Undo if anything from this run is still there.";
                     }
 
-                    TaskDialog.Show(
+                    DialogHelper.ShowWarning(
                         "Filter Pro",
                         "Nothing was changed - the whole run was undone.\n\n" + reason);
                     ShowReport(null);

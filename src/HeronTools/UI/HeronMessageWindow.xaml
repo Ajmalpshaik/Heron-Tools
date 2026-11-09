@@ -1,0 +1,116 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Heron message (Heron Tools): the one pop-up every tool uses for an error, a warning, a note or a yes/no
+  question, in place of Revit's grey TaskDialog. Opened only through DialogHelper. The status glyph's colour
+  says the kind (Error / Warning / Mist for a note / Accent for a question); everything else is the same
+  house look as the tool windows. Heron brand theme (HeronStyles.xaml).
+-->
+<Window x:Class="HeronTools.UI.HeronMessageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Heron Tools"
+        Width="500"
+        SizeToContent="Height"
+        MaxHeight="760"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Status glyphs, drawn on a 24 x 24 grid and stroked (never filled), so all four read as one set. -->
+            <Geometry x:Key="GlyphError">M 12,2.5 A 9.5,9.5 0 1 1 11.99,2.5 Z M 12,7.5 L 12,13 M 12,16.5 L 12,16.6</Geometry>
+            <Geometry x:Key="GlyphWarning">M 12,3.5 L 21.5,20 L 2.5,20 Z M 12,9.5 L 12,14 M 12,17 L 12,17.1</Geometry>
+            <Geometry x:Key="GlyphInfo">M 12,2.5 A 9.5,9.5 0 1 1 11.99,2.5 Z M 12,11 L 12,16.5 M 12,7.5 L 12,7.6</Geometry>
+            <Geometry x:Key="GlyphQuestion">M 12,2.5 A 9.5,9.5 0 1 1 11.99,2.5 Z M 9.4,9.6 A 2.7,2.7 0 1 1 13.3,12 C 12.5,12.4 12,13 12,13.9 M 12,17 L 12,17.1</Geometry>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header: the status glyph where the tool windows show the Heron mark -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="44" Height="44" CornerRadius="11" Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="10">
+                        <Path x:Name="GlyphPath" Width="24" Height="24" Stretch="None" StrokeThickness="1.8"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{StaticResource TextPrimary}" Data="{StaticResource GlyphInfo}"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="ToolText" Style="{StaticResource HeaderTitle}" FontSize="18" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="KindText" Style="{StaticResource HeaderSubtitle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Body (scrolls if a long list would push the buttons off the screen) -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,20,24,20">
+                <TextBlock x:Name="HeadingText" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8" Visibility="Collapsed"/>
+                <TextBlock x:Name="MessageText" FontSize="13" LineHeight="20" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextPrimary}"/>
+
+                <Button x:Name="DetailsButton" Content="Show details" Style="{StaticResource LinkButton}"
+                        HorizontalAlignment="Left" Margin="0,14,0,0" Visibility="Collapsed"/>
+                <Border x:Name="DetailsPanel" Style="{StaticResource StepCard}" Padding="14,12" Margin="0,8,0,0"
+                        Visibility="Collapsed">
+                    <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <TextBlock x:Name="DetailsText" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextSecondary}"/>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <!-- Quiet on purpose: the orange button is the one thing to press. -->
+                <Button x:Name="CopyButton" Grid.Column="0" Content="Copy message" Style="{StaticResource LinkButton}"
+                        Foreground="{StaticResource TextDisabled}" FontWeight="Medium"
+                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                        ToolTip="Copy this message, details included - handy to send to support."/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="PrimaryButton" Content="Close" Style="{StaticResource PrimaryButton}" MinWidth="96"
+                            IsDefault="True"/>
+                    <Button x:Name="SecondButton" Content="No" Style="{StaticResource GhostButton}" MinWidth="88"
+                            Margin="8,0,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

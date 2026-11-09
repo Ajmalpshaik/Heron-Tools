@@ -13,6 +13,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HeronTools.UI;
+using HeronTools.Utils;
 
 namespace HeronTools.Commands
 {
@@ -29,13 +30,13 @@ namespace HeronTools.Commands
 
             if (!ValidateContext(uiDoc, out Document doc, out View activeView, out message))
             {
-                TaskDialog.Show(DialogTitle, message);
+                DialogHelper.ShowError(DialogTitle, message);
                 return Result.Cancelled;
             }
 
             if (_isWindowOpen)
             {
-                TaskDialog.Show(DialogTitle, "The Colorize window is already open.");
+                DialogHelper.ShowError(DialogTitle, "The Colorize window is already open.");
                 return Result.Cancelled;
             }
 
@@ -68,7 +69,7 @@ namespace HeronTools.Commands
                 // Revit undoes everything a command kept when it returns Failed - so if Colorize already kept
                 // changes, the result is Succeeded and those changes stay.
                 bool keep = window != null && window.HasChanges;
-                TaskDialog.Show(DialogTitle,
+                DialogHelper.ShowError(DialogTitle,
                     (keep ? "Colorize stopped unexpectedly. The colours already applied were kept.\n\n"
                           : "Colorize stopped unexpectedly. Nothing was changed.\n\n") +
                     "Revit said: " + ex.Message);

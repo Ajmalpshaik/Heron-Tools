@@ -10,7 +10,6 @@
 using System;
 using System.IO;
 using HeronTools.Utils;
-using Autodesk.Revit.UI;
 using HeronTools.Models.ViewCrop;
 
 namespace HeronTools.Services.ViewCrop
@@ -59,15 +58,9 @@ namespace HeronTools.Services.ViewCrop
                     + annotationBatch.BuildDetailedLines(250);
             }
 
-            var dialog = new TaskDialog(title)
-            {
-                MainInstruction = $"{operationLabel} processing completed.",
-                MainContent = mainContent,
-                ExpandedContent = expandedContent,
-                CommonButtons = TaskDialogCommonButtons.Ok
-            };
-
-            dialog.Show();
+            // Heron message: summary in front, the long per-view list behind "Show details".
+            DialogHelper.ShowReport(title, $"{operationLabel} processing completed.", mainContent, expandedContent,
+                needsAttention: true);
         }
 
         internal static string TryWriteErrorLog(string logPrefix, string commandTitle, string sourceLabel, Exception ex)

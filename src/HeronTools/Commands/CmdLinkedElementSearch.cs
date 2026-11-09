@@ -15,6 +15,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using HeronTools.UI;
+using HeronTools.Utils;
 
 namespace HeronTools.Commands
 {
@@ -35,7 +36,7 @@ namespace HeronTools.Commands
 
                 if (uiDoc == null)
                 {
-                    TaskDialog.Show(Title, "Please open a project before running this tool.");
+                    DialogHelper.ShowError(Title, "Please open a project before running this tool.");
                     return Result.Failed;
                 }
 
@@ -44,14 +45,14 @@ namespace HeronTools.Commands
 
                 if (activeView == null || activeView.IsTemplate)
                 {
-                    TaskDialog.Show(Title, "Run this command in a project view (not a template).");
+                    DialogHelper.ShowError(Title, "Run this command in a project view (not a template).");
                     return Result.Failed;
                 }
 
                 if (activeView.ViewType == ViewType.DrawingSheet ||
                     activeView.ViewType == ViewType.DraftingView)
                 {
-                    TaskDialog.Show(Title, "Linked element search is not available on sheets or drafting views.");
+                    DialogHelper.ShowError(Title, "Linked element search is not available on sheets or drafting views.");
                     return Result.Failed;
                 }
 
@@ -73,7 +74,7 @@ namespace HeronTools.Commands
             }
             catch (Exception ex)
             {
-                TaskDialog.Show(Title, "An error occurred:\n\n" + ex.Message);
+                DialogHelper.ShowError(Title, "An error occurred:\n\n" + ex.Message);
                 return Result.Failed;
             }
         }

@@ -8,10 +8,12 @@
 // Toggles which end of a grid or level shows its bubble in the active view, either by picking datums one-by-one (instant flip) or by window-selecting a batch.
 
 using System.Collections.Generic;
+using System.Windows.Interop;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
+using HeronTools.UI;
 using HeronTools.Utils;
 
 namespace HeronTools.Commands
@@ -22,7 +24,7 @@ namespace HeronTools.Commands
     [Transaction(TransactionMode.Manual)]
     public class CmdFlipGridBubble : IExternalCommand
     {
-        private const string Title = "Flip Grid / Level Bubbles";
+        private const string Title = "Flip Bubbles";   // same name as the ribbon button
         private const string TransactionName = "Flip Grid / Level Bubble";
 
         private enum SelectionMode
@@ -63,7 +65,7 @@ namespace HeronTools.Commands
                     return Result.Cancelled;
                 }
 
-                SelectionMode mode = PromptSelectionMode();
+                SelectionMode mode = PromptSelectionMode(commandData.Application.MainWindowHandle, view.Name);
                 if (mode == SelectionMode.Cancel)
                     return Result.Cancelled;
 
@@ -279,25 +281,19 @@ namespace HeronTools.Commands
             return flipped;
         }
 
-        private static SelectionMode PromptSelectionMode()
+        /// <summary>The Heron chooser window: pick one by one, or window select. Nothing is changed by it.</summary>
+        private static SelectionMode PromptSelectionMode(System.IntPtr revitWindow, string viewName)
         {
-            TaskDialog dialog = new TaskDialog(Title)
+            var window = new FlipBubblesWindow(viewName);
+            new WindowInteropHelper(window) { Owner = revitWindow };
+            window.ShowDialog();
+
+            switch (window.Chosen)
             {
-                MainInstruction = "Select grids or levels to flip bubbles",
-                MainContent = "Choose how you want to select. You can keep picking or windowing until you press Esc.",
-                CommonButtons = TaskDialogCommonButtons.Cancel
-            };
-
-            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Pick individually (instant flip)");
-            dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Window select multiple");
-
-            TaskDialogResult result = dialog.Show();
-
-            if (result == TaskDialogResult.CommandLink1)
-                return SelectionMode.Single;
-            if (result == TaskDialogResult.CommandLink2)
-                return SelectionMode.Window;
-            return SelectionMode.Cancel;
+                case FlipBubblesWindow.PickMode.OneByOne: return SelectionMode.Single;
+                case FlipBubblesWindow.PickMode.Window: return SelectionMode.Window;
+                default: return SelectionMode.Cancel;
+            }
         }
     }
 }
