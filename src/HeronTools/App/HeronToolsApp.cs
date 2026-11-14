@@ -159,7 +159,7 @@ namespace HeronTools.App
             // 3D Snapshot: one click fits Revit's default 3D view to a room, a section or a plan window.
             panel.AddItem(Button(assemblyPath, "HeronTools_3DSnapshot", "3D\nSnapshot", typeof(Cmd3DSnapshot), typeof(Cmd3DSnapshotAvailability), "Snapshot3D",
                 "Fit Revit's 3D view ({3D}) to what you are working on - a room, a section, or a window you drag in the plan.",
-                "Room or space (or its tag) selected: the box fits the room, level to upper limit. Section mark selected, or run " +
+                "Room, space or zone selected (or its tag - rooms in links too): the box fits it, level to upper limit. Section mark selected, or run " +
                 "in a section or elevation: the box matches the section - same cut, same depth - and the camera looks the same way. " +
                 "Nothing selected in a plan: drag a window; the box runs from the bottom to the top of the view range.\n\n" +
                 "Updates the same 3D view Revit's 3D button opens ({3D - your username} in a workshared model, {3D} otherwise), with " +

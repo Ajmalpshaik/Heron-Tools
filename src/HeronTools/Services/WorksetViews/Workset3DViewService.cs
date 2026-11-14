@@ -138,7 +138,11 @@ namespace HeronTools.Services.WorksetViews
                 return Result.Cancelled;
             }
 
-            DialogHelper.ShowInfo(Title, summary);
+            // Done is silent - the new views are in the Project Browser (Ajmal, 2026-11-14: errors may pop up, a
+            // "done" note may not). It speaks only when some views failed, a name was refused, or a template was
+            // taken off a new view.
+            if (failedCount > 0 || badNames.Count > 0 || templatesCleared.Count > 0)
+                DialogHelper.ShowWarning(Title, summary);
             return Result.Succeeded;
         }
 

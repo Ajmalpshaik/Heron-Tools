@@ -122,7 +122,7 @@ namespace HeronTools.Commands
 
                 // The selection was meant for us but nothing in it can be used: say why, instead of quietly
                 // asking for a window.
-                if (read.TagsWithoutLocalRoom > 0 || read.UnusableSpatials > 0 || read.MarksNotSections > 0)
+                if (read.TagsWithoutLocalRoom > 0 || read.UnusableSpatials > 0 || read.MarksNotSections > 0 || read.EmptyZones > 0)
                 {
                     problem = WhyNothingUsable(read);
                     return null;
@@ -142,7 +142,7 @@ namespace HeronTools.Commands
             }
 
             problem = "3D Snapshot works in a plan, ceiling plan, section or elevation.\n\n" +
-                      "Open one of those, then select a room, a room tag, a space or a section mark - or select nothing " +
+                      "Open one of those, then select a room, space, zone, their tag or a section mark - or select nothing " +
                       "and drag a window in the plan.";
             return null;
         }
@@ -151,18 +151,21 @@ namespace HeronTools.Commands
         {
             var reasons = new List<string>();
             if (read.TagsWithoutLocalRoom > 0)
-                reasons.Add("- " + Plural(read.TagsWithoutLocalRoom, "tag belongs", "tags belong") +
-                            " to a room or space in a linked model (not supported yet) or to one that is not placed.");
+                reasons.Add("- " + Plural(read.TagsWithoutLocalRoom, "tag points", "tags point") +
+                            " to a room in a linked model that is not loaded, or to a room or space that is no longer there " +
+                            "(Manage Links > Reload, or tag the room again).");
             if (read.UnusableSpatials > 0)
                 reasons.Add("- " + Plural(read.UnusableSpatials, "room or space is", "rooms or spaces are") +
                             " not placed or not enclosed (Area shows \"Not Placed\" or \"Not Enclosed\").");
+            if (read.EmptyZones > 0)
+                reasons.Add("- " + Plural(read.EmptyZones, "zone has", "zones have") + " no placed space in it.");
             if (read.MarksNotSections > 0)
                 reasons.Add("- " + Plural(read.MarksNotSections, "mark is", "marks are") +
                             " not a section or a single elevation (a callout, or an elevation marker with several arrows - " +
                             "select the arrow of the elevation you want).");
 
             return "Nothing you selected can be shown:\n\n" + string.Join("\n", reasons) +
-                   "\n\nSelect a placed room, space, their tag or one section mark - or press Esc to clear the selection " +
+                   "\n\nSelect a placed room, space, zone, their tag or one section mark - or press Esc to clear the selection " +
                    "and drag a window in the plan.";
         }
 

@@ -20,7 +20,7 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - **Reset Graphics** (View panel): Reset Selected (one click, no window), Reset Graphics... (element and/or category
   overrides, this view or picked views, counted first), and Restore Last Reset - every reset keeps a copy first.
 - **3D Snapshot** (View panel): one click fits Revit's own 3D view (`{3D - <username>}` / `{3D}`, the one its 3D button opens) to what you are
-  working on - selected rooms/spaces or their tags (level to upper limit), a selected section mark or the section you
+  working on - selected rooms, spaces, zones or their tags - linked rooms too (level to upper limit), a selected section mark or the section you
   are in (same cut, same depth, camera facing the same way), or a window dragged in a plan (view range bottom to top).
   300 mm extra on every side; you stay in your view; one Undo step.
 - **Every window remembers your last choices**, also after Revit restarts (`%AppData%\HeronTools\memory-<tool>.txt`):
@@ -51,6 +51,9 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ### Changed (compared with the AJ-Tools versions these tools came from)
 - Every run is one named Undo step, rolled back completely on any failure; the commit result is checked.
 - 64-bit element ids throughout (Revit 2024+).
+- **No "done" pop-ups.** A tool that did its job ends quietly - the result is on screen. Pop-ups are kept for
+  errors, for anything left undone or refused, and for "nothing changed, because...". Removed: Toggle Links'
+  "links hidden one by one" note, Reassign Level's "Complete" box, 3D Views by Workset's summary.
 - Many workflow fixes - see `docs/filter-pro-move-notes.md`, `docs/view-tools-move-notes.md` and
   `docs/panels-move-notes.md`.
 - **Quick Menu wheel looks and motion** (chosen with Ajmal on a 23-design page): six designs - Heron Ring,

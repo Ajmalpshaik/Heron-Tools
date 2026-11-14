@@ -8,7 +8,6 @@
 // Toggles Revit Link category visibility in the active view.
 
 using System;
-using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -65,29 +64,8 @@ namespace HeronTools.Commands
                     }
                 }
 
-                // Links switched ON but some are still hidden one by one (hidden in view): the category tick
-                // cannot show those, so say so instead of looking as if nothing happened.
-                // The change is committed: from here on nothing may turn this into a failure (Revit would
-                // undo the committed toggle), so this extra hint is skipped quietly if it cannot be read.
-                if (!hideLinks)
-                {
-                    try
-                    {
-                        int stillHidden = new FilteredElementCollector(doc)
-                            .OfClass(typeof(RevitLinkInstance))
-                            .Cast<RevitLinkInstance>()
-                            .Count(link => link.IsHidden(view));
-                        if (stillHidden > 0)
-                            DialogHelper.ShowInfo(ToolTitle,
-                                $"Links are switched on, but {stillHidden} link(s) are hidden one by one in this view, so they stay hidden. " +
-                                "Use Unhide All (or right-click > Unhide in View) to show them.");
-                    }
-                    catch (Exception)
-                    {
-                        // Only the hint is lost; the links were switched.
-                    }
-                }
-
+                // Done: no pop-up. Ajmal (2026-11-14): errors may pop up, a "done" note may not. Links hidden one
+                // by one stay hidden, exactly as Revit's own RVT Links tick box leaves them.
                 return Result.Succeeded;
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
