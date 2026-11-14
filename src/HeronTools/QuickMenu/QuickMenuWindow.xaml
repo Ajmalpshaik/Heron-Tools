@@ -10,8 +10,12 @@
   in code-behind (QuickMenuWindow.xaml.cs), because the number of slots is the modeller's own setting - this
   XAML only provides the transparent shell, the pop-in transform and the canvas.
   Heron brand: Ink / Surface ring, Mist text, the hovered slot lit in Accent, the heron mark in the hub.
-  The shell is deliberately plain: a see-through window is drawn by the CPU, so no blur, effect or opacity
-  animation belongs on it - the soft halo behind the ring is a static gradient brush.
+  Motion (code-behind): the ring springs open and the slots unfold from the hub clockwise; an Accent
+  selector arc and hub needle glide to the slot under the pointer, which steps out and lights up; the ring
+  drops back as it closes. Off when Windows' "Show animations" is off.
+  The shell is deliberately plain: a see-through window is drawn by the CPU, so no blur, effect or
+  whole-window opacity animation belongs on it - only transforms and the small slot glows animate, and the
+  soft halo behind the ring is a static gradient brush.
 -->
 <Window x:Class="HeronTools.UI.QuickMenu.QuickMenuWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"

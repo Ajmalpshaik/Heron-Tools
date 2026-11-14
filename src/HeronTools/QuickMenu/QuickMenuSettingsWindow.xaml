@@ -7,7 +7,8 @@
   See docs/metadata-standard.md
 
   Quick Menu Settings: choose which Heron Tools button or Revit command sits in each slot of the quick
-  wheel, how many slots there are and how big the wheel opens. Left card: every tool, with a search box.
+  wheel, how many slots there are, how big the wheel opens, and its look (style, tool names, opening),
+  with a Preview of the real wheel. Left card: every tool, with a search box.
   Right card: the wheel itself, drawn in code exactly like the real one, and the drop target for tools.
   Footer: honest status on the left, ONE Accent action (Save) on the right.
   Heron brand design (UI/HeronStyles.xaml) - same patterns as Filter Pro and Colorize.
@@ -167,6 +168,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -203,10 +205,43 @@
                                   SelectionChanged="OnWheelSizeChanged"/>
                     </Grid>
 
+                    <!-- The wheel's look: design, tool names, opening - and a Preview of the real wheel. -->
+                    <Grid Grid.Row="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Style" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="StyleCombo" Grid.Row="0" Grid.Column="1"
+                                  ToolTip="Which of the six wheel designs opens."/>
+                        <TextBlock Grid.Row="0" Grid.Column="3" Text="Names" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="NamesCombo" Grid.Row="0" Grid.Column="4"
+                                  ToolTip="Tool names written on the wheel, or icons only with the name shown in the centre."/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Opens" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="OpeningCombo" Grid.Row="2" Grid.Column="1"
+                                  ToolTip="How the wheel opens. Every way starts with a small centre button that grows."/>
+                        <Button x:Name="PreviewButton" Grid.Row="2" Grid.Column="3" Grid.ColumnSpan="2"
+                                Content="Preview the wheel"
+                                Style="{StaticResource SecondaryButton}"
+                                ToolTip="Open the real wheel with these choices and your slots. Nothing runs from it - click anywhere or press Esc to come back."
+                                Click="OnPreviewClick"/>
+                    </Grid>
+
                     <!-- Drawn in code so it matches the real wheel exactly, same as QuickMenuWindow does. -->
-                    <Canvas x:Name="WheelCanvas" Grid.Row="2"
-                            Width="352"
-                            Height="352"
+                    <Canvas x:Name="WheelCanvas" Grid.Row="3"
+                            Width="300"
+                            Height="300"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Background="Transparent"
@@ -218,19 +253,19 @@
                             DragLeave="OnWheelDragLeave"
                             Drop="OnWheelDrop"/>
 
-                    <TextBlock x:Name="WheelHintText" Grid.Row="3"
+                    <TextBlock x:Name="WheelHintText" Grid.Row="4"
                                Margin="0,8,0,0"
                                TextAlignment="Center"
                                TextTrimming="CharacterEllipsis"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource TextPrimary}"/>
 
-                    <TextBlock x:Name="ShortcutHintText" Grid.Row="4"
+                    <TextBlock x:Name="ShortcutHintText" Grid.Row="5"
                                Margin="0,6,0,0"
                                Style="{StaticResource HelpText}"
                                TextAlignment="Center"
                                TextWrapping="Wrap"
-                               Text="Tip: give the Quick Menu button a Revit keyboard shortcut so the wheel opens right under your pointer."/>
+                               Text="Tip: give Quick Menu a Revit keyboard shortcut so the wheel opens under your pointer."/>
                 </Grid>
             </Border>
         </Grid>
