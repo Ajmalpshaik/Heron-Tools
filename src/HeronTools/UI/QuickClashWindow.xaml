@@ -1,0 +1,320 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.0.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Quick Clash (Heron Tools): a Navisworks-style clash test in the active 3D view. MODELESS - it stays open beside
+  the model and reaches Revit only through Quick Clash's ExternalEvent. Test tab (Selection A / B, clash type,
+  colours) and Results tab (click a clash to zoom). Layout as approved by Ajmal on 2026-11-14 (rendered picture).
+  Heron brand theme (HeronStyles.xaml); the three swatches show model colours, not window colours.
+-->
+<Window x:Class="HeronTools.UI.QuickClashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Quick Clash - Heron Tools"
+        Width="760" MinWidth="640"
+        Height="900" MinHeight="560"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- One ticked category row with its count. -->
+            <DataTemplate x:Key="CategoryRow">
+                <DockPanel Margin="0,2">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" FontSize="12"
+                               Foreground="{StaticResource TextSecondary}" Margin="12,0,4,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                              Style="{StaticResource ModernCheckBox}" Click="OnCategoryTicked"/>
+                </DockPanel>
+            </DataTemplate>
+
+            <!-- A colour swatch: a plain button showing the model colour it sets. -->
+            <Style x:Key="SwatchButton" TargetType="Button">
+                <Setter Property="Width" Value="34"/>
+                <Setter Property="Height" Value="22"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Face" CornerRadius="6" Background="{TemplateBinding Background}"
+                                    BorderBrush="{StaticResource BorderStrong}" BorderThickness="1"/>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Face" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <DockPanel>
+                <Border DockPanel.Dock="Right" Style="{StaticResource Chip}" VerticalAlignment="Center" MaxWidth="260">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Active view" Style="{StaticResource ChipLabel}"/>
+                        <TextBlock x:Name="ViewNameText" Text="-" Style="{StaticResource ChipValue}" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="44" Height="44" CornerRadius="11" Background="{StaticResource BackgroundDark}"
+                            BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                        <Viewbox Margin="9">
+                            <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                        </Viewbox>
+                    </Border>
+                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Quick Clash" Style="{StaticResource HeaderTitle}"/>
+                        <TextBlock Text="A Navisworks-style clash test on what you can see in this 3D view."
+                                   Style="{StaticResource HeaderSubtitle}"/>
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <TabControl x:Name="Tabs" Grid.Row="1" Style="{StaticResource RailTabs}" Margin="14,4,14,0">
+            <!-- ================= TEST ================= -->
+            <TabItem Header="Test" Style="{StaticResource RailTab}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="10,16,10,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Selection A -->
+                        <Border Grid.Column="0" Style="{StaticResource StepCard}">
+                            <StackPanel>
+                                <TextBlock Text="Selection A  ·  this model" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,10">
+                                    <RadioButton x:Name="CategoriesARadio" Content="Categories" IsChecked="True" GroupName="SideA"
+                                                 Style="{StaticResource ModernRadioButton}" Margin="0,0,16,0" Checked="OnSideAModeChanged"/>
+                                    <RadioButton x:Name="SelectionARadio" GroupName="SideA" Style="{StaticResource ModernRadioButton}"
+                                                 Checked="OnSideAModeChanged"
+                                                 ToolTip="Test only the elements selected in Revit when you press Run.">
+                                        <TextBlock x:Name="SelectionAText" Text="Current selection (0)"/>
+                                    </RadioButton>
+                                </StackPanel>
+                                <TextBox x:Name="SearchA" Style="{StaticResource SearchTextBox}" Tag="Search categories" Margin="0,0,0,6"
+                                         TextChanged="OnSearchChanged"/>
+                                <Grid>
+                                    <ListBox x:Name="ListA" Height="232" Style="{StaticResource ModernListBox}"
+                                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                             ItemTemplate="{StaticResource CategoryRow}"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                                    <TextBlock Text="No model elements are shown in this view." Style="{StaticResource EmptyHint}"
+                                               Tag="{Binding HasItems, ElementName=ListA}"/>
+                                </Grid>
+                                <TextBlock x:Name="CountAText" Style="{StaticResource StepCount}" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Selection B -->
+                        <Border Grid.Column="2" Style="{StaticResource StepCard}">
+                            <StackPanel>
+                                <TextBlock Text="Selection B  ·  this model or a link" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                <ComboBox x:Name="SourceCombo" Margin="0,0,0,6" SelectionChanged="OnSourceChanged"
+                                          ToolTip="Test against this model, or against one loaded link placed in this view."/>
+                                <TextBox x:Name="SearchB" Style="{StaticResource SearchTextBox}" Tag="Search categories" Margin="0,0,0,6"
+                                         TextChanged="OnSearchChanged"/>
+                                <Grid>
+                                    <ListBox x:Name="ListB" Height="232" Style="{StaticResource ModernListBox}"
+                                             ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                             ItemTemplate="{StaticResource CategoryRow}"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                                    <TextBlock Text="No model elements of this model or link are shown in this view." Style="{StaticResource EmptyHint}"
+                                               Tag="{Binding HasItems, ElementName=ListB}"/>
+                                </Grid>
+                                <TextBlock x:Name="CountBText" Style="{StaticResource StepCount}" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Clash type -->
+                    <Border Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Clash type" Style="{StaticResource SectionLabel}"/>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="mm" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                        <TextBox x:Name="ToleranceBox" DockPanel.Dock="Right" Width="64" Style="{StaticResource ModernTextBox}"
+                                                 TextAlignment="Right" TextChanged="OnNumberChanged"/>
+                                        <TextBlock DockPanel.Dock="Right" Text="Tolerance" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <CheckBox x:Name="HardCheck" Content="Hard" Style="{StaticResource ModernCheckBox}" VerticalAlignment="Center"
+                                                  Click="OnClashTypeClicked"/>
+                                    </DockPanel>
+                                    <TextBlock Style="{StaticResource HelpText}" Margin="26,4,0,0" Text="The two elements overlap. Overlaps smaller than the tolerance are ignored."/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="mm" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                        <TextBox x:Name="ClearanceBox" DockPanel.Dock="Right" Width="64" Style="{StaticResource ModernTextBox}"
+                                                 TextAlignment="Right" TextChanged="OnNumberChanged"/>
+                                        <TextBlock DockPanel.Dock="Right" Text="Distance" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <CheckBox x:Name="ClearanceCheck" Content="Clearance" Style="{StaticResource ModernCheckBox}" VerticalAlignment="Center"
+                                                  Click="OnClashTypeClicked"/>
+                                    </DockPanel>
+                                    <TextBlock Style="{StaticResource HelpText}" Margin="26,4,0,0" Text="Not overlapping, but closer than the distance (touching counts). Measured to a few mm."/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Colours -->
+                    <Border Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button x:Name="DefaultColoursButton" DockPanel.Dock="Right" Content="Default colours"
+                                        Style="{StaticResource LinkButton}" Click="OnDefaultColours"/>
+                                <TextBlock Text="Colours in the view" Style="{StaticResource SectionLabel}"/>
+                            </DockPanel>
+                            <WrapPanel Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,28,6">
+                                    <Button x:Name="SwatchA" Style="{StaticResource SwatchButton}" Tag="0" Click="OnSwatchClicked"
+                                            ToolTip="Colour of the Selection A elements that clash"/>
+                                    <TextBlock Text="Clash - Selection A" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,28,6">
+                                    <Button x:Name="SwatchB" Style="{StaticResource SwatchButton}" Tag="1" Click="OnSwatchClicked"
+                                            ToolTip="Colour of the Selection B elements that clash (linked ones are drawn on top in this colour)"/>
+                                    <TextBlock Text="Clash - Selection B" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,10,6">
+                                    <Button x:Name="SwatchRest" Style="{StaticResource SwatchButton}" Tag="2" Click="OnSwatchClicked"
+                                            ToolTip="Colour of everything else in the view"/>
+                                    <TextBlock Text="Rest of the view" Margin="10,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBox x:Name="TransparencyBox" Width="48" Style="{StaticResource ModernTextBox}" TextAlignment="Right"
+                                             TextChanged="OnNumberChanged"/>
+                                    <TextBlock Text="% see-through" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                </StackPanel>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource HelpText}" Margin="0,8,0,0"
+                                       Text="Click a colour to change it. Remembered on this PC. Esc stops a long run."/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= RESULTS ================= -->
+            <TabItem x:Name="ResultsTab" Header="Results" Style="{StaticResource RailTab}">
+                <Border Style="{StaticResource StepCard}" Margin="10,16,10,16">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top">
+                            <TextBlock DockPanel.Dock="Right" Text="Click a clash to zoom to it" Style="{StaticResource HelpText}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ResultsSummaryText" Text="No test run yet" Style="{StaticResource SectionLabel}"/>
+                        </DockPanel>
+                        <!-- Column heads: same widths as the rows below (rows sit 10 px in, inside the list item padding). -->
+                        <Grid DockPanel.Dock="Top" Margin="22,10,22,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34"/><ColumnDefinition Width="86"/><ColumnDefinition Width="56"/>
+                                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="#" Style="{StaticResource Overline}"/>
+                            <TextBlock Grid.Column="1" Text="TYPE" Style="{StaticResource Overline}"/>
+                            <TextBlock Grid.Column="2" Text="MM" Style="{StaticResource Overline}"/>
+                            <TextBlock Grid.Column="3" Text="SELECTION A" Style="{StaticResource Overline}"/>
+                            <TextBlock Grid.Column="4" Text="SELECTION B" Style="{StaticResource Overline}"/>
+                        </Grid>
+                        <Grid>
+                            <ListBox x:Name="ResultsList" Style="{StaticResource ModernListBox}"
+                                     ItemContainerStyle="{StaticResource ModernListBoxItem}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     HorizontalContentAlignment="Stretch"
+                                     SelectionChanged="OnResultSelected">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34"/><ColumnDefinition Width="86"/><ColumnDefinition Width="56"/>
+                                                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding NumberText}" Foreground="{StaticResource TextSecondary}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding KindText}" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource AccentDanger}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding KindText}" Value="Clearance">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentWarning}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding KindText}" Value="Not checked">
+                                                                <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="2" Text="{Binding MillimetresText}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding NameA}" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"
+                                                       ToolTip="{Binding NameA}"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding NameB}" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{StaticResource TextSecondary}" ToolTip="{Binding NameB}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="Set the test on the Test tab and press Run." Style="{StaticResource EmptyHint}"
+                                       Tag="{Binding HasItems, ElementName=ResultsList}"/>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </TabItem>
+        </TabControl>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusText" Grid.Column="0" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Margin="0,0,16,0" Foreground="{StaticResource TextSecondary}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="RunButton" Content="Run" Style="{StaticResource PrimaryButton}" MinWidth="110" Margin="0,0,8,0"
+                            Click="OnRun" ToolTip="Test Selection A against Selection B and colour the clashes in this view (one Undo step)."/>
+                    <Button x:Name="ResetButton" Content="Reset view" Style="{StaticResource SecondaryButton}" MinWidth="110" Margin="0,0,8,0"
+                            Click="OnReset" IsEnabled="False"
+                            ToolTip="Put back every element's own colours exactly as they were (one Undo step)."/>
+                    <Button x:Name="CloseButton" Content="Close" Style="{StaticResource GhostButton}" MinWidth="88" Click="OnCloseClicked"
+                            ToolTip="Puts the view back first, then closes."/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
