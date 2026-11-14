@@ -59,7 +59,8 @@ namespace HeronTools.Commands.QuickMenu
 
                 IList<bool> available = QuickMenuAvailability.Evaluate(uiapp, slots);
 
-                var wheel = new QuickMenuWindow(slots, available, config.Diameter);
+                var wheel = new QuickMenuWindow(slots, available, config.Diameter,
+                                                config.Style, config.ShowNames, config.Opening);
                 new WindowInteropHelper(wheel)
                 {
                     Owner = uiapp.MainWindowHandle

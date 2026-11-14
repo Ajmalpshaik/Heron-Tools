@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using HeronTools.Services.QuickMenu;
 using HeronTools.Utils;
@@ -81,6 +82,13 @@ namespace HeronTools.UI.QuickMenu
         private readonly IList<QuickToolEntry> _allTools;
         private readonly List<string> _slotKeys = new List<string>();
         private readonly List<Path> _wedges = new List<Path>();
+
+        // The picked (or drop-target) slot steps out a little, like the lit slot on the real wheel.
+        // One move per slot, shared by its wedge, icon and number; the target is kept so a repaint
+        // during a drag does not restart a move that is already on its way.
+        private readonly List<TranslateTransform> _wedgeLifts = new List<TranslateTransform>();
+        private readonly List<double> _wedgeAngles = new List<double>();
+        private readonly List<bool> _wedgeLifted = new List<bool>();
         private bool _loading = true;
 
         /// <summary>Which slot the middle buttons act on. -1 when nothing is picked.</summary>
@@ -173,6 +181,57 @@ namespace HeronTools.UI.QuickMenu
             }
 
             SourceFilterCombo.SelectedIndex = 0;
+
+            // The wheel's look. Tags carry the value; the order is the order on the design page.
+            foreach (QuickMenuStyle style in QuickMenuLook.Styles)
+            {
+                StyleCombo.Items.Add(new ComboBoxItem { Content = QuickMenuLook.StyleName(style), Tag = style });
+                if (style == config.Style)
+                {
+                    StyleCombo.SelectedIndex = StyleCombo.Items.Count - 1;
+                }
+            }
+
+            NamesCombo.Items.Add(new ComboBoxItem { Content = "On the wheel", Tag = true });
+            NamesCombo.Items.Add(new ComboBoxItem { Content = "Icons only", Tag = false });
+            NamesCombo.SelectedIndex = config.ShowNames ? 0 : 1;
+
+            foreach (QuickMenuOpening opening in QuickMenuLook.Openings)
+            {
+                OpeningCombo.Items.Add(new ComboBoxItem { Content = QuickMenuLook.OpeningName(opening), Tag = opening });
+                if (opening == config.Opening)
+                {
+                    OpeningCombo.SelectedIndex = OpeningCombo.Items.Count - 1;
+                }
+            }
+
+            if (StyleCombo.SelectedIndex < 0)
+            {
+                StyleCombo.SelectedIndex = 0;
+            }
+
+            if (OpeningCombo.SelectedIndex < 0)
+            {
+                OpeningCombo.SelectedIndex = 0;
+            }
+        }
+
+        private QuickMenuStyle ChosenStyle()
+        {
+            var item = StyleCombo.SelectedItem as ComboBoxItem;
+            return item != null && item.Tag is QuickMenuStyle ? (QuickMenuStyle)item.Tag : QuickMenuLook.DefaultStyle;
+        }
+
+        private bool ChosenShowNames()
+        {
+            var item = NamesCombo.SelectedItem as ComboBoxItem;
+            return item == null || !(item.Tag is bool) || (bool)item.Tag;
+        }
+
+        private QuickMenuOpening ChosenOpening()
+        {
+            var item = OpeningCombo.SelectedItem as ComboBoxItem;
+            return item != null && item.Tag is QuickMenuOpening ? (QuickMenuOpening)item.Tag : QuickMenuLook.DefaultOpening;
         }
 
         /// <summary>Which source the Show combo is asking for, or null for everything.</summary>
@@ -246,6 +305,9 @@ namespace HeronTools.UI.QuickMenu
 
             WheelCanvas.Children.Clear();
             _wedges.Clear();
+            _wedgeLifts.Clear();
+            _wedgeAngles.Clear();
+            _wedgeLifted.Clear();
 
             for (int i = 0; i < _slotKeys.Count; i++)
             {
@@ -286,12 +348,18 @@ namespace HeronTools.UI.QuickMenu
             double startAngle = centreAngle - (step / 2.0) + WedgeGapDegrees;
             double endAngle = centreAngle + (step / 2.0) - WedgeGapDegrees;
 
+            var lift = new TranslateTransform();
+            _wedgeLifts.Add(lift);
+            _wedgeAngles.Add(centreAngle);
+            _wedgeLifted.Add(false);
+
             var wedge = new Path
             {
                 Data = BuildWedgeGeometry(startAngle, endAngle),
                 Fill = filled ? WedgeFill : WedgeFillEmpty,
                 Stroke = WedgeStroke,
                 StrokeThickness = 1.0,
+                RenderTransform = lift,
 
                 // The canvas does the hit testing by angle, exactly like the real wheel, so the
                 // shapes themselves must stay out of the way.
@@ -315,7 +383,8 @@ namespace HeronTools.UI.QuickMenu
             var stack = new StackPanel
             {
                 Width = contentWidth,
-                IsHitTestVisible = false
+                IsHitTestVisible = false,
+                RenderTransform = lift
             };
 
             if (filled && entry.Icon != null)
@@ -356,7 +425,8 @@ namespace HeronTools.UI.QuickMenu
                 FontSize = 10.0,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = WheelTextDisabled,
-                IsHitTestVisible = false
+                IsHitTestVisible = false,
+                RenderTransform = lift
             };
 
             digit.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -419,39 +489,10 @@ namespace HeronTools.UI.QuickMenu
 
         private Geometry BuildWedgeGeometry(double startAngle, double endAngle)
         {
-            double outer = OuterRadius;
-            double inner = InnerRadius;
-            bool largeArc = (endAngle - startAngle) > 180.0;
-
-            var figure = new PathFigure
-            {
-                StartPoint = Polar(outer, startAngle),
-                IsClosed = true,
-                IsFilled = true
-            };
-
-            figure.Segments.Add(new ArcSegment(
-                Polar(outer, endAngle),
-                new Size(outer, outer),
-                0.0,
-                largeArc,
-                SweepDirection.Clockwise,
-                true));
-
-            figure.Segments.Add(new LineSegment(Polar(inner, endAngle), true));
-
-            figure.Segments.Add(new ArcSegment(
-                Polar(inner, startAngle),
-                new Size(inner, inner),
-                0.0,
-                largeArc,
-                SweepDirection.Counterclockwise,
-                true));
-
-            var geometry = new PathGeometry();
-            geometry.Figures.Add(figure);
-            geometry.Freeze();
-            return geometry;
+            // The same rounded slot as the real wheel, at this preview's size.
+            return RoundedSlotGeometry.Build(
+                new Point(WheelCentre, WheelCentre), InnerRadius, OuterRadius, startAngle, endAngle,
+                OuterRadius * RoundedSlotGeometry.CornerFraction);
         }
 
         private Point Polar(double radius, double angleDegrees)
@@ -518,9 +559,42 @@ namespace HeronTools.UI.QuickMenu
                 _wedges[i].Fill = fill;
                 _wedges[i].Stroke = stroke;
                 _wedges[i].StrokeThickness = thickness;
+                SetLift(i, i == _selectedSlot || i == _dropSlot);
             }
 
             UpdateWheelHint();
+        }
+
+        /// <summary>Steps a slot 4 units out towards the rim, or lets it settle back - only when that changes.</summary>
+        private void SetLift(int index, bool lifted)
+        {
+            if (index < 0 || index >= _wedgeLifts.Count || _wedgeLifted[index] == lifted)
+            {
+                return;
+            }
+
+            _wedgeLifted[index] = lifted;
+
+            double radians = _wedgeAngles[index] * Math.PI / 180.0;
+            double distance = lifted ? 4.0 : 0.0;
+            double x = distance * Math.Cos(radians);
+            double y = distance * Math.Sin(radians);
+            TranslateTransform move = _wedgeLifts[index];
+
+            if (!SystemParameters.ClientAreaAnimation)
+            {
+                move.X = x;
+                move.Y = y;
+                return;
+            }
+
+            var duration = new Duration(TimeSpan.FromMilliseconds(lifted ? 140 : 160));
+            IEasingFunction ease = lifted
+                ? (IEasingFunction)new BackEase { Amplitude = 0.4, EasingMode = EasingMode.EaseOut }
+                : new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(x, duration) { EasingFunction = ease });
+            move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(y, duration) { EasingFunction = ease });
         }
 
         /// <summary>
@@ -734,6 +808,9 @@ namespace HeronTools.UI.QuickMenu
             QuickMenuConfig config = QuickMenuConfig.Load();
             config.SlotCount = _slotKeys.Count;
             config.Diameter = ChoiceValue(WheelSizeCombo, QuickMenuConfig.DefaultDiameter);
+            config.Style = ChosenStyle();
+            config.ShowNames = ChosenShowNames();
+            config.Opening = ChosenOpening();
             config.Normalize();
 
             for (int i = 0; i < config.Slots.Count && i < _slotKeys.Count; i++)
@@ -750,6 +827,34 @@ namespace HeronTools.UI.QuickMenu
             }
 
             DialogResult = true;
+        }
+
+        /// <summary>
+        /// Opens the real wheel with the choices and slots as they are in this window - saved or not - so the
+        /// look can be judged before saving. Whatever is clicked on it, nothing runs and nothing is saved.
+        /// </summary>
+        private void OnPreviewClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var slots = new List<QuickToolEntry>(_slotKeys.Count);
+                foreach (string key in _slotKeys)
+                {
+                    slots.Add(FindTool(key));
+                }
+
+                var wheel = new QuickMenuWindow(slots, null,
+                    ChoiceValue(WheelSizeCombo, QuickMenuConfig.DefaultDiameter),
+                    ChosenStyle(), ChosenShowNames(), ChosenOpening())
+                {
+                    Owner = this
+                };
+                wheel.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                ShowError("The preview could not open: " + ex.Message);
+            }
         }
 
         private void OnCancelClick(object sender, RoutedEventArgs e)

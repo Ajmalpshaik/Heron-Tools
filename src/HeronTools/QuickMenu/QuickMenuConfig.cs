@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Ajmal's own wheel layout - how many slots, how big the wheel is, and which tool sits in each slot. Saved to %APPDATA%\HeronTools\quickmenu-slots.txt so it survives Revit restarts and add-in updates.
+// Ajmal's own wheel layout - how many slots, how big the wheel is, which tool sits in each slot, and its look (design, tool names, opening). Saved to %APPDATA%\HeronTools\quickmenu-slots.txt so it survives Revit restarts and add-in updates.
 
 using System;
 using System.Collections.Generic;
@@ -48,6 +48,9 @@ namespace HeronTools.Services.QuickMenu
         {
             SlotCount = DefaultSlotCount;
             Diameter = DefaultDiameter;
+            Style = QuickMenuLook.DefaultStyle;
+            ShowNames = true;
+            Opening = QuickMenuLook.DefaultOpening;
             Slots = new List<string>();
         }
 
@@ -56,6 +59,15 @@ namespace HeronTools.Services.QuickMenu
 
         /// <summary>Outer diameter of the wheel in WPF units (420 to 760).</summary>
         public int Diameter { get; set; }
+
+        /// <summary>Which of the six wheel designs opens.</summary>
+        public QuickMenuStyle Style { get; set; }
+
+        /// <summary>True: tool names on the wheel. False: icons only, the name shown in the centre.</summary>
+        public bool ShowNames { get; set; }
+
+        /// <summary>Which of the four ways the wheel opens.</summary>
+        public QuickMenuOpening Opening { get; set; }
 
         /// <summary>One command class name per slot, "" for an empty slot. Always SlotCount long.</summary>
         public List<string> Slots { get; private set; }
@@ -106,6 +118,21 @@ namespace HeronTools.Services.QuickMenu
                             recognised++;
                             config.Diameter = ParseInt(value, DefaultDiameter);
                         }
+                        else if (string.Equals(name, "Style", StringComparison.OrdinalIgnoreCase))
+                        {
+                            recognised++;
+                            config.Style = QuickMenuLook.ParseStyle(value);
+                        }
+                        else if (string.Equals(name, "Names", StringComparison.OrdinalIgnoreCase))
+                        {
+                            recognised++;
+                            config.ShowNames = !string.Equals(value, "Off", StringComparison.OrdinalIgnoreCase);
+                        }
+                        else if (string.Equals(name, "Opening", StringComparison.OrdinalIgnoreCase))
+                        {
+                            recognised++;
+                            config.Opening = QuickMenuLook.ParseOpening(value);
+                        }
                         else if (name.StartsWith("Slot", StringComparison.OrdinalIgnoreCase))
                         {
                             int slotNumber = ParseInt(name.Substring(4), 0);
@@ -137,6 +164,9 @@ namespace HeronTools.Services.QuickMenu
                 config.LoadFailed = true;
                 config.SlotCount = DefaultSlotCount;
                 config.Diameter = DefaultDiameter;
+                config.Style = QuickMenuLook.DefaultStyle;
+                config.ShowNames = true;
+                config.Opening = QuickMenuLook.DefaultOpening;
                 readSlots.Clear();
                 FillDefaultSlots(readSlots);
             }
@@ -180,7 +210,10 @@ namespace HeronTools.Services.QuickMenu
                 {
                     "# Heron Tools - Quick Menu layout. Slot 1 is at the top, then clockwise.",
                     "SlotCount=" + SlotCount.ToString(CultureInfo.InvariantCulture),
-                    "Diameter=" + Diameter.ToString(CultureInfo.InvariantCulture)
+                    "Diameter=" + Diameter.ToString(CultureInfo.InvariantCulture),
+                    "Style=" + Style,
+                    "Names=" + (ShowNames ? "On" : "Off"),
+                    "Opening=" + Opening
                 };
 
                 for (int i = 0; i < Slots.Count; i++)

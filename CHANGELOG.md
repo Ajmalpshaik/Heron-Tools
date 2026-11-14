@@ -49,6 +49,13 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - 64-bit element ids throughout (Revit 2024+).
 - Many workflow fixes - see `docs/filter-pro-move-notes.md`, `docs/view-tools-move-notes.md` and
   `docs/panels-move-notes.md`.
+- **Quick Menu wheel looks and motion** (chosen with Ajmal on a 23-design page): six designs - Heron Ring,
+  Slim Ring, Double Ring, Orbit Buttons, Rim Lights, HUD Notched - with softly rounded slot corners; tool names
+  on the wheel or icons only (the name then shows large in the centre); four openings - Unfold, Bloom, Spin in,
+  Iris Pop - each starting with a small centre button that grows before the tools come out. The pointed slot
+  pops, lights and (by design) steps out, with an arc, needle or chevron gliding to it; the wheel drops back
+  as it closes. All three are set in Quick Menu Settings, which also gets a Preview of the real wheel and
+  lifts the picked slot in its own drawing. Motion is off when Windows "Show animations" is off.
 - Window polish after a full review of every window: typing fields are the same 34 px height as the drop-downs
   (the text was set 16 px in and the box was 41 px tall); search hints no longer cut off in Filter Pro and Colorize;
   the Annotation Crop offset label fits; the Pick views column headings sit over their columns; Reset Graphics'
