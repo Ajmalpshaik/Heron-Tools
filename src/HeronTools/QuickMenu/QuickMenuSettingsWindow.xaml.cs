@@ -26,10 +26,11 @@ namespace HeronTools.UI.QuickMenu
     {
         private static readonly int[] SlotCountChoices = { 4, 6, 8, 10, 12 };
 
-        private static readonly int[] WheelSizeChoices = { 460, 560, 660, 760 };
+        private static readonly int[] WheelSizeChoices = { 380, 460, 560, 660, 760 };
 
         private static readonly string[] WheelSizeLabels =
         {
+            "Extra small (380)",
             "Small (460)",
             "Medium (560)",
             "Large (660)",
@@ -78,6 +79,8 @@ namespace HeronTools.UI.QuickMenu
         private static readonly Brush WheelTextPrimary = MakeBrush(0xEB, 0xF7, 0xF5, 0xF2);     // Mist 92 %
         private static readonly Brush WheelTextIdle = MakeBrush(0xB8, 0xF7, 0xF5, 0xF2);        // Mist 72 %
         private static readonly Brush WheelTextDisabled = MakeBrush(0x73, 0xF7, 0xF5, 0xF2);    // Mist 45 %
+        private static readonly Brush RimIdle = MakeBrush(0x24, 0xF7, 0xF5, 0xF2);              // Mist 14 %
+        private static readonly Brush RulerTickMajor = MakeBrush(0xB3, 0xFD, 0x64, 0x1A);       // Accent 70 %
 
         private readonly IList<QuickToolEntry> _allTools;
         private readonly List<string> _slotKeys = new List<string>();
@@ -125,6 +128,10 @@ namespace HeronTools.UI.QuickMenu
             RefreshWheel(0);
 
             ToolList.SelectionChanged += OnListSelectionChanged;
+
+            // The drawing follows the chosen look straight away (the opening only shows in Preview).
+            StyleCombo.SelectionChanged += OnLookChanged;
+            NamesCombo.SelectionChanged += OnLookChanged;
 
             _loading = false;
             UpdateButtonStates();
@@ -294,8 +301,9 @@ namespace HeronTools.UI.QuickMenu
         }
 
         /// <summary>
-        /// Redraws the wheel and picks a slot. The geometry deliberately mirrors QuickMenuWindow -
-        /// slot 1 at the top, the rest clockwise - so what Ajmal arranges here is what opens.
+        /// Redraws the wheel and picks a slot. The drawing follows the chosen Style and Names - the same
+        /// shapes as the real wheel (QuickMenuDesign), slot 1 at the top, the rest clockwise - so what Ajmal
+        /// arranges here is what opens.
         /// </summary>
         private void RefreshWheel(int selectIndex)
         {
@@ -303,12 +311,17 @@ namespace HeronTools.UI.QuickMenu
                 ? -1
                 : Math.Min(Math.Max(selectIndex, 0), _slotKeys.Count - 1);
 
+            _design = QuickMenuDesign.For(ChosenStyle(), ChosenShowNames());
+            _bubbleRadius = _design.Bubbles ? _design.BubbleRadius(OuterRadius, Math.Max(1, _slotKeys.Count)) : 0.0;
+
             WheelCanvas.Children.Clear();
             _wedges.Clear();
             _wedgeLifts.Clear();
             _wedgeAngles.Clear();
             _wedgeLifted.Clear();
+            _slotMiddles.Clear();
 
+            AddRuler();
             for (int i = 0; i < _slotKeys.Count; i++)
             {
                 AddWedge(i);
@@ -318,24 +331,66 @@ namespace HeronTools.UI.QuickMenu
             UpdateWheelVisuals();
         }
 
+        /// <summary>The shape of the chosen design; never null once the window is up.</summary>
+        private QuickMenuDesign _design = QuickMenuDesign.For(QuickMenuLook.DefaultStyle, true);
+        private double _bubbleRadius;
+        private readonly List<Point> _slotMiddles = new List<Point>();
+
         private double WheelCentre
         {
             get { return WheelCanvas.Width / 2.0; }
         }
 
+        /// <summary>The wheel's full radius in this drawing (a design's ring may use less of it).</summary>
         private double OuterRadius
         {
             get { return WheelCentre - 4.0; }
         }
 
+        /// <summary>Design units to this drawing's units.</summary>
+        private double Unit
+        {
+            get { return OuterRadius / QuickMenuDesign.DesignRadius; }
+        }
+
+        /// <summary>Ring: inner edge. Orbit Buttons: the centre's radius.</summary>
         private double InnerRadius
         {
-            get { return OuterRadius * HubRadiusFraction; }
+            get { return OuterRadius * _design.InnerFraction; }
+        }
+
+        /// <summary>Ring: outer edge. Orbit Buttons: the orbit the bubbles sit on.</summary>
+        private double RingOuter
+        {
+            get { return OuterRadius * _design.OuterFraction; }
         }
 
         private double StepDegrees
         {
             get { return _slotKeys.Count > 0 ? 360.0 / _slotKeys.Count : 360.0; }
+        }
+
+        /// <summary>HUD Notched: the degree ruler round the outside.</summary>
+        private void AddRuler()
+        {
+            if (!_design.Ruler)
+            {
+                return;
+            }
+
+            for (int k = 0; k < 72; k++)
+            {
+                bool major = k % 9 == 0;
+                Point a = Polar(RingOuter + (6.0 * Unit), k * 5.0);
+                Point b = Polar(RingOuter + ((major ? 16.0 : 11.0) * Unit), k * 5.0);
+                WheelCanvas.Children.Add(new Line
+                {
+                    X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
+                    Stroke = major ? RulerTickMajor : WedgeStroke,
+                    StrokeThickness = major ? 1.4 : 1.0,
+                    IsHitTestVisible = false
+                });
+            }
         }
 
         private void AddWedge(int index)
@@ -353,32 +408,46 @@ namespace HeronTools.UI.QuickMenu
             _wedgeAngles.Add(centreAngle);
             _wedgeLifted.Add(false);
 
-            var wedge = new Path
+            Point contentCentre;
+            double contentWidth;
+            if (_design.Bubbles)
             {
-                Data = BuildWedgeGeometry(startAngle, endAngle),
-                Fill = filled ? WedgeFill : WedgeFillEmpty,
-                Stroke = WedgeStroke,
-                StrokeThickness = 1.0,
-                RenderTransform = lift,
+                contentCentre = Polar(RingOuter, centreAngle);
+                contentWidth = _bubbleRadius * 1.7;
+                var circle = new EllipseGeometry(contentCentre, _bubbleRadius, _bubbleRadius);
+                circle.Freeze();
+                AddSlotShape(circle, filled, lift);
+            }
+            else
+            {
+                double contentRadius = (InnerRadius + RingOuter) / 2.0;
+                contentCentre = Polar(contentRadius, centreAngle);
+                AddSlotShape(BuildWedgeGeometry(startAngle, endAngle), filled, lift);
 
-                // The canvas does the hit testing by angle, exactly like the real wheel, so the
-                // shapes themselves must stay out of the way.
-                IsHitTestVisible = false
-            };
+                if (_design.RimLights)
+                {
+                    WheelCanvas.Children.Add(new Path
+                    {
+                        Data = RoundedSlotGeometry.Build(new Point(WheelCentre, WheelCentre),
+                            RingOuter + (4.0 * Unit), RingOuter + (9.0 * Unit), startAngle, endAngle, 2.0),
+                        Fill = RimIdle,
+                        RenderTransform = lift,
+                        IsHitTestVisible = false
+                    });
+                }
 
-            WheelCanvas.Children.Add(wedge);
-            _wedges.Add(wedge);
+                // Same reasoning as the real wheel: measure the room at the slot's inner corners, where it is
+                // narrowest, and never let the block outgrow the thickness of the ring.
+                double halfWedgeRadians = ((step / 2.0) - WedgeGapDegrees) * Math.PI / 180.0;
+                // Measured where the name sits (just inside the slot's middle), not at its very bottom.
+                double innerCornerRadius = Math.Max(InnerRadius + 4.0, contentRadius - 6.0);
+                double angularAllowance = 2.0 * innerCornerRadius * Math.Tan(Math.Min(halfWedgeRadians, 1.2));
+                // Across the ring, leave room for the slot number by the rim (where the design shows one).
+                double radialAllowance = (RingOuter - InnerRadius) - (_design.Digits ? 22.0 : 8.0);
+                contentWidth = Math.Max(34.0, Math.Min(angularAllowance, radialAllowance));
+            }
 
-            double contentRadius = (InnerRadius + OuterRadius) / 2.0;
-            Point contentCentre = Polar(contentRadius, centreAngle);
-
-            // Same reasoning as the real wheel: measure the room at the wedge's inner corners, where
-            // it is narrowest, and never let the block outgrow the thickness of the ring.
-            double halfWedgeRadians = ((step / 2.0) - WedgeGapDegrees) * Math.PI / 180.0;
-            double innerCornerRadius = Math.Max(InnerRadius + 4.0, contentRadius - 26.0);
-            double angularAllowance = 2.0 * innerCornerRadius * Math.Tan(Math.Min(halfWedgeRadians, 1.2));
-            double radialAllowance = (OuterRadius - InnerRadius) - 32.0;   // clear of the rim slot number
-            double contentWidth = Math.Max(42.0, Math.Min(angularAllowance, radialAllowance));
+            _slotMiddles.Add(contentCentre);
 
             var stack = new StackPanel
             {
@@ -387,52 +456,87 @@ namespace HeronTools.UI.QuickMenu
                 RenderTransform = lift
             };
 
+            bool withLabel = _design.LabelsOnSlots;
             if (filled && entry.Icon != null)
             {
+                double iconSize = withLabel ? 22.0 : 26.0;
                 stack.Children.Add(new Image
                 {
                     Source = entry.Icon,
-                    Width = 22,
-                    Height = 22,
-                    Margin = new Thickness(0, 0, 0, 3),
+                    Width = iconSize,
+                    Height = iconSize,
+                    Margin = new Thickness(0, 0, 0, withLabel ? 3 : 0),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     SnapsToDevicePixels = true
                 });
             }
 
-            stack.Children.Add(new TextBlock
+            // Names only where the chosen design writes them; an empty slot always says so.
+            if (withLabel || !filled)
             {
-                Text = filled ? entry.DisplayName : "Empty",
-                FontSize = 10.5,
-                MaxHeight = 30,
-                TextAlignment = TextAlignment.Center,
-                TextWrapping = TextWrapping.WrapWithOverflow,   // break between words, never inside one
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                Foreground = filled ? WheelTextPrimary : WheelTextDisabled,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
+                // Shrink a long name a little (10.5 down to 7.5) rather than cut it off: every word fits the
+                // slot, on at most two lines - as on the real wheel.
+                string name = filled ? entry.DisplayName : "Empty";
+                double fontSize = LabelFit.FontSizeFor(name, contentWidth, 2, 10.5, 7.5,
+                    new Typeface(FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                stack.Children.Add(new TextBlock
+                {
+                    Text = name,
+                    FontSize = fontSize,
+                    MaxHeight = Math.Ceiling(fontSize * 2.0 * 1.75),   // two Manrope lines, with room to spare
+                    TextAlignment = TextAlignment.Center,
+                    TextWrapping = TextWrapping.WrapWithOverflow,   // break between words, never inside one
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    Foreground = filled ? WheelTextPrimary : WheelTextDisabled,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+            }
 
             stack.Measure(new Size(stack.Width, double.PositiveInfinity));
             Canvas.SetLeft(stack, contentCentre.X - (stack.Width / 2.0));
             Canvas.SetTop(stack, contentCentre.Y - (stack.DesiredSize.Height / 2.0));
             WheelCanvas.Children.Add(stack);
 
-            // Slot number out by the rim, the same place the real wheel puts its 1-9 keys.
-            Point digitCentre = Polar(OuterRadius - 11.0, centreAngle);
-            var digit = new TextBlock
+            // Slot number out by the rim, where the real wheel puts its 1-9 keys (designs that show them).
+            if (_design.Digits)
             {
-                Text = (index + 1).ToString(CultureInfo.InvariantCulture),
-                FontSize = 10.0,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = WheelTextDisabled,
-                IsHitTestVisible = false,
-                RenderTransform = lift
+                Point digitCentre = Polar(RingOuter - 11.0, centreAngle);
+                var digit = new TextBlock
+                {
+                    Text = (index + 1).ToString(CultureInfo.InvariantCulture),
+                    FontSize = 10.0,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = WheelTextDisabled,
+                    IsHitTestVisible = false,
+                    RenderTransform = lift
+                };
+
+                digit.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(digit, digitCentre.X - (digit.DesiredSize.Width / 2.0));
+                Canvas.SetTop(digit, digitCentre.Y - (digit.DesiredSize.Height / 2.0));
+                WheelCanvas.Children.Add(digit);
+            }
+        }
+
+        private void AddSlotShape(Geometry shape, bool filled, TranslateTransform lift)
+        {
+            var path = new Path
+            {
+                Data = shape,
+                Fill = filled ? WedgeFill : WedgeFillEmpty,
+                Stroke = WedgeStroke,
+                StrokeThickness = 1.0,
+                RenderTransform = lift,
+
+                // The canvas does the hit testing, exactly like the real wheel, so the shapes themselves
+                // must stay out of the way.
+                IsHitTestVisible = false
             };
 
-            digit.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            Canvas.SetLeft(digit, digitCentre.X - (digit.DesiredSize.Width / 2.0));
-            Canvas.SetTop(digit, digitCentre.Y - (digit.DesiredSize.Height / 2.0));
-            WheelCanvas.Children.Add(digit);
+            WheelCanvas.Children.Add(path);
+            _wedges.Add(path);
         }
 
         private void AddHub()
@@ -453,9 +557,23 @@ namespace HeronTools.UI.QuickMenu
             Canvas.SetTop(hub, WheelCentre - inner);
             WheelCanvas.Children.Add(hub);
 
+            if (_design.Hub == QuickMenuHub.Ticks)
+            {
+                for (int k = 0; k < 48; k++)
+                {
+                    Point a = Polar(inner - 3.0, k * 7.5);
+                    Point b = Polar(inner - (k % 6 == 0 ? 8.0 : 5.5), k * 7.5);
+                    WheelCanvas.Children.Add(new Line
+                    {
+                        X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
+                        Stroke = WedgeStroke, StrokeThickness = 1.0, IsHitTestVisible = false
+                    });
+                }
+            }
+
             var caption = new StackPanel
             {
-                Width = (inner * 2.0) - 16.0,
+                Width = Math.Max(40.0, (inner * 2.0) - 16.0),
                 IsHitTestVisible = false
             };
 
@@ -481,6 +599,20 @@ namespace HeronTools.UI.QuickMenu
                 Foreground = WheelTextIdle
             });
 
+            // The big centre card (Slim Ring, or Names: icons only) says where the tool names will show.
+            if (_design.Hub == QuickMenuHub.Card)
+            {
+                caption.Children.Add(new TextBlock
+                {
+                    Text = "Names show here",
+                    FontSize = 10.0,
+                    Margin = new Thickness(0, 3, 0, 0),
+                    TextAlignment = TextAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = WheelTextDisabled
+                });
+            }
+
             caption.Measure(new Size(caption.Width, double.PositiveInfinity));
             Canvas.SetLeft(caption, WheelCentre - (caption.Width / 2.0));
             Canvas.SetTop(caption, WheelCentre - (caption.DesiredSize.Height / 2.0));
@@ -489,10 +621,10 @@ namespace HeronTools.UI.QuickMenu
 
         private Geometry BuildWedgeGeometry(double startAngle, double endAngle)
         {
-            // The same rounded slot as the real wheel, at this preview's size.
+            // The same rounded slot as the real wheel, at this drawing's size.
             return RoundedSlotGeometry.Build(
-                new Point(WheelCentre, WheelCentre), InnerRadius, OuterRadius, startAngle, endAngle,
-                OuterRadius * RoundedSlotGeometry.CornerFraction);
+                new Point(WheelCentre, WheelCentre), InnerRadius, RingOuter, startAngle, endAngle,
+                OuterRadius * RoundedSlotGeometry.CornerFraction, _design.Notched ? 7.0 * Unit : 0.0);
         }
 
         private Point Polar(double radius, double angleDegrees)
@@ -504,7 +636,7 @@ namespace HeronTools.UI.QuickMenu
                 centre + (radius * Math.Sin(radians)));
         }
 
-        /// <summary>Which slot the pointer is over, or -1 for the hub / outside the ring.</summary>
+        /// <summary>Which slot the pointer is over, or -1 for the centre / outside the wheel.</summary>
         private int IndexAt(Point point)
         {
             if (_slotKeys.Count == 0)
@@ -516,8 +648,9 @@ namespace HeronTools.UI.QuickMenu
             double dx = point.X - centre;
             double dy = point.Y - centre;
             double distance = Math.Sqrt((dx * dx) + (dy * dy));
+            double outer = _design.Bubbles ? RingOuter + _bubbleRadius + 6.0 : RingOuter;
 
-            if (distance < InnerRadius || distance > OuterRadius)
+            if (distance < InnerRadius || distance > outer)
             {
                 return -1;
             }
@@ -528,7 +661,22 @@ namespace HeronTools.UI.QuickMenu
             shifted = ((shifted % 360.0) + 360.0) % 360.0;
 
             int index = (int)(shifted / step);
-            return index >= 0 && index < _slotKeys.Count ? index : -1;
+            if (index < 0 || index >= _slotKeys.Count)
+            {
+                return -1;
+            }
+
+            // Orbit Buttons: only the bubble itself, as on the real wheel.
+            if (_design.Bubbles && index < _slotMiddles.Count)
+            {
+                double bx = point.X - _slotMiddles[index].X, by = point.Y - _slotMiddles[index].Y;
+                if (Math.Sqrt((bx * bx) + (by * by)) > _bubbleRadius + 6.0)
+                {
+                    return -1;
+                }
+            }
+
+            return index;
         }
 
         /// <summary>Repaints the selected and drop-target wedges without rebuilding the whole wheel.</summary>
@@ -543,7 +691,7 @@ namespace HeronTools.UI.QuickMenu
 
                 if (i == _selectedSlot)
                 {
-                    fill = SelectedFill();
+                    fill = _design.Bubbles ? BubbleSelectedFill : SelectedFill();
                     stroke = WedgeStrokeSelected;
                     thickness = 1.6;
                 }
@@ -623,6 +771,18 @@ namespace HeronTools.UI.QuickMenu
         }
 
         private Brush _selectedFill;
+
+        /// <summary>A picked bubble's fill: Accent, stronger in the middle (centred on each bubble).</summary>
+        private static readonly Brush BubbleSelectedFill = MakeRadial(0x73, 0x2E);
+
+        private static Brush MakeRadial(byte middleAlpha, byte edgeAlpha)
+        {
+            var brush = new RadialGradientBrush();
+            brush.GradientStops.Add(new GradientStop(Color.FromArgb(middleAlpha, 0xFD, 0x64, 0x1A), 0.0));
+            brush.GradientStops.Add(new GradientStop(Color.FromArgb(edgeAlpha, 0xFD, 0x64, 0x1A), 1.0));
+            brush.Freeze();
+            return brush;
+        }
 
         private void UpdateWheelHint()
         {
@@ -748,6 +908,17 @@ namespace HeronTools.UI.QuickMenu
             while (_slotKeys.Count > wanted)
             {
                 _slotKeys.RemoveAt(_slotKeys.Count - 1);
+            }
+
+            RefreshWheel(_selectedSlot);
+            UpdateButtonStates();
+        }
+
+        private void OnLookChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_loading)
+            {
+                return;
             }
 
             RefreshWheel(_selectedSlot);

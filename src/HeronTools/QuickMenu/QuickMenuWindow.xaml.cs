@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -31,16 +32,10 @@ namespace HeronTools.UI.QuickMenu
         private const double EdgePadding = 16.0;
 
         /// <summary>
-        /// The designs were drawn on a wheel 170 units in radius; every size below is in those units and is
-        /// multiplied by the real radius / 170, so the wheel keeps its proportions at every chosen size.
+        /// The designs were drawn on a wheel 170 units in radius; sizes in design units are multiplied by the
+        /// real radius / 170, so the wheel keeps its proportions at every chosen size.
         /// </summary>
-        private const double DesignRadius = 170.0;
-
-        /// <summary>
-        /// Half the tallest a slot's icon-plus-label block gets (34 icon + 5 gap + two 17pt lines),
-        /// used to work out how wide that block may be before its lower corners leave the slot.
-        /// </summary>
-        private const double EstimatedContentHalfHeight = 44.0;
+        private const double DesignRadius = QuickMenuDesign.DesignRadius;
 
         // Heron brand only: Surface #1B1B1F and Ink #0F0F10 for the ring, Mist #F7F5F2 at an opacity for
         // text and lines, Accent #FD641A for the slot being pointed at.
@@ -67,19 +62,6 @@ namespace HeronTools.UI.QuickMenu
         private const string HeronMarkData =
             "M811.368 1070.84C811.475 1070.9 811.583 1070.95 811.691 1071C711.874 1049.97 610.779 1028.5 519.57 982.796C423.923 934.858 329.769 852.648 310.05 743.375C300.796 692.115 306.069 638.823 324.725 590.199C360.49 496.987 439.324 428.738 488.284 342.748C505.582 312.377 534.352 262.959 517.647 226.912C483.711 153.646 346.286 236.556 264.506 291.677L0 516.517L219.904 256.718C219.904 256.718 240.86 142.765 376.294 62.6933C434.024 28.5556 497.35 28.1118 566.203 26.9147C643.921 25.5696 694.509 39.2354 782.839 0C782.839 0 758.682 53.2644 573.252 52.9416C459.917 52.7398 425.026 104.363 424.945 104.498C428.765 98.8351 445.995 95.1496 451.9 93.2262C473.475 86.1915 496.449 82.7885 519.126 84.4967C588.088 89.7021 647.069 143.747 646.948 214.591C646.786 302.437 593.145 382.576 538.562 447.044C475.318 521.722 433.567 610.792 443.924 710.999C453.259 801.293 503.9 886.503 578.766 937.844C526.766 856.925 493.167 756.624 520.323 664.366C545.974 577.206 620.154 513.746 695.101 462.378C770.047 411.01 851.477 364.498 905.67 291.582C931.818 256.422 951.214 211.807 940.426 169.33C957.979 238.426 960.965 302.155 937.857 370.847C919.349 425.86 888.13 476.461 846.864 517.324C802.759 560.998 751.647 598.767 715.317 649.732C620.1 783.31 664.702 996.098 811.368 1070.84Z " +
             "M824.899 1057.76C783.928 1015.83 749.575 970.529 731.7 914.05C715.478 862.83 712.102 806.27 728.162 754.566C729.978 748.728 732.022 742.985 734.336 737.322C783.861 615.903 912.852 553.896 965.404 434.401C1000.43 354.76 1012.64 262.395 984.786 178.691C992.198 194.711 1024.09 236.072 1033.63 250.988C1076.29 317.69 1092.73 386.799 1069.3 466.965C1036.93 577.704 943.977 643.598 881.392 734.834C840.73 794.124 816.021 861.35 815.672 933.688C815.483 973.461 821.2 1043.67 824.899 1057.74V1057.76Z";
-
-        /// <summary>What the centre of the wheel holds.</summary>
-        private enum HubKind
-        {
-            /// <summary>Heron mark, the pointed tool's name and a hint.</summary>
-            Mark,
-
-            /// <summary>Heron mark on top, then the pointed tool's large icon, name and hint.</summary>
-            Card,
-
-            /// <summary>As Mark, with a ring of fine ticks inside the hub's edge.</summary>
-            Ticks
-        }
 
         /// <summary>Everything drawn for one slot, and the transforms that move it.</summary>
         private sealed class SlotParts
@@ -118,7 +100,7 @@ namespace HeronTools.UI.QuickMenu
         private double _ringOuter;              // ring: outer radius; bubbles: the orbit radius
         private double _bubbleRadius;
         private bool _labelsOnSlots;
-        private HubKind _hub;
+        private QuickMenuHub _hub;
         private double _hubRadius;
         private double _lift;
         private bool _rimLights;
@@ -232,71 +214,26 @@ namespace HeronTools.UI.QuickMenu
             Deactivated += OnWheelDeactivated;
         }
 
-        /// <summary>The six designs, as chosen on the design page (2026-11-13).</summary>
+        /// <summary>The chosen design's shape, read from QuickMenuDesign (shared with the settings drawing).</summary>
         private void SetUpDesign()
         {
+            QuickMenuDesign d = QuickMenuDesign.For(_style, _showNames);
             double r = _outerRadius;
-            _ringInner = r * 0.42;
-            _ringOuter = r;
-            _labelsOnSlots = _showNames;
-            _hub = _showNames ? HubKind.Mark : HubKind.Card;
-            _lift = 7.0;
-            _halo = true;
-            _digits = true;
-
-            switch (_style)
-            {
-                case QuickMenuStyle.SlimRing:
-                    _ringInner = r * 0.72;
-                    _labelsOnSlots = false;          // too thin for names: the card shows them
-                    _hub = HubKind.Card;
-                    _digits = false;
-                    _arc = true;
-                    _needle = true;
-                    break;
-
-                case QuickMenuStyle.DoubleRing:
-                    _ringOuter = r * 0.90;
-                    _rimLights = true;
-                    _lift = 0.0;
-                    _needle = true;
-                    break;
-
-                case QuickMenuStyle.OrbitButtons:
-                    _bubbles = true;
-                    _ringInner = r * 0.30;           // the centre
-                    _ringOuter = r * 0.66;           // the orbit
-                    // 34 design units, but never so big that neighbours touch (11-12 slots).
-                    double chordHalf = _ringOuter * Math.Sin(Math.PI / Math.Max(2, _slotCount));
-                    _bubbleRadius = Math.Min(34.0 * _unit, chordHalf - 4.0);
-                    _labelsOnSlots = false;          // names come in the pill instead
-                    _hub = HubKind.Mark;
-                    _lift = 12.0;
-                    _halo = false;
-                    _digits = false;
-                    break;
-
-                case QuickMenuStyle.RimLights:
-                    _ringOuter = r * 0.92;
-                    _rimLights = true;
-                    _lift = 0.0;
-                    _hub = HubKind.Ticks;
-                    break;
-
-                case QuickMenuStyle.HudNotched:
-                    _ringOuter = r * 0.93;           // leaves room for the ruler inside the window
-                    _notched = true;
-                    _ruler = true;
-                    _hub = HubKind.Ticks;
-                    _halo = false;
-                    _chevron = true;
-                    break;
-
-                default:                             // Heron Ring
-                    _arc = true;
-                    _needle = true;
-                    break;
-            }
+            _bubbles = d.Bubbles;
+            _ringInner = r * d.InnerFraction;
+            _ringOuter = r * d.OuterFraction;
+            _bubbleRadius = _bubbles ? d.BubbleRadius(r, _slotCount) : 0.0;
+            _labelsOnSlots = d.LabelsOnSlots;
+            _hub = d.Hub;
+            _lift = d.Lift;
+            _rimLights = d.RimLights;
+            _notched = d.Notched;
+            _ruler = d.Ruler;
+            _halo = d.Halo;
+            _digits = d.Digits;
+            _arc = d.Arc;
+            _needle = d.Needle;
+            _chevron = d.Chevron;
 
             _hubRadius = _ringInner;
             if (_bubbles)
@@ -752,10 +689,12 @@ namespace HeronTools.UI.QuickMenu
             // middle: a slot narrows towards the hub, so measure the allowance there, and never let the block
             // be wider than the ring is thick.
             double halfWedgeRadians = ((_stepDegrees / 2.0) - WedgeGapDegrees) * Math.PI / 180.0;
-            double innerCornerRadius = Math.Max(_ringInner + 6.0, contentRadius - EstimatedContentHalfHeight);
+            // Measured where the name sits (just inside the slot's middle), not at the block's very bottom.
+            double innerCornerRadius = Math.Max(_ringInner + 6.0, contentRadius - 10.0);
             double angularAllowance = 2.0 * innerCornerRadius * Math.Tan(Math.Min(halfWedgeRadians, 1.2));
-            double radialAllowance = (_ringOuter - _ringInner) - 44.0;
-            double contentWidth = Math.Max(60.0, Math.Min(angularAllowance, radialAllowance));
+            // Across the ring, leave room for the slot number by the rim (where the design shows one).
+            double radialAllowance = (_ringOuter - _ringInner) - (_digits ? 28.0 : 12.0);
+            double contentWidth = Math.Max(44.0, Math.Min(angularAllowance, radialAllowance));
 
             AddSlotContent(p, index, entry, filled, usable, contentWidth, p.Middle, _labelsOnSlots, _labelsOnSlots ? 32.0 : 40.0);
 
@@ -881,15 +820,24 @@ namespace HeronTools.UI.QuickMenu
             // An empty slot always says so, even when names are off, so it never looks like a missing icon.
             if (withLabel || !filled)
             {
+                string name = filled ? entry.DisplayName : "Empty";
+                FontWeight weight = filled ? FontWeights.SemiBold : FontWeights.Normal;
+
+                // Shrink a long name a little (12 down to 8.5) rather than cut it off: every word fits the slot,
+                // on at most two lines.
+                double fontSize = LabelFit.FontSizeFor(name, width, 2, 12.0, 8.5,
+                    new Typeface(TextElement.GetFontFamily(RootGrid), FontStyles.Normal, weight, FontStretches.Normal),
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
                 p.Label = new TextBlock
                 {
-                    Text = filled ? entry.DisplayName : "Empty",
+                    Text = name,
                     Foreground = usable ? TextIdle : TextDisabled,
-                    FontSize = 12,
-                    FontWeight = filled ? FontWeights.SemiBold : FontWeights.Normal,
+                    FontSize = fontSize,
+                    FontWeight = weight,
                     TextAlignment = TextAlignment.Center,
                     TextWrapping = TextWrapping.WrapWithOverflow,   // break between words, never inside one
-                    MaxHeight = 46,
+                    MaxHeight = Math.Ceiling(fontSize * 2.0 * 1.75),   // two Manrope lines, with room to spare
                     TextTrimming = TextTrimming.CharacterEllipsis
                 };
                 stack.Children.Add(p.Label);
@@ -913,7 +861,7 @@ namespace HeronTools.UI.QuickMenu
             Canvas.SetTop(hub, _centre - hr);
             _hubLayer.Children.Add(hub);
 
-            if (_hub == HubKind.Ticks)
+            if (_hub == QuickMenuHub.Ticks)
             {
                 for (int k = 0; k < 48; k++)
                 {
@@ -927,7 +875,7 @@ namespace HeronTools.UI.QuickMenu
             var mark = Geometry.Parse(HeronMarkData);
             mark.Freeze();
 
-            if (_hub == HubKind.Card)
+            if (_hub == QuickMenuHub.Card)
             {
                 // Mark on top, then the pointed tool's large icon, its name and the hint, spaced to the hub.
                 double markSize = Math.Min(22.0, hr * 0.24);
@@ -1290,6 +1238,7 @@ namespace HeronTools.UI.QuickMenu
             if (_hoverIndex >= 0 && _hoverIndex < _parts.Count)
             {
                 SlotParts previous = _parts[_hoverIndex];
+                Panel.SetZIndex(previous.Layer, 0);
                 previous.Body.Fill = IdleFill(_hoverIndex);
                 previous.Body.Stroke = WedgeStroke;
                 previous.Body.StrokeThickness = 1.0;
@@ -1311,6 +1260,9 @@ namespace HeronTools.UI.QuickMenu
                 // the same as hovering a greyed ribbon button.
                 bool usable = IsUsable(_hoverIndex);
                 SlotParts current = _parts[_hoverIndex];
+
+                // In front of its neighbours, so its lift, glow and name pill are never half-hidden.
+                Panel.SetZIndex(current.Layer, 1);
                 current.Body.Stroke = usable ? WedgeStroke : WedgeStrokeHoverDisabled;
                 current.Body.StrokeThickness = usable ? 1.0 : 1.4;
                 if (usable)

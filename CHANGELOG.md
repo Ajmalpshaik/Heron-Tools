@@ -56,6 +56,9 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   pops, lights and (by design) steps out, with an arc, needle or chevron gliding to it; the wheel drops back
   as it closes. All three are set in Quick Menu Settings, which also gets a Preview of the real wheel and
   lifts the picked slot in its own drawing. Motion is off when Windows "Show animations" is off.
+- **Quick Menu Settings drawing follows the chosen Style and Names** (same shapes as the real wheel, from one
+  shared design table); new **Extra small (380)** wheel size; tool names on the wheel shrink a little to fit
+  their slot instead of being cut off with "..."; the pointed slot always sits in front of its neighbours.
 - Window polish after a full review of every window: typing fields are the same 34 px height as the drop-downs
   (the text was set 16 px in and the box was 41 px tall); search hints no longer cut off in Filter Pro and Colorize;
   the Annotation Crop offset label fits; the Pick views column headings sit over their columns; Reset Graphics'
