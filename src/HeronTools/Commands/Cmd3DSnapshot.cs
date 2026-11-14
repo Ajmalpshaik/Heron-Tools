@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// 3D Snapshot: fit the modeller's own 3D view's section box to what they are working on, in one click -
+// 3D Snapshot: fit Revit's default 3D view's section box to what they are working on, in one click -
 // selected rooms/spaces (or their tags), a selected section mark, the section they are in, or a window
 // dragged in a plan. The modeller stays in their view; the 3D view updates (and opens behind if closed).
 

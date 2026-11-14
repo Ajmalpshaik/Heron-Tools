@@ -38,7 +38,7 @@ side on one **Heron** tab.
 | **View Crop** | View | **Crop View by Elements** fits plan crops around their elements with a margin. **Annotation Crop by View Crop** turns the annotation crop on at an offset measured on paper. |
 | **Unhide All** | View | Shows everything hidden one by one in the view and turns Temporary Hide/Isolate off. |
 | **Toggle Links** | View | Turns the RVT Links category off or on in the view, and says if some links stay hidden one by one. |
-| **3D Snapshot** | View | One click fits your own 3D view's section box to a selected room or space (or its tag), a selected section mark or the section you are in, or a window you drag in a plan. You stay in your view; the 3D view updates behind it. |
+| **3D Snapshot** | View | One click fits Revit's own 3D view ({3D}) to a selected room or space (or its tag), a selected section mark or the section you are in, or a window you drag in a plan. You stay in your view; the 3D view updates behind it. |
 | **Highlight** | View | Selection in red, the rest grey. **Click again to put the view back** - every element's own overrides are remembered. |
 | **Reset Graphics** | View | **Reset Selected** clears the selected elements' overrides in one click (with their insulation and lining). **Reset Graphics...** clears element overrides, category (V/G) overrides or both, in this view or picked views - it counts first, and can leave Colorize and Highlight colours alone. **Restore Last Reset** puts everything back. |
 | **Quick Menu** | Quick | A tool wheel that opens around the mouse pointer with your favourite Heron Tools buttons and Revit commands; **Quick Menu Settings** chooses what sits in each slot. |

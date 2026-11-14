@@ -6,7 +6,7 @@
 // See docs/metadata-standard.md
 
 // The model work behind 3D Snapshot: measure the box (rooms/spaces, a section, or a plan rectangle) and put
-// it on the modeller's own "3D Snapshot - <user>" view in one transaction. Shows nothing itself; the
+// it on Revit's own default 3D view ("{3D - user}" or "{3D}") in one transaction. Shows nothing itself; the
 // command (Cmd3DSnapshot) talks to the modeller.
 
 using System;
@@ -52,9 +52,6 @@ namespace HeronTools.Services.Snapshot3D
         /// </summary>
         private const double SectionCameraSideTurn = 0.35;
         private const double SectionCameraDownTurn = 0.35;
-
-        /// <summary>Characters Revit refuses in a view name.</summary>
-        private static readonly char[] BadNameChars = { '\\', ':', '{', '}', '[', ']', '|', ';', '<', '>', '?', '`', '~' };
 
         // ------------------------------------------------------------------ what was selected
 
@@ -462,18 +459,18 @@ namespace HeronTools.Services.Snapshot3D
 
         // ------------------------------------------------------------------ the 3D view
 
-        /// <summary>"3D Snapshot - ajmal.al": each Revit user has their own, like Revit's own "{3D - user}".</summary>
-        internal static string SnapshotViewName(Document doc)
+        /// <summary>
+        /// Revit's own default 3D view - the one its 3D button opens: "{3D - ajmal.al}" in a workshared model
+        /// (one per user), "{3D}" otherwise. Ajmal's choice: update that view, so there is never a second 3D view.
+        /// </summary>
+        internal static string DefaultViewName(Document doc)
         {
-            string user = doc?.Application?.Username;
-            if (string.IsNullOrWhiteSpace(user))
-                user = Environment.UserName;
-            foreach (char bad in BadNameChars)
-                user = user.Replace(bad, '_');
-            return "3D Snapshot - " + user.Trim();
+            if (doc != null && doc.IsWorkshared)
+                return "{3D - " + (doc.Application?.Username ?? string.Empty) + "}";
+            return "{3D}";
         }
 
-        private static View3D FindSnapshotView(Document doc, string name)
+        private static View3D FindDefaultView(Document doc, string name)
         {
             return new FilteredElementCollector(doc)
                 .OfClass(typeof(View3D))
@@ -491,13 +488,14 @@ namespace HeronTools.Services.Snapshot3D
         }
 
         /// <summary>
-        /// Makes (first time) or finds the modeller's snapshot view and sets its section box - and, for a
-        /// section, its camera - in ONE transaction named "3D Snapshot". Any failure rolls the whole run back.
+        /// Finds Revit's default 3D view (making it the first time, if Revit allows) and sets its section box -
+        /// and, for a section, its camera - in ONE transaction named "3D Snapshot". Any failure rolls the whole
+        /// run back.
         /// </summary>
         internal static SnapshotApplyResult Apply(Document doc, SnapshotTarget target)
         {
             var result = new SnapshotApplyResult();
-            string viewName = SnapshotViewName(doc);
+            string viewName = DefaultViewName(doc);
             BoundingBoxXYZ box = target.ToSectionBox(Padding);
             result.Box = box;
 
@@ -507,17 +505,20 @@ namespace HeronTools.Services.Snapshot3D
                 {
                     t.Start();
 
-                    View3D view = FindSnapshotView(doc, viewName);
+                    View3D view = FindDefaultView(doc, viewName);
                     if (view == null)
                     {
                         ElementId typeId = ThreeDViewTypeId(doc);
                         if (typeId == ElementId.InvalidElementId)
                         {
                             t.RollBack();
-                            result.Problem = "This project has no 3D view type, so the 3D Snapshot view cannot be made.";
+                            result.Problem = "This project has no 3D view type, so no 3D view can be made.";
                             return result;
                         }
 
+                        // Revit's default 3D view does not exist yet. Make it with Revit's exact name, so Revit's 3D
+                        // button opens this same view. Revit may refuse curly brackets in a name an add-in gives; then
+                        // the modeller makes it once with Revit's own button.
                         view = View3D.CreateIsometric(doc, typeId);
                         try
                         {
@@ -526,8 +527,10 @@ namespace HeronTools.Services.Snapshot3D
                         catch (Autodesk.Revit.Exceptions.ArgumentException)
                         {
                             t.RollBack();
-                            result.Problem = "A view called \"" + viewName + "\" already exists and is not a 3D view.\n\n" +
-                                             "Rename that view, then run 3D Snapshot again.";
+                            result.Problem = "Revit's own 3D view \"" + viewName + "\" is not in this model yet, and Revit " +
+                                             "does not let an add-in make it. Nothing was changed.\n\n" +
+                                             "Click Revit's 3D button once (View tab > 3D View, or the small house on the " +
+                                             "Quick Access Toolbar), go back to your view, then run 3D Snapshot again.";
                             return result;
                         }
 
