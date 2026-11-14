@@ -41,8 +41,11 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   the Heron AI installer's safeguards: DLL .NET check per year, deps.json check, ManifestSettings check,
   open/unknown Revit refusal, kept previous install with `-Rollback`, byte-for-byte check.
 - **`HeronToolsInstaller.exe`** - one-file setup window in the Heron AI installer's look: finds Revit 2020-2027,
-  installs, replaces or removes Heron Tools per version, waits while Revit is open, keeps the replaced
-  install, checks every file; `/install`, `/uninstall`, `/status` without a window. Made by
+  installs or replaces Heron Tools in the ticked versions, waits while Revit is open, keeps the replaced
+  install, checks every file; `/install`, `/uninstall`, `/status` without a window. Like the Heron AI
+  installer since 2026-11-08: no tick box on the one product, so Install never removes, and a quiet
+  **Remove Heron Tools** button (shown only while it is installed) takes it out of every Revit after a
+  Yes/No question with No first. Made by
   `build/build-installer.ps1`, and by the Gates check on every change.
 - A **Release** workflow (`.github/workflows/release.yml`): a version tag builds every Revit year, checks the tag
   matches the built version, and makes a draft GitHub release with `HeronToolsInstaller.exe` attached.

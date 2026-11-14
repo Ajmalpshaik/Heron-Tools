@@ -5,16 +5,19 @@
 // Heron-Layer:  platform
 // See docs/metadata-standard.md
 
-// The installer window - one window, one list, two buttons - laid out like the Heron AI installer (no code
-// shared): the Heron Tools logo at the top with "Installer <version>" on the right, over a line of the
-// brand's orange; Mist for the page, Ink for the words; short labels; the orange Install and a quiet Close;
-// the heron as the window's icon.
+// The installer window - one window, one list - laid out like the Heron AI installer (no code shared): the
+// Heron Tools logo at the top with "Installer <version>" on the right, over a line of the brand's orange;
+// Mist for the page, Ink for the words; short labels; the orange Install, a quiet Close, and a quiet
+// Remove Heron Tools while it is installed; the heron as the window's icon.
 //
-// HOW IT WORKS, the Heron AI way:
-//   - "Revit versions found on this PC": tick the versions to work on (all found ones start ticked).
-//   - "Products": Heron Tools, with what is installed on the right. Ticked = install it (or replace it) in
-//     the ticked versions. Unticked while installed = REMOVE it from the ticked versions, after a yes.
-//   - Pressing Install while one of those Revit versions is open WAITS, says so, and carries on by itself
+// HOW IT WORKS, the Heron AI way (its installer since 2026-11-08, Heron AI pull request 821):
+//   - "Revit versions found on this PC": tick the versions to install into (all found ones start ticked).
+//   - "Products": Heron Tools and what is installed on the right - words only, NO tick box. With one
+//     product a box offers no choice and one trap: unticking it used to turn Install into a removal.
+//   - Install installs (or replaces) Heron Tools in the ticked versions. It never removes anything.
+//   - "Remove Heron Tools", quiet like Close and drawn only while Heron Tools is on this PC, takes it out of
+//     every Revit it is in, after a Yes/No question with No first.
+//   - Install or Remove while one of those Revit versions is open WAITS, says so, and carries on by itself
 //     once it is closed. It never closes Revit.
 // Every install decision is the engine's (InstallEngine); this window only draws and asks.
 
@@ -41,6 +44,7 @@ namespace HeronTools.Installer
         private static Color At(Color colour, byte alpha) => Color.FromArgb(alpha, colour.R, colour.G, colour.B);
 
         private const string CloseRevitFirst = "Close Revit before installing - the installer waits until it is closed.";
+        private const string Replaces = "Already installed. Pressing Install replaces it - there is no separate Update or Repair.";
 
         private readonly Payload _payload;
         private readonly InstallEngine _engine;
@@ -49,12 +53,12 @@ namespace HeronTools.Installer
 
         private readonly WrapPanel _releaseList = new WrapPanel { Margin = new Thickness(12, 4, 0, 0) };
         private readonly TextBlock _releaseNote;
-        private readonly CheckBox _productTick;
+        private readonly TextBlock _productWords;
         private readonly TextBlock _productState;
-        private readonly TextBlock _productNote;
         private readonly TextBlock _closeRevitFirst;
         private readonly TextBlock _report;
         private readonly Button _install;
+        private readonly Button _remove;
         private DispatcherTimer _waiting;
 
         public InstallerWindow(Payload payload, InstallEngine engine)
@@ -86,28 +90,24 @@ namespace HeronTools.Installer
             var product = new Grid { Margin = new Thickness(12, 4, 0, 0) };
             product.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             product.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var label = new TextBlock();
-            label.Inlines.Add(new System.Windows.Documents.Run("Heron Tools") { FontWeight = FontWeights.SemiBold });
-            label.Inlines.Add(new System.Windows.Documents.Run("    Everyday Revit tools on the Heron tab.")
+            // ONE PRODUCT, NO TICK BOX - the words alone; "Already installed..." is on hover, as in Heron AI.
+            _productWords = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 1, 0, 1) };
+            _productWords.Inlines.Add(new System.Windows.Documents.Run("Heron Tools") { FontWeight = FontWeights.SemiBold });
+            _productWords.Inlines.Add(new System.Windows.Documents.Run("    Everyday Revit tools on the Heron tab.")
             {
                 Foreground = new SolidColorBrush(At(Ink, 0xAB)),
             });
-            _productTick = new CheckBox { Content = label, IsChecked = true, VerticalContentAlignment = VerticalAlignment.Center };
-            _productTick.Checked += (s, e) => DrawProduct();
-            _productTick.Unchecked += (s, e) => DrawProduct();
-            product.Children.Add(_productTick);
+            product.Children.Add(_productWords);
             _productState = new TextBlock
             {
-                Foreground = new SolidColorBrush(At(Ink, 0x8C)),
+                Foreground = new SolidColorBrush(At(Ink, 0xAB)),
                 VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
                 Margin = new Thickness(12, 0, 0, 0),
             };
             Grid.SetColumn(_productState, 1);
             product.Children.Add(_productState);
             page.Children.Add(product);
-            _productNote = Quiet("");
-            _productNote.Margin = new Thickness(32, 1, 0, 1);
-            page.Children.Add(_productNote);
 
             // ONE LINE, with the folder on hover - short words, like the Heron AI installer.
             page.Children.Add(Heading("Install location"));
@@ -134,6 +134,20 @@ namespace HeronTools.Installer
             };
             _install.Click += (s, e) => StartInstall();
 
+            // REMOVE HERON TOOLS, quiet like Close - drawn only while Heron Tools is on this PC (DrawProduct).
+            _remove = new Button
+            {
+                Content = "Remove Heron Tools",
+                Width = 140,
+                Height = 34,
+                Margin = new Thickness(0, 0, 10, 0),
+                Foreground = new SolidColorBrush(Ink),
+                Cursor = Cursors.Hand,
+                ToolTip = "Takes Heron Tools out of every Revit on this PC. It asks first.",
+                Template = ButtonTemplate(Colors.Transparent, At(Ink, 0x0F), At(Ink, 0x40)),
+            };
+            _remove.Click += (s, e) => StartRemove();
+
             var close = new Button
             {
                 Content = "Close",
@@ -152,6 +166,7 @@ namespace HeronTools.Installer
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Margin = new Thickness(0, 18, 0, 0),
             };
+            buttons.Children.Add(_remove);
             buttons.Children.Add(_install);
             buttons.Children.Add(close);
             page.Children.Add(buttons);
@@ -183,9 +198,7 @@ namespace HeronTools.Installer
                     VerticalContentAlignment = VerticalAlignment.Center,
                 };
                 if (!year.RevitInstalled)
-                    tick.ToolTip = $"Revit {year.Year} is not on this PC any more, but Heron Tools still is - untick Heron Tools to remove it.";
-                tick.Checked += (s, e) => DrawProduct();
-                tick.Unchecked += (s, e) => DrawProduct();
+                    tick.ToolTip = $"Revit {year.Year} is not on this PC any more, but Heron Tools still is - Remove Heron Tools takes it out.";
                 _releaseTicks[year.Year] = tick;
                 _releaseList.Children.Add(tick);
             }
@@ -202,33 +215,26 @@ namespace HeronTools.Installer
             DrawCloseRevitFirst();
         }
 
-        /// <summary>The product row: what is installed now (right), and what Install will do (under it).</summary>
+        /// <summary>The product row (what is installed now, on the right) and the buttons.</summary>
         private void DrawProduct()
         {
             List<YearState> installed = _years.Where(y => y.Installed != null).ToList();
-            List<int> chosen = Chosen();
 
             if (installed.Count == 0)
-                _productState.Text = "--";
+                _productState.Text = "";
             else if (_years.All(y => y.Installed != null))
                 _productState.Text = "Installed";
             else
                 _productState.Text = "Installed for Revit " + Join(installed.Select(y => y.Year));
 
-            bool ticked = _productTick.IsChecked == true;
-            List<int> removing = installed.Where(y => chosen.Contains(y.Year)).Select(y => y.Year).ToList();
-            if (ticked && installed.Any(y => chosen.Contains(y.Year)))
-                _productNote.Text = "Already installed. Pressing Install replaces it - there is no separate Update or Repair.";
-            else if (!ticked && removing.Count > 0)
-                _productNote.Text = "Unticked: pressing Install REMOVES it from Revit " + Join(removing) + ".";
-            else if (!ticked)
-                _productNote.Text = "Not ticked, so Install does nothing.";
-            else
-                _productNote.Text = "";
-            _productNote.Foreground = new SolidColorBrush(!ticked && removing.Count > 0 ? Accent : At(Ink, 0xAB));
-            _productNote.Visibility = _productNote.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+            string hover = installed.Count > 0 ? Replaces : null;
+            _productWords.ToolTip = hover;
+            _productState.ToolTip = hover;
 
-            _install.IsEnabled = _payload != null && _years.Count > 0 && (_waiting == null || !_waiting.IsEnabled);
+            bool waiting = _waiting != null && _waiting.IsEnabled;
+            _install.IsEnabled = _payload != null && _years.Count > 0 && !waiting;
+            _remove.Visibility = installed.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            _remove.IsEnabled = !waiting;
         }
 
         /// <summary>The bold line above the report, naming any Revit open right now.</summary>
@@ -252,54 +258,63 @@ namespace HeronTools.Installer
         {
             _waiting?.Stop();
             List<int> chosen = Chosen();
-            bool ticked = _productTick.IsChecked == true;
-            List<int> install = ticked ? chosen : new List<int>();
-            List<int> remove = ticked ? new List<int>() : _years.Where(y => y.Installed != null && chosen.Contains(y.Year)).Select(y => y.Year).ToList();
-
-            if (install.Count == 0 && remove.Count == 0)
+            if (chosen.Count == 0)
             {
-                _report.Text = chosen.Count == 0
-                    ? "No Revit version is ticked, so nothing was installed."
-                    : "Heron Tools is not ticked and not installed there, so there is nothing to do.";
+                _report.Text = "No Revit version is ticked, so there is nowhere to install to.";
+                return;
+            }
+            WaitThenRun(chosen, new List<int>(), chosen);
+        }
+
+        /// <summary>Remove Heron Tools: out of every Revit it is in, after a Yes/No question with No first.</summary>
+        private void StartRemove()
+        {
+            _waiting?.Stop();
+            List<int> remove = _years.Where(y => y.Installed != null).Select(y => y.Year).ToList();
+            if (remove.Count == 0)
+            {
+                _report.Text = "Heron Tools is not on this PC, so there is nothing to remove.";
                 return;
             }
 
-            if (remove.Count > 0)
+            MessageBoxResult answer = MessageBox.Show(this,
+                "This will REMOVE 'Heron Tools' from Revit " + Join(remove) + "." + Environment.NewLine + Environment.NewLine +
+                "Restart Revit afterwards to unload it." + Environment.NewLine + Environment.NewLine +
+                "Your models are not touched.",
+                "Heron Tools Installer", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes)
             {
-                MessageBoxResult answer = MessageBox.Show(this,
-                    "This will REMOVE 'Heron Tools' from Revit " + Join(remove) + "." + Environment.NewLine + Environment.NewLine +
-                    "Restart Revit afterwards to unload it." + Environment.NewLine + Environment.NewLine +
-                    "Your models are not touched, and the copy kept for going back stays.",
-                    "Heron Tools Installer", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
-                if (answer != MessageBoxResult.OK)
-                {
-                    _report.Text = "Nothing was removed.";
-                    return;
-                }
+                _report.Text = "Nothing was changed.";
+                return;
             }
 
-            // Wait - never work around it - while a Revit that is involved is open.
+            WaitThenRun(new List<int>(), remove, Chosen());
+        }
+
+        /// <summary>Runs now, or - never working around it - waits while a Revit that is involved is open.</summary>
+        private void WaitThenRun(List<int> install, List<int> remove, List<int> chosen)
+        {
             List<int> involved = install.Concat(remove).ToList();
             string blocking = Blocking(involved);
-            if (blocking != null)
+            if (blocking == null)
             {
-                _report.Text = blocking + " Close it and this will carry on by itself - nothing has been changed yet.";
-                _waiting = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
-                _waiting.Tick += (s, e) =>
-                {
-                    DrawCloseRevitFirst();
-                    if (Blocking(involved) == null)
-                    {
-                        _waiting.Stop();
-                        Run(install, remove, chosen);
-                    }
-                };
-                _waiting.Start();
-                DrawProduct();
+                Run(install, remove, chosen);
                 return;
             }
 
-            Run(install, remove, chosen);
+            _report.Text = blocking + " Close it and this will carry on by itself - nothing has been changed yet.";
+            _waiting = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+            _waiting.Tick += (s, e) =>
+            {
+                DrawCloseRevitFirst();
+                if (Blocking(involved) == null)
+                {
+                    _waiting.Stop();
+                    Run(install, remove, chosen);
+                }
+            };
+            _waiting.Start();
+            DrawProduct();
         }
 
         /// <summary>Which open Revit stops this run, said in a sentence; null when none does.</summary>
@@ -315,6 +330,7 @@ namespace HeronTools.Installer
         private void Run(List<int> install, List<int> remove, List<int> chosen)
         {
             _install.IsEnabled = false;
+            _remove.IsEnabled = false;
             Cursor = Cursors.Wait;
             var lines = new List<string>();
             try
@@ -324,8 +340,8 @@ namespace HeronTools.Installer
                 foreach (int year in remove)
                     lines.Add(_engine.Remove(year).Message);
                 if (remove.Count > 0)
-                    lines.Add("Restart Revit so the removed product stops loading.");
-                foreach (YearState year in _years.Where(y => y.RevitInstalled && !chosen.Contains(y.Year)))
+                    lines.Add("Restart Revit so Heron Tools stops loading.");
+                foreach (YearState year in _years.Where(y => install.Count > 0 && y.RevitInstalled && !chosen.Contains(y.Year)))
                     lines.Add($"Revit {year.Year} is on this PC but was not ticked, so nothing was installed for it. Run this again and tick it if that was not meant.");
             }
             catch (Exception ex)
