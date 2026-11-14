@@ -15,6 +15,7 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.DB.Mechanical;
+using HeronTools.Utils;
 
 namespace HeronTools.Services.Snapshot3D
 {
@@ -55,14 +56,32 @@ namespace HeronTools.Services.Snapshot3D
 
         // ------------------------------------------------------------------ what was selected
 
+        /// <summary>A room or space, and how to bring its coordinates into this model (identity unless it is in a link).</summary>
+        internal sealed class SpatialPart
+        {
+            internal SpatialPart(SpatialElement element, Transform toHost, bool linked)
+            {
+                Element = element;
+                ToHost = toHost ?? Transform.Identity;
+                Linked = linked;
+            }
+
+            internal SpatialElement Element { get; }
+            internal Transform ToHost { get; }
+            internal bool Linked { get; }
+        }
+
         /// <summary>What the modeller's selection holds that 3D Snapshot can use.</summary>
         internal sealed class SelectionRead
         {
-            internal List<SpatialElement> Spatials { get; } = new List<SpatialElement>();
+            internal List<SpatialPart> Spatials { get; } = new List<SpatialPart>();
             internal List<View> SectionViews { get; } = new List<View>();
 
-            /// <summary>Tags whose room or space is not in this model (a link) or not placed.</summary>
+            /// <summary>Tags whose room or space cannot be reached: the link is not loaded, or it is not placed.</summary>
             internal int TagsWithoutLocalRoom { get; set; }
+
+            /// <summary>Zones (or zone tags) with no placed space in them.</summary>
+            internal int EmptyZones { get; set; }
 
             /// <summary>Rooms or spaces selected that are not placed or not enclosed (no area).</summary>
             internal int UnusableSpatials { get; set; }
@@ -71,16 +90,41 @@ namespace HeronTools.Services.Snapshot3D
             internal int MarksNotSections { get; set; }
         }
 
-        /// <summary>Sorts the selection into rooms/spaces and section views. Anything else is ignored.</summary>
+        /// <summary>
+        /// Sorts the selection into rooms/spaces (also through room tags - linked rooms too -, space tags, zones and
+        /// zone tags) and section views. Anything else is ignored.
+        /// </summary>
         internal static SelectionRead ReadSelection(Document doc, ICollection<ElementId> ids)
         {
             var read = new SelectionRead();
             if (doc == null || ids == null)
                 return read;
 
-            var seenSpatial = new HashSet<ElementId>();
+            var seenSpatial = new HashSet<string>(StringComparer.Ordinal);
             var seenViews = new HashSet<ElementId>();
             var viewersId = new ElementId(BuiltInCategory.OST_Viewers);
+            var zoneTagsId = new ElementId(BuiltInCategory.OST_ZoneTags);
+
+            void AddPart(SpatialPart part, string linkKey)
+            {
+                if (!IsUsable(part.Element)) { read.UnusableSpatials++; return; }
+                // Same room twice (a room and its tag, two tags) counts once. The key carries the link, because
+                // two links can hold rooms with the same id.
+                if (seenSpatial.Add(linkKey + ":" + part.Element.Id.LongValue().ToString(System.Globalization.CultureInfo.InvariantCulture)))
+                    read.Spatials.Add(part);
+            }
+
+            void AddZoneSpaces(IList<ElementId> spaceIds)
+            {
+                int before = read.Spatials.Count;
+                foreach (ElementId spaceId in spaceIds)
+                {
+                    if (doc.GetElement(spaceId) is Space space && IsUsable(space))
+                        AddPart(new SpatialPart(space, null, false), "host");
+                }
+                if (read.Spatials.Count == before)
+                    read.EmptyZones++;
+            }
 
             foreach (ElementId id in ids)
             {
@@ -88,25 +132,39 @@ namespace HeronTools.Services.Snapshot3D
                 if (e == null)
                     continue;
 
-                SpatialElement spatial = null;
-                if (e is Room room) spatial = room;
-                else if (e is Space space) spatial = space;
-                else if (e is RoomTag roomTag)
+                if (e is Room room) { AddPart(new SpatialPart(room, null, false), "host"); continue; }
+                if (e is Space space) { AddPart(new SpatialPart(space, null, false), "host"); continue; }
+                if (ZoneCompat.TryGetSpaceIds(e, out IList<ElementId> zoneSpaces)) { AddZoneSpaces(zoneSpaces); continue; }
+
+                if (e is RoomTag roomTag)
                 {
-                    spatial = roomTag.Room;
-                    if (spatial == null) { read.TagsWithoutLocalRoom++; continue; }
-                }
-                else if (e is SpaceTag spaceTag)
-                {
-                    spatial = spaceTag.Space;
-                    if (spatial == null) { read.TagsWithoutLocalRoom++; continue; }
+                    SpatialPart part = RoomOfTag(doc, roomTag, out string linkKey);
+                    if (part == null) read.TagsWithoutLocalRoom++;
+                    else AddPart(part, linkKey);
+                    continue;
                 }
 
-                if (spatial != null)
+                if (e is SpaceTag spaceTag)
                 {
-                    if (!IsUsable(spatial)) { read.UnusableSpatials++; continue; }
-                    if (seenSpatial.Add(spatial.Id))
-                        read.Spatials.Add(spatial);
+                    if (spaceTag.Space == null) read.TagsWithoutLocalRoom++;
+                    else AddPart(new SpatialPart(spaceTag.Space, null, false), "host");
+                    continue;
+                }
+
+                // A zone tag is an ordinary tag (IndependentTag, see the API notes), in the Zone Tags category.
+                if (e is IndependentTag tag && tag.Category != null && tag.Category.Id == zoneTagsId)
+                {
+                    bool foundZone = false;
+                    foreach (ElementId taggedId in TagCompat.TaggedLocalElementIds(tag))
+                    {
+                        if (ZoneCompat.TryGetSpaceIds(doc.GetElement(taggedId), out IList<ElementId> taggedSpaces))
+                        {
+                            AddZoneSpaces(taggedSpaces);
+                            foundZone = true;
+                        }
+                    }
+                    if (!foundZone)
+                        read.EmptyZones++;
                     continue;
                 }
 
@@ -131,6 +189,33 @@ namespace HeronTools.Services.Snapshot3D
             }
 
             return read;
+        }
+
+        /// <summary>
+        /// The room a room tag points at - in this model, or in a loaded link (with the link's placement, so the box
+        /// lands where the linked room shows here). Null when the link is not loaded or the tag is orphaned.
+        /// </summary>
+        private static SpatialPart RoomOfTag(Document doc, RoomTag tag, out string linkKey)
+        {
+            linkKey = "host";
+            LinkElementId tagged = tag.TaggedRoomId;
+            if (tagged == null)
+                return null;
+
+            if (tagged.LinkInstanceId == null || tagged.LinkInstanceId == ElementId.InvalidElementId)
+            {
+                Room local = doc.GetElement(tagged.HostElementId) as Room;
+                return local == null ? null : new SpatialPart(local, null, false);
+            }
+
+            RevitLinkInstance link = doc.GetElement(tagged.LinkInstanceId) as RevitLinkInstance;
+            Document linkDoc = link?.GetLinkDocument();
+            Room linked = linkDoc?.GetElement(tagged.LinkedElementId) as Room;
+            if (linked == null)
+                return null;
+
+            linkKey = "link" + tagged.LinkInstanceId.LongValue().ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return new SpatialPart(linked, link.GetTotalTransform(), true);
         }
 
         /// <summary>A room or space that is placed and enclosed, with a height.</summary>
@@ -238,17 +323,32 @@ namespace HeronTools.Services.Snapshot3D
 
         // ------------------------------------------------------------------ measuring the box
 
-        /// <summary>Rooms / spaces: their outline, from level + base offset up to upper limit + limit offset.</summary>
-        internal static SnapshotTarget FromSpatials(IList<SpatialElement> spatials, View activeView)
+        /// <summary>
+        /// Rooms / spaces: their outline, from level + base offset up to upper limit + limit offset. Each point is
+        /// measured in the room's own model and brought into this one (a linked room keeps the link's placement).
+        /// </summary>
+        internal static SnapshotTarget FromSpatials(IList<SpatialPart> parts, View activeView)
         {
-            string name = spatials.Count == 1
-                ? DescribeSpatial(spatials[0])
-                : spatials.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " rooms / spaces";
+            string name = parts.Count == 1
+                ? DescribeSpatial(parts[0].Element) + (parts[0].Linked ? " (linked)" : string.Empty)
+                : parts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " rooms / spaces";
             var target = new SnapshotTarget(SnapshotMode.Rooms, activeView?.RightDirection, name);
 
             var options = new SpatialElementBoundaryOptions();
-            foreach (SpatialElement spatial in spatials)
+            foreach (SpatialPart part in parts)
             {
+                SpatialElement spatial = part.Element;
+                double bottom = spatial.Level.ProjectElevation + BaseOffset(spatial);
+                double top = bottom + UnboundedHeight(spatial);
+
+                // Both the floor and the ceiling of each outline point, so a link placed higher or lower, or turned,
+                // moves the whole box with it.
+                void AddColumn(XYZ p)
+                {
+                    target.Add(part.ToHost.OfPoint(new XYZ(p.X, p.Y, bottom)));
+                    target.Add(part.ToHost.OfPoint(new XYZ(p.X, p.Y, top)));
+                }
+
                 bool hadBoundary = false;
                 IList<IList<BoundarySegment>> loops = null;
                 try { loops = spatial.GetBoundarySegments(options); }
@@ -265,7 +365,7 @@ namespace HeronTools.Services.Snapshot3D
                                 continue;
                             foreach (XYZ p in curve.Tessellate())
                             {
-                                target.Add(p);
+                                AddColumn(p);
                                 hadBoundary = true;
                             }
                         }
@@ -274,18 +374,14 @@ namespace HeronTools.Services.Snapshot3D
 
                 if (!hadBoundary)
                 {
-                    // No boundary to read: fall back to the room's own extents.
+                    // No boundary to read: fall back to the room's own extents (in its own model's coordinates).
                     BoundingBoxXYZ bb = spatial.get_BoundingBox(null);
                     if (bb != null)
                     {
                         foreach (XYZ corner in SnapshotTarget.Corners(bb))
-                            target.Add(corner);
+                            AddColumn(corner);
                     }
                 }
-
-                double bottom = spatial.Level.ProjectElevation + BaseOffset(spatial);
-                target.IncludeElevation(bottom);
-                target.IncludeElevation(bottom + UnboundedHeight(spatial));
             }
 
             return target;

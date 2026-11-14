@@ -133,7 +133,7 @@ namespace HeronTools.Commands
                 toLevel.Name);
             resultMessage += tally.Describe();
             resultMessage += Skipped(skippedHosted, skippedSpaces, 0);
-            DialogHelper.ShowInfo("Reassign Level - Complete", resultMessage);
+            ReportIfAttentionNeeded(tally, resultMessage);
             return tally.Reassigned > 0 ? Result.Succeeded : Result.Cancelled;
         }
 
@@ -171,6 +171,16 @@ namespace HeronTools.Commands
                         Refused);
                 return text;
             }
+        }
+
+        /// <summary>
+        /// A run that did its job ends silently (Ajmal, 2026-11-14: errors may pop up, a "done" note may not).
+        /// It speaks only when some elements were left as they were and need a look.
+        /// </summary>
+        private static void ReportIfAttentionNeeded(Tally tally, string resultMessage)
+        {
+            if (tally.WouldMove > 0 || tally.Refused > 0)
+                DialogHelper.ShowWarning(ToolTitle, resultMessage);
         }
 
         private static string Skipped(int hosted, int spaces, int unsupported)
@@ -276,7 +286,7 @@ namespace HeronTools.Commands
                 toLevel.Name);
             resultMessage += tally.Describe();
             resultMessage += Skipped(skippedHosted, skippedSpaces, skippedUnsupported);
-            DialogHelper.ShowInfo("Reassign Level - Complete", resultMessage);
+            ReportIfAttentionNeeded(tally, resultMessage);
             return Result.Succeeded;
         }
 
