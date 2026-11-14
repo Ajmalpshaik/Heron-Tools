@@ -22,7 +22,7 @@ namespace HeronTools.Services.QuickMenu
         internal const int MaxSlotCount = 12;
         internal const int DefaultSlotCount = 8;
 
-        internal const int MinDiameter = 420;
+        internal const int MinDiameter = 360;   // room for the Extra small (380) wheel
         internal const int MaxDiameter = 760;
         internal const int DefaultDiameter = 560;
 
