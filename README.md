@@ -94,8 +94,10 @@ Tools into the ones you tick, for your Windows user only - no administrator need
   <img src="docs/installer/installer-window.png" alt="The Heron Tools installer window" width="560">
 </p>
 
-- **Install** puts Heron Tools in (or replaces it - there is no separate Update or Repair).
-- **Untick Heron Tools** and press Install to **remove** it from the ticked versions (it asks first).
+- **Install** puts Heron Tools in the ticked versions (or replaces it - there is no separate Update or
+  Repair). It never removes anything.
+- **Remove Heron Tools** (shown only while it is installed) takes it out of every Revit it is in. It asks
+  first, with No already picked. To take it out of one version only: `/uninstall /years 2024` (below).
 - If one of those Revit versions is open, it **waits** and says so, and carries on by itself once Revit is
   closed. It never closes Revit.
 - It keeps the install it replaces (`%LocalAppData%\HeronTools\install-backup\<year>`), puts it back by
