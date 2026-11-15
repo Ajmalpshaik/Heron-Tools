@@ -49,6 +49,7 @@ side on one **Heron** tab.
 | **Reassign Level** | Modify | Move MEP elements to another reference level without moving them in space. |
 | **Pin / Unpin** | Modify | Pin or unpin groups (title blocks, views on sheets, ducts, pipes, grids, levels...). |
 | **Smart Selection** | Modify | Pick one element, window-select, keep only that category. |
+| **Quick Clash** | Coordination | A Navisworks-style clash test in the active 3D view, in a window that stays open. Selection A (categories of this model, or your selection) against Selection B (categories of this model or of a linked model); Hard with a tolerance and/or Clearance with a distance, in mm. Clashes turn red and green, the rest grey and see-through; click a clash to zoom to it. **Reset view puts every element's own colours back exactly** - also done by itself before Save and Sync with Central. Only what the view shows is tested (in Revit 2020-2022, link elements inside the section box). 3D views only. |
 | **Element ID** | Coordination | See the ID of a picked element (also in links), or find an element by ID and zoom to it. |
 | **3D Views by Workset** | Coordination | One 3D view per user workset. |
 | **Link Workset** | Coordination | Put selected Revit links and CAD imports on a workset. |

@@ -247,6 +247,16 @@ namespace HeronTools.App
 
             // ---- Coordination
             var coordination = app.CreateRibbonPanel(TabName, CoordinationPanelName);
+
+            // Quick Clash: a Navisworks-style clash test in the active 3D view, in a window that stays open.
+            coordination.AddItem(Button(assemblyPath, "HeronTools_QuickClash", "Quick\nClash", typeof(CmdQuickClash), typeof(CmdQuickClashAvailability), "QuickClash",
+                "Find clashes in the active 3D view, like a Navisworks clash test, and show them in colour. Reset puts the view back.",
+                "Pick Selection A (categories of this model, or your current selection) and Selection B (categories of this model " +
+                "or of a linked model), then Hard (with a tolerance) and/or Clearance (a distance), in mm. Only what the view shows " +
+                "is tested, so a section box makes it quicker. Clashes turn red and green, the rest grey and see-through; click a " +
+                "clash in the list to zoom to it. Every element's own colours are remembered: Reset view puts them back exactly " +
+                "(also done before Save and Sync with Central). Run and Reset are each one Undo step. Works in 3D views only."));
+
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")
             {
                 ToolTip = "Element ID tools for this model and linked models.",

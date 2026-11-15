@@ -23,6 +23,12 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   working on - selected rooms, spaces, zones or their tags - linked rooms too (level to upper limit), a selected section mark or the section you
   are in (same cut, same depth, camera facing the same way), or a window dragged in a plan (view range bottom to top).
   300 mm extra on every side; you stay in your view; one Undo step.
+- **Quick Clash** (Coordination panel, 3D views only): a Navisworks-style clash test in a window that stays open beside the model.
+  Selection A (categories of this model, or the current selection) against Selection B (categories of this model or one placed link);
+  Hard (tolerance) and/or Clearance (distance) in mm; boxes first, then shapes, so big views stay quick; Esc stops a run.
+  Clash colours red / green, the rest grey and see-through (all changeable); linked clash elements drawn on top. Click a clash to zoom.
+  Every element's own overrides are remembered (and kept on disk in case Revit closes): Reset view puts them back exactly, and the
+  view is put back by itself before Save and Sync with Central. Run and Reset are each one Undo step.
 - **Every window remembers your last choices**, also after Revit restarts (`%AppData%\HeronTools\memory-<tool>.txt`):
   remembered by name, applied only where the model has them.
 - **Every window stays fully on screen**, bottom buttons included: it is moved inside the screen it opens on
