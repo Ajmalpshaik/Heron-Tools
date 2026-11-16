@@ -42,6 +42,8 @@ namespace HeronTools.UI
         private bool _ready;            // false while the window fills itself (events then change nothing)
         private bool _busy;
         private bool _coloured;         // the view shows Quick Clash colours (Reset view is offered)
+        private bool _isolated;         // Quick Clash's Isolate is on (Show all is offered)
+        private List<ClashResult> _zoomPick;   // the latest clashes clicked, waiting for Revit to zoom to them
         private bool _is3DView;
         private bool _closingForReal;
         private int _selectionCount;
@@ -78,6 +80,7 @@ namespace HeronTools.UI
             RestorePlace();
             _ready = true;
             OnSideAModeChanged(this, null);   // greys the A list when "Current selection" was remembered
+            UpdatePicked();
         }
 
         // ------------------------------------------------------------------ called by the session (Revit thread)
@@ -132,6 +135,7 @@ namespace HeronTools.UI
             StatusText.Text = status;
             if (hard + clear > 0)
                 Tabs.SelectedItem = ResultsTab;
+            UpdatePicked();
         }
 
         internal void ClearResults()
@@ -142,6 +146,7 @@ namespace HeronTools.UI
             ResultsTab.Header = "Results";
             ResultsSummaryText.Text = "No test run yet";
             StatusText.Text = "The view is back as it was.";
+            UpdatePicked();
         }
 
         internal void SetStatus(string text) => StatusText.Text = text ?? "";
@@ -152,6 +157,12 @@ namespace HeronTools.UI
             ResetButton.IsEnabled = coloured && !_busy;
         }
 
+        internal void SetIsolated(bool isolated)
+        {
+            _isolated = isolated;
+            UpdateResultButtons();
+        }
+
         internal void SetBusy(bool busy)
         {
             _busy = busy;
@@ -159,6 +170,7 @@ namespace HeronTools.UI
             CloseButton.IsEnabled = !busy;
             ResetButton.IsEnabled = !busy && _coloured;
             UpdateRunState();
+            UpdateResultButtons();
         }
 
         internal void SetColour(int which, ClashColour colour)
@@ -299,8 +311,70 @@ namespace HeronTools.UI
 
         private void OnResultSelected(object sender, SelectionChangedEventArgs e)
         {
-            if (!_ready || !(ResultsList.SelectedItem is ClashResult clash)) return;
-            _session.Post(app => _session.Zoom(app, clash));
+            UpdatePicked();
+            if (!_ready) return;
+            List<ClashResult> picked = ResultsList.SelectedItems.OfType<ClashResult>().ToList();
+            if (picked.Count == 0) return;
+
+            // Arrow keys or quick clicks change the pick many times: only the latest pick is zoomed to.
+            bool alreadyAsked = _zoomPick != null;
+            _zoomPick = picked;
+            if (alreadyAsked) return;
+            _session.Post(app =>
+            {
+                List<ClashResult> latest = _zoomPick;
+                _zoomPick = null;
+                if (latest != null) _session.Zoom(app, latest);
+            });
+        }
+
+        private void OnIsolate(object sender, RoutedEventArgs e)
+        {
+            List<ClashResult> clashes = PickedOrAll();
+            if (clashes.Count > 0) _session.Post(app => _session.Isolate(app, clashes));
+        }
+
+        private void OnShowAll(object sender, RoutedEventArgs e) => _session.Post(app => _session.ShowAll(app));
+
+        private void OnSelectInRevit(object sender, RoutedEventArgs e)
+        {
+            List<ClashResult> clashes = PickedOrAll();
+            if (clashes.Count > 0) _session.Post(app => _session.SelectInRevit(app, clashes));
+        }
+
+        private void OnPickNone(object sender, RoutedEventArgs e)
+        {
+            _ready = false;              // un-picking is not a click on a clash: no zoom
+            ResultsList.UnselectAll();
+            _ready = true;
+            UpdatePicked();
+        }
+
+        /// <summary>The clashes picked in the list, or every clash when none is picked (Navisworks-style).</summary>
+        private List<ClashResult> PickedOrAll()
+        {
+            List<ClashResult> picked = ResultsList.SelectedItems.OfType<ClashResult>().OrderBy(c => c.Number).ToList();
+            return picked.Count > 0 ? picked : _results.ToList();
+        }
+
+        private void UpdatePicked()
+        {
+            int picked = ResultsList.SelectedItems.Count;
+            PickNoneButton.Visibility = picked > 0 ? Visibility.Visible : Visibility.Collapsed;
+            PickedText.Text = _results.Count == 0
+                ? "Run a test to see clashes here."
+                : picked == 0
+                    ? "No clash picked - the buttons use every clash."
+                    : (picked == 1 ? "1 clash picked." : picked + " clashes picked.");
+            UpdateResultButtons();
+        }
+
+        private void UpdateResultButtons()
+        {
+            bool any = _results.Count > 0 && !_busy;
+            IsolateButton.IsEnabled = any;
+            SelectButton.IsEnabled = any;
+            ShowAllButton.IsEnabled = _isolated && !_busy;
         }
 
         // ------------------------------------------------------------------ helpers

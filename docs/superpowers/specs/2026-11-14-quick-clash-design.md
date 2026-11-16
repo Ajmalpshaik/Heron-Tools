@@ -164,6 +164,29 @@ Click a row: the view must still be the coloured view (if the modeller switched 
 "Go back to {3D - ajmal} to zoom"). `UIView.ZoomAndCenterRectangle` on the clash box grown by 1 m; element A
 is selected. The section box is not changed.
 
+### Isolate, Show all, Select (added 2026-11-16, Ajmal: "same as Navisworks")
+
+- The results list takes several clashes (Ctrl / Shift click). Clicking zooms to all picked clashes and selects
+  both elements of each in Revit (as Navisworks selects a clash's two items). No clash picked = the buttons use every clash;
+  "Pick none" un-picks.
+- **Isolate** uses Revit's own Temporary Hide/Isolate (`IsolateElementsTemporary`, one Undo step "Quick Clash - Isolate"),
+  so Revit's sunglasses button also ends it. Each element brings its insulation and lining. Revit cannot isolate one
+  element inside a link, so a linked clash keeps its link instance visible (grey) and the overlay draws only the picked
+  clashes' linked elements. If the view already has a Temporary Hide/Isolate the modeller set, a Heron Yes/No asks first.
+- **Show all** ends Quick Clash's isolate ("Quick Clash - Show all") and the overlay draws every linked clash element again.
+  Run ends it first (the test must see the whole view); Reset view ends it in the same Undo step as the put-back.
+- **Select** makes the picked clashes' elements Revit's selection. Linked elements: `Selection.SetReferences` exists only
+  from 2023, so 2020-2022 select this model's elements and the status line says so (`Helpers/LinkSelection.cs`).
+- Whether the isolate is Quick Clash's own (found in code review): Revit raises no event for its own "Reset Temporary
+  Hide/Isolate", so the session remembers which view it isolated, the elements it isolated and a sample (200) of the
+  elements it hid. The isolate is taken as Quick Clash's only while `View.IsElementVisibleInTemporaryViewMode` still shows
+  the first and hides the second (elements drawn since do not matter); otherwise it is the modeller's and is never ended
+  or replaced without asking. A Run in another view ends Quick Clash's isolate where it is. Run stays one Undo step:
+  a TransactionGroup "Quick Clash" folds the isolate's end and the colouring together.
+- Revit may refuse an id it cannot isolate (insulation of a hidden category): Isolate then tries the clash elements alone;
+  views that cannot use temporary modes (locked by a template) say so. Run ends the isolate before it checks its input
+  (the test must see the whole view), so a Run that then stops still leaves the view un-isolated.
+
 ### Closing
 
 Close (or closing the model or the view) runs Reset first, so the view is never left coloured. The

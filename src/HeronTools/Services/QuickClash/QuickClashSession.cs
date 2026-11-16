@@ -30,6 +30,8 @@ namespace HeronTools.Services.QuickClash
         private const string Title = "Quick Clash";
         private const string RunName = "Quick Clash";
         private const string ResetName = "Quick Clash - Reset";
+        private const string IsolateName = "Quick Clash - Isolate";
+        private const string ShowAllName = "Quick Clash - Show all";
 
         private readonly UIApplication _uiApp;
         private readonly Document _doc;
@@ -40,9 +42,27 @@ namespace HeronTools.Services.QuickClash
         /// <summary>The view the last Run coloured (its memory belongs to this session), or -1.</summary>
         private long _colouredViewId = -1;
 
-        /// <summary>The linked clash elements' solids of the last Run, to show again after an Undo then Redo.</summary>
+        /// <summary>The linked clash elements' solids the overlay shows now (all of them, or only the isolated clashes').</summary>
         private List<Solid> _linkedSolids = new List<Solid>();
+
+        /// <summary>Every linked clash element's solids of the last Run, by linked element id.</summary>
+        private Dictionary<long, List<Solid>> _linkedSolidsById = new Dictionary<long, List<Solid>>();
         private ClashColour _overlayColour;
+
+        /// <summary>The Temporary Hide/Isolate on the results view is Quick Clash's own (Isolate), not the modeller's.</summary>
+        private bool _isolatedByUs;
+
+        /// <summary>The view Quick Clash isolated (may differ from the results view after a Run elsewhere), or -1.</summary>
+        private long _isolatedViewId = -1;
+
+        /// <summary>
+        /// The elements Quick Clash isolated, and a sample of the view's other elements it hid. The isolate is taken as
+        /// Quick Clash's own only while Revit still shows the first and hides the second - Revit raises no event for its
+        /// own "Reset Temporary Hide/Isolate", and a new isolate of the modeller's would show or hide other elements.
+        /// </summary>
+        private List<ElementId> _isolatedIds = new List<ElementId>();
+        private List<ElementId> _hiddenSample = new List<ElementId>();
+        private const int HiddenSampleSize = 200;
 
         /// <summary>The view the results list belongs to.</summary>
         private long _resultsViewId = -1;
@@ -92,6 +112,9 @@ namespace HeronTools.Services.QuickClash
                     if (memory != null && !memory.StillColoured(_doc, view))
                         ClashColourMemory.Forget(_doc, view);
                 }
+                // An isolate left on (e.g. the colours were undone by hand) goes too: the window takes Show all with it.
+                if (!EndOwnIsolate())
+                    return;
                 Shutdown();
             });
         }
@@ -185,7 +208,28 @@ namespace HeronTools.Services.QuickClash
 
         // ------------------------------------------------------------------ Run
 
+        /// <summary>
+        /// Run is one Undo step "Quick Clash", even when it first ends Quick Clash's isolate (its own small transaction):
+        /// the group folds them together.
+        /// </summary>
         internal void Run(UIApplication app, QuickClashSettings s)
+        {
+            using (var group = new TransactionGroup(_doc, RunName))
+            {
+                group.Start();
+                try
+                {
+                    RunCore(app, s);
+                }
+                finally
+                {
+                    if (group.GetStatus() == TransactionStatus.Started)
+                        group.Assimilate();   // what committed inside stays; an empty group leaves no Undo step
+                }
+            }
+        }
+
+        private void RunCore(UIApplication app, QuickClashSettings s)
         {
             if (_window == null) return;
             if (!TryActive3DView(app, out View3D view, out string why))
@@ -194,6 +238,11 @@ namespace HeronTools.Services.QuickClash
                 return;
             }
             UIDocument uiDoc = app.ActiveUIDocument;
+
+            // Quick Clash's own Isolate hides elements; a new test must see the whole view, so it ends first
+            // (wherever it is - an isolate left on another view would otherwise be forgotten).
+            if (!EndOwnIsolate())
+                return;
 
             // ---- who takes part
             List<Element> host = ClashElementCollector.HostElementsInView(_doc, view);
@@ -340,7 +389,9 @@ namespace HeronTools.Services.QuickClash
 
             // ---- linked clash elements: the overlay
             var linkedIds = new HashSet<long>(coloured.Where(c => c.BIsLinked).Select(c => c.ElementBId));
-            _linkedSolids = itemsB.Where(i => linkedIds.Contains(i.Id)).SelectMany(i => i.Solids.Select(p => p.Solid)).ToList();
+            _linkedSolidsById = itemsB.Where(i => linkedIds.Contains(i.Id))
+                .ToDictionary(i => i.Id, i => i.Solids.Select(p => p.Solid).ToList());
+            _linkedSolids = _linkedSolidsById.Values.SelectMany(x => x).ToList();
             _overlayColour = s.ColourB;
             if (_linkedSolids.Count > 0)
                 ClashOverlayServer.Instance.Show(_doc, view, _linkedSolids, _overlayColour);
@@ -433,16 +484,21 @@ namespace HeronTools.Services.QuickClash
         /// <summary>The Reset transaction. The memory is kept, so an Undo of this Reset can be reset again.</summary>
         private bool PutBack(View view, ClashColourMemory memory, bool clearList)
         {
+            bool endIsolate = OwnIsolateOn() && _isolatedViewId == view.Id.LongValue();
             using (var t = new Transaction(_doc, ResetName))
             {
                 t.Start();
                 memory.PutBack(_doc, view);
+                if (endIsolate)
+                    view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);   // the whole view shows again
                 if (t.Commit() != TransactionStatus.Committed)
                 {
                     _window?.SetStatus("Revit did not keep the change, so the clash colours are still on. Try again, or press Undo.");
                     return false;
                 }
             }
+            if (endIsolate)
+                ForgetIsolate();
             ClashOverlayServer.Instance.Hide();
             _uiApp.ActiveUIDocument?.RefreshActiveView();
             if (clearList)
@@ -471,29 +527,347 @@ namespace HeronTools.Services.QuickClash
             }
         }
 
-        // ------------------------------------------------------------------ Zoom
+        // ------------------------------------------------------------------ the picked clashes: zoom, select, isolate
 
-        internal void Zoom(UIApplication app, ClashResult clash)
+        /// <summary>
+        /// Clicking clashes in the list (like Navisworks): zoom to them and select both elements of each in Revit.
+        /// </summary>
+        internal void Zoom(UIApplication app, List<ClashResult> clashes)
         {
-            UIDocument uiDoc = app.ActiveUIDocument;
-            if (uiDoc.Document != _doc || uiDoc.ActiveView.Id.LongValue() != _resultsViewId)
+            if (clashes.Count == 0 || !InResultsView(app, "zoom to a clash", out UIDocument uiDoc, out _))
+                return;
+
+            UIView uiView = uiDoc.GetOpenUIViews().FirstOrDefault(v => v.ViewId.LongValue() == _resultsViewId);
+            List<ClashResult> boxed = clashes.Where(c => c.BoxMin != null && c.BoxMax != null).ToList();
+            if (uiView != null && boxed.Count > 0)
             {
-                View resultsView = _doc.GetElement(ElementIdHelper.FromLong(_resultsViewId)) as View;
-                _window?.SetStatus("Go back to " + (resultsView?.Name ?? "the clash view") + " to zoom to a clash.");
+                var min = new XYZ(boxed.Min(c => c.BoxMin.X), boxed.Min(c => c.BoxMin.Y), boxed.Min(c => c.BoxMin.Z));
+                var max = new XYZ(boxed.Max(c => c.BoxMax.X), boxed.Max(c => c.BoxMax.Y), boxed.Max(c => c.BoxMax.Z));
+                var pad = new XYZ(3.28, 3.28, 3.28);   // about 1 m around the clashes
+                uiView.ZoomAndCenterRectangle(min - pad, max + pad);
+            }
+
+            int notSelected = SelectElements(uiDoc, clashes);
+            ClashResult first = clashes[0];
+            string text = clashes.Count == 1
+                ? "Clash " + first.Number + ": " + first.NameA + "  -  " + first.NameB
+                : clashes.Count + " clashes picked, their elements selected in Revit.";
+            if (_isolatedByUs)
+                text += " Isolate is on: press Isolate to show only these, or Show all.";
+            _window?.SetStatus(text + LinkedNotSelectedNote(notSelected));
+        }
+
+        /// <summary>Select: the elements of the picked clashes (all clashes when none is picked) become Revit's selection.</summary>
+        internal void SelectInRevit(UIApplication app, List<ClashResult> clashes)
+        {
+            if (clashes.Count == 0) return;
+            UIDocument uiDoc = app.ActiveUIDocument;
+            if (uiDoc == null || !uiDoc.Document.Equals(_doc))
+            {
+                _window?.SetStatus("Switch back to " + _doc.Title + " to select the clash elements.");
+                return;
+            }
+            int notSelected = SelectElements(uiDoc, clashes);
+            _window?.SetStatus("The elements of " + Clashes(clashes.Count) + " are selected in Revit." + LinkedNotSelectedNote(notSelected));
+        }
+
+        /// <summary>
+        /// Isolate: the view shows only the elements of the picked clashes (all clashes when none is picked), with
+        /// Revit's own Temporary Hide/Isolate - so Revit's "Reset Temporary Hide/Isolate" also brings the rest back.
+        /// A linked clash element keeps its link visible (Revit cannot isolate one element inside a link).
+        /// </summary>
+        internal void Isolate(UIApplication app, List<ClashResult> clashes)
+        {
+            if (clashes.Count == 0 || !InResultsView(app, "isolate clashes", out UIDocument uiDoc, out View view))
+                return;
+
+            if (!view.CanUseTemporaryVisibilityModes())
+            {
+                _window?.SetStatus("This view cannot use Temporary Hide/Isolate (its view template or settings lock it), so Isolate cannot work here.");
                 return;
             }
 
-            UIView uiView = uiDoc.GetOpenUIViews().FirstOrDefault(v => v.ViewId.LongValue() == _resultsViewId);
-            if (uiView != null && clash.BoxMin != null && clash.BoxMax != null)
+            // An isolate of Quick Clash's own on another view goes first - only one is ever kept track of.
+            if (_isolatedByUs && _isolatedViewId != view.Id.LongValue() && !EndOwnIsolate())
+                return;
+
+            if (view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate) && !OwnIsolateOn() &&
+                !DialogHelper.ShowYesNo(Title,
+                    "This view already has a Temporary Hide/Isolate of your own. Isolate replaces it, and Show all " +
+                    "then shows everything.\n\nIsolate the clashes anyway?"))
             {
-                var pad = new XYZ(3.28, 3.28, 3.28);   // about 1 m around the clash
-                uiView.ZoomAndCenterRectangle(clash.BoxMin - pad, clash.BoxMax + pad);
+                _window?.SetStatus("Not isolated. Your own Temporary Hide/Isolate is unchanged.");
+                return;
             }
 
-            ElementId a = ElementIdHelper.FromLong(clash.ElementAId);
-            if (_doc.GetElement(a) != null)
-                uiDoc.Selection.SetElementIds(new List<ElementId> { a });
-            _window?.SetStatus("Clash " + clash.Number + ": " + clash.NameA + "  -  " + clash.NameB);
+            var bare = new List<ElementId>();       // the clash elements (and the link of a linked clash)
+            var ids = new List<ElementId>();        // the same with their insulation and lining
+            var bareKeys = new HashSet<long>();
+            var keys = new HashSet<long>();
+            foreach (ClashResult c in clashes)
+            {
+                AddIfThere(ElementIdHelper.FromLong(c.ElementAId), bare, bareKeys);
+                AddWithWraps(ElementIdHelper.FromLong(c.ElementAId), ids, keys);
+                ElementId b = ElementIdHelper.FromLong(c.BIsLinked ? c.LinkInstanceId : c.ElementBId);
+                AddIfThere(b, bare, bareKeys);
+                if (c.BIsLinked) AddIfThere(b, ids, keys);
+                else AddWithWraps(b, ids, keys);
+            }
+            if (bare.Count == 0)
+            {
+                _window?.SetStatus("The elements of these clashes are no longer in the model. Press Run to test again.");
+                return;
+            }
+
+            // Some of what the view shows now and Isolate will hide - to recognise this isolate as ours later.
+            List<ElementId> sample = new FilteredElementCollector(_doc, view.Id).WhereElementIsNotElementType().ToElementIds()
+                .Where(id => !keys.Contains(id.LongValue())).Take(HiddenSampleSize).ToList();
+
+            // Revit can refuse an id it cannot isolate (e.g. insulation of a hidden category): then try without the wraps.
+            List<ElementId> isolated = ids;
+            string refused = TryIsolate(view, ids);
+            if (refused != null && ids.Count > bare.Count)
+            {
+                isolated = bare;
+                refused = TryIsolate(view, bare);
+            }
+            if (refused != null)
+            {
+                _window?.SetStatus("Revit did not isolate the clashes, so the view is as it was (" + refused + ").");
+                return;
+            }
+            _isolatedByUs = true;
+            _isolatedViewId = view.Id.LongValue();
+            // Keep only what Revit really shows / hides now (some elements, e.g. the section box, never hide).
+            try
+            {
+                _isolatedIds = isolated.Where(id => view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, id)).ToList();
+                _hiddenSample = sample.Where(id => !view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, id)).ToList();
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                _isolatedIds = new List<ElementId>();
+                _hiddenSample = new List<ElementId>();   // no fingerprint: the view, the flag and the mode decide alone
+            }
+
+            // The overlay draws only the picked clashes' linked elements, so the isolated view shows just these.
+            var linked = new HashSet<long>(clashes.Where(c => c.BIsLinked).Select(c => c.ElementBId));
+            ShowOverlay(view, _linkedSolidsById.Where(kv => linked.Contains(kv.Key)).SelectMany(kv => kv.Value).ToList());
+            uiDoc.RefreshActiveView();
+            _window?.SetIsolated(true);
+            _window?.SetStatus("Showing only " + Clashes(clashes.Count) + ". Show all brings back the rest of the view.");
+        }
+
+        /// <summary>One Undo step "Quick Clash - Isolate". Null when done; otherwise what Revit said.</summary>
+        private string TryIsolate(View view, List<ElementId> ids)
+        {
+            try
+            {
+                using (var t = new Transaction(_doc, IsolateName))
+                {
+                    t.Start();
+                    view.IsolateElementsTemporary(ids);
+                    return t.Commit() == TransactionStatus.Committed ? null : "Revit did not keep the change";
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+            {
+                return ex.Message;      // the transaction was rolled back by its using block
+            }
+        }
+
+        /// <summary>Show all: ends Quick Clash's isolate, and the overlay draws every linked clash element again.</summary>
+        internal void ShowAll(UIApplication app)
+        {
+            View isolated = _doc.GetElement(ElementIdHelper.FromLong(_isolatedViewId)) as View;
+            bool ours = OwnIsolateOn();
+            if (!EndOwnIsolate())
+                return;
+            if (!ours && isolated != null && isolated.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))
+            {
+                // It shows more than Quick Clash isolated (e.g. elements drawn since, or an isolate of the modeller's): left alone.
+                _window?.SetStatus("The Temporary Hide/Isolate on " + isolated.Name + " is no longer only Quick Clash's, so it was left as it is. " +
+                                   "Use Revit's Reset Temporary Hide/Isolate to show everything.");
+                return;
+            }
+            View coloured = ColouredView();
+            ClashColourMemory memory = coloured != null ? ClashColourMemory.Find(_doc, coloured) : null;
+            if (memory != null && memory.StillColoured(_doc, coloured))
+                ShowOverlay(coloured, _linkedSolidsById.Values.SelectMany(x => x).ToList());
+            app.ActiveUIDocument?.RefreshActiveView();
+            Refresh(app, null);    // the Test tab's counts were of the isolated view
+            _window?.SetStatus("The whole view shows again.");
+        }
+
+        /// <summary>
+        /// Ends Quick Clash's own isolate, on whichever view it is (its own Undo step "Quick Clash - Show all").
+        /// False if Revit refused - the status line says so and Show all stays offered.
+        /// </summary>
+        private bool EndOwnIsolate()
+        {
+            if (!OwnIsolateOn())
+            {
+                ForgetIsolate();
+                return true;
+            }
+            View view = (View)_doc.GetElement(ElementIdHelper.FromLong(_isolatedViewId));
+            try
+            {
+                using (var t = new Transaction(_doc, ShowAllName))
+                {
+                    t.Start();
+                    view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
+                    if (t.Commit() != TransactionStatus.Committed)
+                    {
+                        _window?.SetStatus("Revit did not show the whole of " + view.Name + " again. Use Revit's Reset Temporary Hide/Isolate there.");
+                        return false;
+                    }
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+            {
+                _window?.SetStatus("Revit did not show the whole of " + view.Name + " again (" + ex.Message + "). Use Revit's Reset Temporary Hide/Isolate there.");
+                return false;
+            }
+            ForgetIsolate();
+            return true;
+        }
+
+        private void ForgetIsolate()
+        {
+            _isolatedByUs = false;
+            _isolatedViewId = -1;
+            _isolatedIds = new List<ElementId>();
+            _hiddenSample = new List<ElementId>();
+            _window?.SetIsolated(false);
+        }
+
+        /// <summary>
+        /// Quick Clash's isolate is still on: its view still has a Temporary Hide/Isolate that shows what Quick Clash
+        /// isolated and hides what it hid. Elements drawn since do not matter; a modeller's own isolate would.
+        /// </summary>
+        private bool OwnIsolateOn()
+        {
+            if (!_isolatedByUs) return false;
+            View view = _doc.GetElement(ElementIdHelper.FromLong(_isolatedViewId)) as View;
+            if (view == null || !view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))
+                return false;
+            try
+            {
+                foreach (ElementId id in _isolatedIds)
+                    if (_doc.GetElement(id) != null && !view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, id))
+                        return false;
+                foreach (ElementId id in _hiddenSample)
+                    if (_doc.GetElement(id) != null && view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, id))
+                        return false;
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                return false;   // cannot tell: treat it as the modeller's, so it is never ended without asking
+            }
+            return true;
+        }
+
+        /// <summary>Selects both elements of every clash; returns how many linked ones Revit could not select.</summary>
+        private int SelectElements(UIDocument uiDoc, List<ClashResult> clashes)
+        {
+            var hostIds = new List<ElementId>();
+            var keys = new HashSet<long>();
+            var linked = new List<KeyValuePair<Element, RevitLinkInstance>>();
+            var linkedKeys = new HashSet<string>();
+            foreach (ClashResult c in clashes)
+            {
+                AddIfThere(ElementIdHelper.FromLong(c.ElementAId), hostIds, keys);
+                if (!c.BIsLinked)
+                {
+                    AddIfThere(ElementIdHelper.FromLong(c.ElementBId), hostIds, keys);
+                    continue;
+                }
+                if (!linkedKeys.Add(c.LinkInstanceId + ":" + c.ElementBId)) continue;
+                var instance = _doc.GetElement(ElementIdHelper.FromLong(c.LinkInstanceId)) as RevitLinkInstance;
+                Element inLink = instance?.GetLinkDocument()?.GetElement(ElementIdHelper.FromLong(c.ElementBId));
+                linked.Add(new KeyValuePair<Element, RevitLinkInstance>(inLink, instance));
+            }
+            try
+            {
+                return LinkSelection.Select(uiDoc, hostIds, linked);
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                // A linked reference Revit will not select here (e.g. the link was reloaded): select this model's elements.
+                try { uiDoc.Selection.SetElementIds(hostIds); }
+                catch (Autodesk.Revit.Exceptions.ApplicationException) { return linked.Count; }
+                return linked.Count;
+            }
+        }
+
+        private static string LinkedNotSelectedNote(int notSelected)
+        {
+            if (notSelected <= 0) return "";
+            return LinkSelection.CanSelectLinked
+                ? " " + notSelected + " linked element(s) could not be selected (the link was reloaded or unloaded)."
+                : " Linked elements cannot be selected in Revit 2020-2022 - only this model's are selected.";
+        }
+
+        private static string Clashes(int count) => count == 1 ? "1 clash" : count + " clashes";
+
+        private void AddIfThere(ElementId id, List<ElementId> into, HashSet<long> keys)
+        {
+            if (_doc.GetElement(id) != null && keys.Add(id.LongValue()))
+                into.Add(id);
+        }
+
+        /// <summary>The element and its insulation and lining - a duct shown without its jacket would look wrong.</summary>
+        private void AddWithWraps(ElementId id, List<ElementId> into, HashSet<long> keys)
+        {
+            if (_doc.GetElement(id) == null) return;
+            AddIfThere(id, into, keys);
+            foreach (ElementId wrap in WrapIds(id))
+                AddIfThere(wrap, into, keys);
+        }
+
+        private IEnumerable<ElementId> WrapIds(ElementId hostId)
+        {
+            var wraps = new List<ElementId>();
+            try { wraps.AddRange(InsulationLiningBase.GetInsulationIds(_doc, hostId)); }
+            catch (Autodesk.Revit.Exceptions.ArgumentException) { /* this element cannot carry insulation */ }
+            try { wraps.AddRange(InsulationLiningBase.GetLiningIds(_doc, hostId)); }
+            catch (Autodesk.Revit.Exceptions.ArgumentException) { /* this element cannot carry lining */ }
+            return wraps;
+        }
+
+        private void ShowOverlay(View view, List<Solid> solids)
+        {
+            _linkedSolids = solids;
+            try
+            {
+                if (solids.Count > 0)
+                    ClashOverlayServer.Instance.Show(_doc, view, solids, _overlayColour);
+                else
+                    ClashOverlayServer.Instance.Hide();
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                // the link was reloaded since the Run and its old shapes are gone: no overlay
+                _linkedSolids = new List<Solid>();
+                _linkedSolidsById = new Dictionary<long, List<Solid>>();
+                ClashOverlayServer.Instance.Hide();
+            }
+        }
+
+        /// <summary>The active view is the one the clash list belongs to (zoom and isolate only make sense there).</summary>
+        private bool InResultsView(UIApplication app, string what, out UIDocument uiDoc, out View view)
+        {
+            uiDoc = app.ActiveUIDocument;
+            view = null;
+            if (uiDoc != null && uiDoc.Document.Equals(_doc) && uiDoc.ActiveView.Id.LongValue() == _resultsViewId)
+            {
+                view = uiDoc.ActiveView;
+                return true;
+            }
+            View resultsView = _doc.GetElement(ElementIdHelper.FromLong(_resultsViewId)) as View;
+            _window?.SetStatus("Go back to " + (resultsView?.Name ?? "the clash view") + " to " + what + ".");
+            return false;
         }
 
         // ------------------------------------------------------------------ colours
@@ -527,19 +901,18 @@ namespace HeronTools.Services.QuickClash
             ClashColourMemory memory = view != null ? ClashColourMemory.Find(_doc, view) : null;
             bool coloured = memory != null && memory.StillColoured(_doc, view);
             _window?.SetColoured(coloured);
-            try
-            {
-                if (coloured && _linkedSolids.Count > 0)
-                    ClashOverlayServer.Instance.Show(_doc, view, _linkedSolids, _overlayColour);
-                else if (!coloured)
-                    ClashOverlayServer.Instance.Hide();
-            }
-            catch (Autodesk.Revit.Exceptions.ApplicationException)
-            {
-                // e.g. the link was reloaded since the Run and its old shapes are gone: drop the overlay.
-                _linkedSolids = new List<Solid>();
-                ClashOverlayServer.Instance.Hide();
-            }
+
+            // The isolate may have been undone, or reset with Revit's own sunglasses button.
+            if (_isolatedByUs && !OwnIsolateOn())
+                ForgetIsolate();
+            _window?.SetIsolated(_isolatedByUs);
+
+            if (!coloured)
+                ShowOverlay(view, new List<Solid>());
+            else if (!_isolatedByUs)
+                ShowOverlay(view, _linkedSolidsById.Values.SelectMany(x => x).ToList());
+            else
+                ShowOverlay(view, _linkedSolids);   // still isolated: keep drawing only the isolated clashes' linked elements
             _uiApp.ActiveUIDocument?.RefreshActiveView();
         }
 

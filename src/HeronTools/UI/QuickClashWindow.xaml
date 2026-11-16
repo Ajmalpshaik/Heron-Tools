@@ -8,7 +8,8 @@
 
   Quick Clash (Heron Tools): a Navisworks-style clash test in the active 3D view. MODELESS - it stays open beside
   the model and reaches Revit only through Quick Clash's ExternalEvent. Test tab (Selection A / B, clash type,
-  colours) and Results tab (click a clash to zoom). Layout as approved by Ajmal on 2026-11-14 (rendered picture).
+  colours) and Results tab (click one or several clashes to zoom; Isolate / Show all / Select, like Navisworks - 1.1.0).
+  Layout as approved by Ajmal on 2026-11-14 (rendered picture).
   Heron brand theme (HeronStyles.xaml); the three swatches show model colours, not window colours.
 -->
 <Window x:Class="HeronTools.UI.QuickClashWindow"
@@ -234,7 +235,7 @@
                 <Border Style="{StaticResource StepCard}" Margin="10,16,10,16">
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top">
-                            <TextBlock DockPanel.Dock="Right" Text="Click a clash to zoom to it" Style="{StaticResource HelpText}" VerticalAlignment="Center"/>
+                            <TextBlock DockPanel.Dock="Right" Text="Click a clash to zoom to it · Ctrl or Shift for several" Style="{StaticResource HelpText}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="ResultsSummaryText" Text="No test run yet" Style="{StaticResource SectionLabel}"/>
                         </DockPanel>
                         <!-- Column heads: same widths as the rows below (rows sit 10 px in, inside the list item padding). -->
@@ -249,11 +250,31 @@
                             <TextBlock Grid.Column="3" Text="SELECTION A" Style="{StaticResource Overline}"/>
                             <TextBlock Grid.Column="4" Text="SELECTION B" Style="{StaticResource Overline}"/>
                         </Grid>
+                        <!-- Like Navisworks: pick one or several clashes, then Isolate or Select. None picked = every clash. -->
+                        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button x:Name="IsolateButton" Content="Isolate" Style="{StaticResource CompactSecondaryButton}" MinWidth="88"
+                                        Margin="0,0,8,0" Click="OnIsolate" IsEnabled="False"
+                                        ToolTip="Show only the elements of the picked clashes (Revit's Temporary Hide/Isolate)"/>
+                                <Button x:Name="ShowAllButton" Content="Show all" Style="{StaticResource CompactSecondaryButton}" MinWidth="88"
+                                        Margin="0,0,8,0" Click="OnShowAll" IsEnabled="False"
+                                        ToolTip="Bring back the rest of the view after Isolate"/>
+                                <Button x:Name="SelectButton" Content="Select" Style="{StaticResource CompactSecondaryButton}" MinWidth="88"
+                                        Click="OnSelectInRevit" IsEnabled="False"
+                                        ToolTip="Make the elements of the picked clashes Revit's selection"/>
+                            </StackPanel>
+                            <Button x:Name="PickNoneButton" DockPanel.Dock="Left" Content="Pick none" Style="{StaticResource LinkButton}"
+                                    VerticalAlignment="Center" Margin="0,0,10,0" Click="OnPickNone" Visibility="Collapsed"
+                                    ToolTip="Un-pick the clashes, so the buttons use every clash again"/>
+                            <TextBlock x:Name="PickedText" Style="{StaticResource HelpText}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Margin="0,0,12,0" Text="No clash picked - the buttons use every clash."/>
+                        </DockPanel>
                         <Grid>
                             <ListBox x:Name="ResultsList" Style="{StaticResource ModernListBox}"
                                      ItemContainerStyle="{StaticResource ModernListBoxItem}"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      HorizontalContentAlignment="Stretch"
+                                     SelectionMode="Extended"
                                      SelectionChanged="OnResultSelected">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
