@@ -2,7 +2,7 @@
 
 All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
-## [1.1.0] - unreleased (awaiting the Revit test)
+## [1.1.0] - 2026-11-16
 
 ### Added
 - **Quick Clash - Isolate, Show all, Select** (Results tab, like Navisworks): pick one or several clashes (Ctrl / Shift click),
