@@ -2,7 +2,17 @@
 
 All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
-## [1.0.0] - unreleased (draft, awaiting the Revit test)
+## [1.1.0] - unreleased (awaiting the Revit test)
+
+### Added
+- **Quick Clash - Isolate, Show all, Select** (Results tab, like Navisworks): pick one or several clashes (Ctrl / Shift click),
+  or none for every clash. Clicking clashes zooms to all of them and selects both elements of each in Revit.
+  **Isolate** shows only their elements (Revit's own Temporary Hide/Isolate, with insulation; a linked clash keeps its link
+  visible and the overlay draws only the picked linked elements); **Show all** brings the rest back; **Select** makes them
+  Revit's selection. Linked elements are selected too in Revit 2023 and later (2020-2022 cannot select inside a link).
+  Run and Reset view end Quick Clash's isolate first; a Temporary Hide/Isolate of your own is never replaced without asking.
+
+## [1.0.0] - 2026-11-15
 
 ### Added
 - Heron Tools as a stand-alone add-in for Revit 2020-2027, joining the shared **Heron** ribbon tab with
