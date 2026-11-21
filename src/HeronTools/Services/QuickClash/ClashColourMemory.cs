@@ -124,8 +124,9 @@ namespace HeronTools.Services.QuickClash
 
         /// <summary>
         /// Puts the remembered overrides back - only on elements that still carry a Quick Clash colour. An element the
-        /// modeller has given an override of their own since is left as it is. Deleted elements are passed over.
-        /// Returns how many were put back.
+        /// modeller has given an override of their own since is left as it is, and that override becomes its
+        /// remembered copy - so a later Run and Reset give back the modeller's newer override, not the older one.
+        /// Deleted elements are passed over. Returns how many were put back.
         /// </summary>
         internal int PutBack(Document doc, View view)
         {
@@ -133,13 +134,18 @@ namespace HeronTools.Services.QuickClash
             if (!_hasColours)
                 return 0;   // never coloured (an empty, fresh memory): nothing of ours to take off
             ElementId solid = SolidFill(doc);
+            var newerOwn = new Dictionary<long, OverrideGraphicSettings>();
             foreach (KeyValuePair<long, OverrideGraphicSettings> entry in _originals)
             {
                 ElementId id = ElementIdHelper.FromLong(entry.Key);
                 if (doc.GetElement(id) == null)
                     continue;
-                if (!CarriesOurOverride(view.GetElementOverrides(id), solid))
+                OverrideGraphicSettings now = view.GetElementOverrides(id);
+                if (!CarriesOurOverride(now, solid))
+                {
+                    newerOwn[entry.Key] = new OverrideGraphicSettings(now);
                     continue;
+                }
                 try
                 {
                     view.SetElementOverrides(id, entry.Value);
@@ -150,6 +156,8 @@ namespace HeronTools.Services.QuickClash
                     // one refused element must not stop the rest being put back
                 }
             }
+            foreach (KeyValuePair<long, OverrideGraphicSettings> own in newerOwn)
+                _originals[own.Key] = own.Value;
             return count;
         }
 
