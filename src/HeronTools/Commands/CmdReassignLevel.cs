@@ -144,6 +144,7 @@ namespace HeronTools.Commands
             public int AlreadyOnTarget;
             public int Refused;
             public int WouldMove;
+            public int WouldMoveConnected;
 
             public void Add(ReassignOutcome outcome)
             {
@@ -152,6 +153,7 @@ namespace HeronTools.Commands
                     case ReassignOutcome.Reassigned: Reassigned++; break;
                     case ReassignOutcome.AlreadyOnTarget: AlreadyOnTarget++; break;
                     case ReassignOutcome.WouldMove: WouldMove++; break;
+                    case ReassignOutcome.WouldMoveConnected: WouldMoveConnected++; break;
                     default: Refused++; break;
                 }
             }
@@ -165,6 +167,10 @@ namespace HeronTools.Commands
                     text += string.Format(CultureInfo.CurrentCulture,
                         "\n\n{0} element(s) left as they were: changing their level would have moved them, and their offset could not put them back.",
                         WouldMove);
+                if (WouldMoveConnected > 0)
+                    text += string.Format(CultureInfo.CurrentCulture,
+                        "\n\n{0} element(s) left as they were: reassigning them would move or delete a connected duct, pipe or fitting.",
+                        WouldMoveConnected);
                 if (Refused > 0)
                     text += string.Format(CultureInfo.CurrentCulture,
                         "\n\n{0} element(s) left as they were: Revit would not take the new level for them (pinned, in a group, owned by a colleague, or no level parameter).",
@@ -179,7 +185,7 @@ namespace HeronTools.Commands
         /// </summary>
         private static void ReportIfAttentionNeeded(Tally tally, string resultMessage)
         {
-            if (tally.WouldMove > 0 || tally.Refused > 0)
+            if (tally.WouldMove > 0 || tally.WouldMoveConnected > 0 || tally.Refused > 0)
                 DialogHelper.ShowWarning(ToolTitle, resultMessage);
         }
 

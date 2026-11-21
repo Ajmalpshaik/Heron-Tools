@@ -234,7 +234,7 @@ namespace HeronTools.Commands
                         return t.Commit() == TransactionStatus.Committed;
                     }
                 }
-                catch
+                catch (System.Exception)
                 {
                     // Skip a datum this view will not let us change (e.g. owned by another user).
                 }
@@ -257,14 +257,27 @@ namespace HeronTools.Commands
                 t.Start();
                 foreach (DatumPlane datum in datums)
                 {
-                    try
+                    // A flip is two calls (hide one end, show the other). Each datum gets its own
+                    // sub-transaction, so a datum Revit refuses half-way is put back whole - never
+                    // left with no bubble at either end.
+                    using (var sub = new SubTransaction(doc))
                     {
-                        if (Flip(datum, view))
-                            flipped++;
-                    }
-                    catch
-                    {
-                        // Skip a datum this view will not let us change; keep flipping the rest.
+                        sub.Start();
+                        try
+                        {
+                            if (Flip(datum, view) && sub.Commit() == TransactionStatus.Committed)
+                            {
+                                flipped++;
+                                continue;
+                            }
+                        }
+                        catch (System.Exception)
+                        {
+                            // Skip a datum this view will not let us change; keep flipping the rest.
+                        }
+
+                        if (sub.HasStarted() && !sub.HasEnded())
+                            sub.RollBack();
                     }
                 }
 

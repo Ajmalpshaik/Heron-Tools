@@ -40,7 +40,7 @@
          corner (outside the ring) can close the wheel the way it does in a game. -->
     <Grid x:Name="RootGrid"
           Background="#01000000"
-          TextElement.FontFamily="Manrope, Segoe UI"
+          TextElement.FontFamily="pack://application:,,,/HeronTools;component/Resources/Fonts/#Manrope, Segoe UI"
           RenderTransformOrigin="0.5,0.5">
         <Grid.RenderTransform>
             <ScaleTransform x:Name="PopScale" ScaleX="1" ScaleY="1"/>

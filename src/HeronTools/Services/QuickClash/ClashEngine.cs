@@ -29,6 +29,9 @@ namespace HeronTools.Services.QuickClash
         public int PairsTested { get; set; }
         public bool StoppedByEsc { get; set; }
         public bool HitLimit { get; set; }
+
+        /// <summary>Pairs whose shapes were too detailed to compare every edge: their gap was measured on a sample of edges.</summary>
+        public int GapSampled { get; set; }
         public TimeSpan Elapsed { get; set; }
     }
 
@@ -43,6 +46,15 @@ namespace HeronTools.Services.QuickClash
         internal const int AskAbovePairs = 50000;
 
         private const double Tiny = 1e-9;
+
+        /// <summary>
+        /// At most this many edge-to-edge comparisons per pair. Detailed equipment families can have thousands of edge
+        /// pieces each, and comparing all of them against all would freeze Revit for minutes on one pair.
+        /// </summary>
+        internal const int MaxSegmentChecks = 250000;
+
+        /// <summary>How often Esc is read during a run, in milliseconds - by time, not by pair count, so one slow pair never hides it.</summary>
+        private const long EscCheckMs = 100;
 
         // ------------------------------------------------------------------ step 1: boxes
 
@@ -113,16 +125,23 @@ namespace HeronTools.Services.QuickClash
             double toleranceFeet = settings.ToleranceMm / MmPerFoot;
             double clearanceFeet = settings.ClearanceMm / MmPerFoot;
 
+            EscPressed();   // clears Windows' "pressed since last asked": an Esc from before Run must not stop it
+            long lastEscCheck = 0;
+
             foreach (KeyValuePair<ClashItem, ClashItem> pair in pairs)
             {
-                if (result.PairsTested % 25 == 0 && EscPressed())
+                if (clock.ElapsedMilliseconds - lastEscCheck >= EscCheckMs)
                 {
-                    result.StoppedByEsc = true;
-                    break;
+                    lastEscCheck = clock.ElapsedMilliseconds;
+                    if (EscPressed())
+                    {
+                        result.StoppedByEsc = true;
+                        break;
+                    }
                 }
                 result.PairsTested++;
 
-                ClashResult clash = TestPair(pair.Key, pair.Value, settings, toleranceFeet, clearanceFeet);
+                ClashResult clash = TestPair(pair.Key, pair.Value, settings, toleranceFeet, clearanceFeet, result);
                 if (clash == null)
                     continue;
                 result.Clashes.Add(clash);
@@ -147,7 +166,8 @@ namespace HeronTools.Services.QuickClash
             return result;
         }
 
-        private static ClashResult TestPair(ClashItem a, ClashItem b, QuickClashSettings s, double toleranceFeet, double clearanceFeet)
+        private static ClashResult TestPair(ClashItem a, ClashItem b, QuickClashSettings s, double toleranceFeet, double clearanceFeet,
+            ClashRunResult result)
         {
             List<SolidPart> solidsA = a.Solids;
             List<SolidPart> solidsB = b.Solids;
@@ -167,7 +187,7 @@ namespace HeronTools.Services.QuickClash
                     if (common != null && common.Volume > Tiny)
                     {
                         intersects = true;
-                        depth = Math.Max(depth, SmallestSide(common));
+                        depth = Math.Max(depth, OverlapDepth(common));
                     }
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
@@ -180,9 +200,13 @@ namespace HeronTools.Services.QuickClash
             {
                 if (s.HardOn && depth > toleranceFeet)
                     return Make(ClashKind.Hard, depth * MmPerFoot, a, b);
-                if (!s.HardOn && s.ClearanceOn)
-                    return Make(ClashKind.Clearance, 0, a, b);   // overlapping is closer than any distance
-                return null;                                     // overlap within the tolerance: ignored
+                // Overlapping is closer than any clearance distance, so with Clearance on it is a clearance clash
+                // at 0 mm - also when Hard is on and the overlap is within the Hard tolerance (a pipe 5 mm into
+                // a beam must not pass while a pipe 30 mm away is listed). With only Hard on, an overlap within
+                // the tolerance is ignored, as the modeller asked.
+                if (s.ClearanceOn)
+                    return Make(ClashKind.Clearance, 0, a, b);
+                return null;
             }
 
             if (s.ClearanceOn)
@@ -190,7 +214,9 @@ namespace HeronTools.Services.QuickClash
                 double gap;
                 try
                 {
-                    gap = ShortestGap(solidsA, solidsB, a, b, clearanceFeet);
+                    gap = ShortestGap(solidsA, solidsB, a, b, clearanceFeet, out bool sampled);
+                    if (sampled)
+                        result.GapSampled++;
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
                 {
@@ -226,7 +252,80 @@ namespace HeronTools.Services.QuickClash
             };
         }
 
-        /// <summary>Overlap depth: the smallest side of the shared solid's box.</summary>
+        /// <summary>
+        /// Overlap depth: the thinnest width of the shared solid, measured across the solid itself - not along the
+        /// model's X, Y and Z. In plain words: lay the overlap between two parallel plates, turn the plates to every
+        /// direction the overlap's own faces point in (and to X, Y, Z), and keep the smallest gap between the plates.
+        /// For a box this is its thinnest side; for two pipes crossing with a 2 mm overlap it is about 2 mm, also
+        /// when the pipes run at 45 degrees in plan (the old "smallest side of the X/Y/Z box" read about 28 mm there).
+        /// The answer is never larger than the old one, because X, Y and Z are among the directions tried.
+        /// </summary>
+        private static double OverlapDepth(Solid common)
+        {
+            double boxDepth = SmallestSide(common);
+            var points = new List<XYZ>();
+            var directions = new List<XYZ> { XYZ.BasisX, XYZ.BasisY, XYZ.BasisZ };
+            try
+            {
+                foreach (Face face in common.Faces)
+                {
+                    Mesh mesh = face.Triangulate();
+                    if (mesh == null)
+                        continue;
+                    points.AddRange(mesh.Vertices);
+                    if (face is PlanarFace planar)
+                    {
+                        AddDirection(directions, planar.FaceNormal);
+                        continue;
+                    }
+                    // A curved face (round pipe, round duct): each small triangle of it points its own way.
+                    for (int i = 0; i < mesh.NumTriangles; i++)
+                    {
+                        MeshTriangle t = mesh.get_Triangle(i);
+                        XYZ normal = (t.get_Vertex(1) - t.get_Vertex(0)).CrossProduct(t.get_Vertex(2) - t.get_Vertex(0));
+                        AddDirection(directions, normal);
+                    }
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                return boxDepth;   // Revit could not mesh the overlap: keep the X/Y/Z box measure
+            }
+            if (points.Count < 4)
+                return boxDepth;
+
+            double best = boxDepth;
+            foreach (XYZ n in directions)
+            {
+                double lo = double.MaxValue, hi = double.MinValue;
+                foreach (XYZ p in points)
+                {
+                    double d = p.DotProduct(n);
+                    if (d < lo) lo = d;
+                    if (d > hi) hi = d;
+                }
+                best = Math.Min(best, hi - lo);
+            }
+            return best;
+        }
+
+        /// <summary>Adds a unit direction unless it (or its reverse) is already in the list - keeps the work small.</summary>
+        private static void AddDirection(List<XYZ> directions, XYZ v)
+        {
+            double length = v.GetLength();
+            if (length < Tiny || directions.Count >= MaxDepthDirections)
+                return;
+            XYZ n = v / length;
+            foreach (XYZ d in directions)
+                if (Math.Abs(d.DotProduct(n)) > 0.9998)   // within about 1 degree
+                    return;
+            directions.Add(n);
+        }
+
+        /// <summary>Directions tried per overlap; plenty for a pipe, duct or beam, and keeps a big run quick.</summary>
+        private const int MaxDepthDirections = 256;
+
+        /// <summary>The smallest side of the shared solid's X/Y/Z box (the fallback depth).</summary>
         private static double SmallestSide(Solid common)
         {
             BoundingBoxXYZ box = common.GetBoundingBox();
@@ -250,9 +349,12 @@ namespace HeronTools.Services.QuickClash
         ///   - "walking": from seed points near where the two meet, step to the closest point on one solid, then on the
         ///     other, until it settles - this finds the gap between curved faces (a round duct over a round pipe).
         /// Accurate to a few mm; Revit has no ready-made "distance between two solids".
+        /// <paramref name="sampled"/>: the edges were too many to compare all, so an even sample of them was compared.
         /// </summary>
-        private static double ShortestGap(List<SolidPart> solidsA, List<SolidPart> solidsB, ClashItem a, ClashItem b, double limit)
+        private static double ShortestGap(List<SolidPart> solidsA, List<SolidPart> solidsB, ClashItem a, ClashItem b, double limit,
+            out bool sampled)
         {
+            sampled = false;
             // Only the region where the two boxes (grown by the limit) meet can hold a gap below the limit.
             XYZ zoneMin = new XYZ(Math.Max(a.Min.X, b.Min.X) - limit, Math.Max(a.Min.Y, b.Min.Y) - limit, Math.Max(a.Min.Z, b.Min.Z) - limit);
             XYZ zoneMax = new XYZ(Math.Min(a.Max.X, b.Max.X) + limit, Math.Min(a.Max.Y, b.Max.Y) + limit, Math.Min(a.Max.Z, b.Max.Z) + limit);
@@ -267,6 +369,16 @@ namespace HeronTools.Services.QuickClash
             // Edge to edge.
             List<XYZ[]> segA = Segments(solidsA, zoneMin, zoneMax);
             List<XYZ[]> segB = Segments(solidsB, zoneMin, zoneMax);
+            long checks = (long)segA.Count * segB.Count;
+            if (checks > MaxSegmentChecks)
+            {
+                // Too detailed to compare every edge with every edge: compare an even spread of both sides' edges.
+                // The walking below still runs over all faces, so a near miss is rarely lost.
+                sampled = true;
+                double keep = Math.Sqrt((double)MaxSegmentChecks / checks);
+                segA = EvenSample(segA, Math.Max(1, (int)(segA.Count * keep)));
+                segB = EvenSample(segB, Math.Max(1, (int)(segB.Count * keep)));
+            }
             foreach (XYZ[] sa in segA)
             foreach (XYZ[] sb in segB)
                 best = Math.Min(best, SegmentDistance(sa[0], sa[1], sb[0], sb[1]));
@@ -297,6 +409,18 @@ namespace HeronTools.Services.QuickClash
                 if (best < 1e-6) break;
             }
             return best;
+        }
+
+        /// <summary>About <paramref name="count"/> items, evenly spread over the list.</summary>
+        private static List<XYZ[]> EvenSample(List<XYZ[]> items, int count)
+        {
+            if (count >= items.Count)
+                return items;
+            var sample = new List<XYZ[]>(count);
+            double step = (double)items.Count / count;
+            for (int i = 0; i < count; i++)
+                sample.Add(items[(int)(i * step)]);
+            return sample;
         }
 
         private static List<Face> FacesNear(List<SolidPart> solids, XYZ min, XYZ max)
@@ -416,12 +540,13 @@ namespace HeronTools.Services.QuickClash
         private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
 
         /// <summary>
-        /// True while Esc is held down and Revit (or the Quick Clash window) is the window in front - an Esc pressed in
-        /// another program does not stop the run. Read between pairs.
+        /// True when Esc is held down now, or was tapped since the last time it was read, and Revit (or the Quick Clash
+        /// window) is the window in front - an Esc pressed in another program does not stop the run. Read between pairs.
         /// </summary>
         private static bool EscPressed()
         {
-            if ((GetAsyncKeyState(VkEscape) & 0x8000) == 0)
+            // 0x8000: held down now. 0x0001: pressed since the last read - catches a quick tap between two reads.
+            if ((GetAsyncKeyState(VkEscape) & 0x8001) == 0)
                 return false;
             GetWindowThreadProcessId(GetForegroundWindow(), out uint process);
             return process == (uint)Process.GetCurrentProcess().Id;

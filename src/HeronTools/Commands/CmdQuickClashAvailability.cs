@@ -24,7 +24,7 @@ namespace HeronTools.Commands
                     return false;
                 return uiDoc.ActiveView is View3D view && view.IsValidObject && !view.IsTemplate;
             }
-            catch
+            catch (System.Exception)
             {
                 // Any unexpected issue keeps the button disabled rather than crashing the ribbon.
                 return false;

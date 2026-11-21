@@ -17,7 +17,8 @@
 //   (-install and --install work too; a switch it does not know stops it with a message, never opens the window)
 //
 // Testing only (never needed by a modeller): --addins-root, --revit-root and --backup-root point the installer
-// at test folders (and stop it watching the real Revit), and --picture <png> draws the window into a picture.
+// at test folders (and stop it watching the real Revit; --revit-root also stops it reading Windows' list of
+// installed programs and the all-users Addins folder), and --picture <png> draws the window into a picture.
 //
 // Exit codes: 0 done, 1 something failed, 2 nothing to do (no Revit found / no build inside).
 
@@ -84,7 +85,14 @@ namespace HeronTools.Installer
 
             var paths = new MachinePaths();
             if (options.TryGetValue("addins-root", out string addins)) { paths.AddinsRoot = addins; paths.WatchRunningRevit = false; }
-            if (options.TryGetValue("revit-root", out string revit)) { paths.RevitRoot = revit; paths.WatchRunningRevit = false; }
+            if (options.TryGetValue("revit-root", out string revit))
+            {
+                // A test run: only the test folders decide which Revit is "on the PC", not this PC's own Revit.
+                paths.RevitRoot = revit;
+                paths.WatchRunningRevit = false;
+                paths.ReadRegistry = false;
+                paths.AllUsersAddinsRoot = null;
+            }
             if (options.TryGetValue("backup-root", out string backup)) { paths.BackupRoot = backup; }
             var engine = new InstallEngine(payload, paths);
 

@@ -10,6 +10,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using HeronTools.Utils;
 using HeronTools.Services.LevelExtents;
 
 namespace HeronTools.Commands
@@ -28,8 +29,11 @@ namespace HeronTools.Commands
             }
             catch (System.Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                // Cancelled, not Failed: our own box is the message, and Revit undoes anything not
+                // Succeeded - so "nothing was changed" is true.
+                DialogHelper.ShowError("Match Level Extents",
+                    "Match Level Extents stopped because of an unexpected error, so nothing was changed.\n\nRevit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }

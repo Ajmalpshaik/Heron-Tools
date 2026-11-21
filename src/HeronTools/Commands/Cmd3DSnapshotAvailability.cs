@@ -31,7 +31,7 @@ namespace HeronTools.Commands
 
                 return Snapshot3DService.IsPlan(view) || Snapshot3DService.IsSectionLike(view);
             }
-            catch
+            catch (System.Exception)
             {
                 // Any unexpected issue keeps the button disabled rather than crashing the ribbon.
                 return false;

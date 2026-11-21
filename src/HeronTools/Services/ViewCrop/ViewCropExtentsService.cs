@@ -283,6 +283,13 @@ namespace HeronTools.Services.ViewCrop
                 return ViewCropResultState.Skipped;
             }
 
+            // A shaped (non-rectangular) crop is kept on purpose, so this is a skip, not a failure.
+            if (HasShapedCropToKeep(view, out reason))
+            {
+                item.MarkSkipped(reason);
+                return ViewCropResultState.Skipped;
+            }
+
             var tracker = new BoundTracker();
             ViewCropGeometryProjectionHelper.PlaneBounds bounds = _source == ViewCropExtentSource.ActiveViewElements
                 ? CollectBoundsFromActiveViewElements(view, tracker)
@@ -391,15 +398,8 @@ namespace HeronTools.Services.ViewCrop
                     .ToElements()
                     .ToList();
                 _linkElementsVisibleInView = new Dictionary<long, List<Element>>();
-#if REVIT2024_OR_GREATER
                 // Revit 2024+ can say which LINKED elements this view shows; collect them now, uncropped.
-                foreach (RevitLinkInstance link in elements.OfType<RevitLinkInstance>())
-                {
-                    if (link.GetLinkDocument() == null) continue;
-                    _linkElementsVisibleInView[link.Id.LongValue()] =
-                        new FilteredElementCollector(_doc, view.Id, link.Id).WhereElementIsNotElementType().ToElements().ToList();
-                }
-#endif
+                ViewCropCompat.CollectLinkElementsInView(_doc, view, elements, _linkElementsVisibleInView);
 
             foreach (Element element in elements)
             {
@@ -420,7 +420,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     bbox = element.get_BoundingBox(view);
                 }
-                catch
+                catch (System.Exception)
                 {
                     continue;
                 }
@@ -501,17 +501,26 @@ namespace HeronTools.Services.ViewCrop
                 if (category == null || category.Id == null)
                     continue;
 
-                if (category.CategoryType != CategoryType.Model)
-                    continue;
-
                 long categoryId = (category.Id).LongValue();
+
+                // Datums BEFORE the model-category test, as in ShouldUseElement: grids and reference
+                // planes are not model categories, so linked grids were always dropped here. Levels
+                // have no extent in a plan, so only grids and reference planes push the crop out.
+                bool isDatum = element is DatumPlane || IsDatumCategory(categoryId);
+                if (isDatum)
+                {
+                    if (!_settings.IncludeDatums || element is Level)
+                        continue;
+                }
+                else if (category.CategoryType != CategoryType.Model)
+                {
+                    continue;
+                }
+
                 if (categoryId == (int)BuiltInCategory.OST_Coordination_Model)
                     continue;
 
                 if (IsExcludedCategory(categoryId))
-                    continue;
-
-                if (!_settings.IncludeDatums && IsDatumCategory(categoryId))
                     continue;
 
                 if (_settings.IgnoreHiddenCategories && IsCategoryHidden(view, categoryId, hiddenCategoryCache))
@@ -538,7 +547,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     bbox = element.get_BoundingBox(null);
                 }
-                catch
+                catch (System.Exception)
                 {
                     continue;
                 }
@@ -648,7 +657,7 @@ namespace HeronTools.Services.ViewCrop
                     {
                         local = modelToView.OfPoint(corners[i]);
                     }
-                    catch
+                    catch (System.Exception)
                     {
                         continue;
                     }
@@ -710,17 +719,26 @@ namespace HeronTools.Services.ViewCrop
                         if (category == null || category.Id == null)
                             continue;
 
-                        if (category.CategoryType != CategoryType.Model)
-                            continue;
-
                         long categoryId = (category.Id).LongValue();
+
+                        // Datums BEFORE the model-category test, as in ShouldUseElement: grids and reference
+                        // planes are not model categories, so linked grids were always dropped here. Levels
+                        // have no extent in a plan, so only grids and reference planes push the crop out.
+                        bool isDatum = linkedElement is DatumPlane || IsDatumCategory(categoryId);
+                        if (isDatum)
+                        {
+                            if (!_settings.IncludeDatums || linkedElement is Level)
+                                continue;
+                        }
+                        else if (category.CategoryType != CategoryType.Model)
+                        {
+                            continue;
+                        }
+
                         if (categoryId == (int)BuiltInCategory.OST_Coordination_Model)
                             continue;
 
                         if (IsExcludedCategory(categoryId))
-                            continue;
-
-                        if (!_settings.IncludeDatums && IsDatumCategory(categoryId))
                             continue;
 
                         // Filter linked element design options
@@ -745,7 +763,7 @@ namespace HeronTools.Services.ViewCrop
                         {
                             linkedBbox = linkedElement.get_BoundingBox(null);
                         }
-                        catch
+                        catch (System.Exception)
                         {
                             continue;
                         }
@@ -788,7 +806,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     bbox = element.get_BoundingBox(null);
                 }
-                catch
+                catch (System.Exception)
                 {
                     continue;
                 }
@@ -873,7 +891,7 @@ namespace HeronTools.Services.ViewCrop
                     if (element.IsHidden(view))
                         return false;
                 }
-                catch
+                catch (System.Exception)
                 {
                     // If Revit cannot evaluate element-level hide state, keep the element.
                 }
@@ -897,13 +915,28 @@ namespace HeronTools.Services.ViewCrop
                 if (view.CanCategoryBeHidden(categoryElementId))
                     hidden = view.GetCategoryHidden(categoryElementId);
             }
-            catch
+            catch (System.Exception)
             {
                 hidden = false;
             }
 
             cache[categoryId] = hidden;
             return hidden;
+        }
+
+        private bool HasShapedCropToKeep(View view, out string reason)
+        {
+            reason = string.Empty;
+            if (_settings.RectangularCropOnly)
+                return false;
+
+            ViewCropRegionShapeManager shapeManager = view.GetCropRegionShapeManager();
+            if (shapeManager == null || !shapeManager.ShapeSet)
+                return false;
+
+            reason = "This view has a non-rectangular crop shape. It was left as it is so the shape is not lost - " +
+                     "use Reset Crop in Revit first if you want a rectangular crop fitted.";
+            return true;
         }
 
         private bool TryApplyCrop(View view, ViewCropGeometryProjectionHelper.PlaneBounds bounds, out string reason)
@@ -913,14 +946,6 @@ namespace HeronTools.Services.ViewCrop
             if (currentCrop == null)
             {
                 reason = "View crop box is unavailable.";
-                return false;
-            }
-
-            ViewCropRegionShapeManager shapeManager = view.GetCropRegionShapeManager();
-            if (shapeManager != null && shapeManager.ShapeSet && !_settings.RectangularCropOnly)
-            {
-                reason = "This view has a non-rectangular crop shape. It was left as it is so the shape is not lost - " +
-                         "use Reset Crop in Revit first if you want a rectangular crop fitted.";
                 return false;
             }
 
@@ -1014,7 +1039,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     isShapeValid = manager.IsCropRegionShapeValid(loop);
                 }
-                catch
+                catch (System.Exception)
                 {
                     // If Revit does not expose validation, attempt SetCropShape directly.
                     isShapeValid = true;
@@ -1044,10 +1069,8 @@ namespace HeronTools.Services.ViewCrop
         {
             if (element is BasePoint)
                 return true;
-#if REVIT2021_OR_GREATER
-            if (element is InternalOrigin)
+            if (ViewCropCompat.IsInternalOrigin(element))
                 return true;
-#endif
             return false;
         }
 

@@ -85,7 +85,8 @@ namespace HeronTools.Services.FilterPro
             }
 
             // Start from the filter's current overrides so nothing the user set is lost.
-            var ogs = CloneOverrideGraphics(view.GetFilterOverrides(filterId));
+            OverrideGraphicSettings before = view.GetFilterOverrides(filterId);
+            var ogs = CloneOverrideGraphics(before);
 
             Color chosenColor = GetColor(selection, filterId);
             ElementId patternId = ResolvePatternId(doc, selection.PatternId, solidFillId);
@@ -122,7 +123,11 @@ namespace HeronTools.Services.FilterPro
             if (applyHalftone)
                 ogs.SetHalftone(true);
 
+            // Remember what the filter had, and what Shuffle wrote (read back from Revit), so
+            // "Restore colours" can put the modeller's own overrides back exactly.
+            FilterColorMemory.RememberBefore(doc, view, filterId, before);
             view.SetFilterOverrides(filterId, ogs);
+            FilterColorMemory.RememberAfter(doc, view, filterId, view.GetFilterOverrides(filterId));
             return true;
         }
 

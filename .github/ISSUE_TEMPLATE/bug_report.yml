@@ -12,7 +12,32 @@ body:
     id: tool
     attributes:
       label: Which tool
-      options: [Filter Pro, Colorize, Crop View by Elements, Annotation Crop by View Crop, Unhide All, Toggle Links, Highlight Selection, Ribbon / start-up, Other]
+      options:
+        - Quick Menu / Quick Menu Settings
+        - Filter Pro
+        - Colorize
+        - Reset Graphics (Reset Selected / Reset Graphics / Restore Last Reset)
+        - Crop View by Elements
+        - Annotation Crop by View Crop
+        - 3D Snapshot
+        - Unhide All
+        - Toggle Links
+        - Highlight Selection
+        - Reset Datums (Grids / Levels)
+        - Match Level Extents / Levels to Section Box
+        - Flip Bubbles
+        - Match Elevation (Centre / Top / Bottom)
+        - Reassign Level
+        - Pin / Unpin
+        - Smart Selection
+        - Quick Clash
+        - Element ID (ID of a Picked Element / Find by Element ID)
+        - 3D Views by Workset
+        - Link Workset
+        - About Heron
+        - Installer / uninstall
+        - Ribbon / start-up
+        - Other
     validations:
       required: true
   - type: dropdown

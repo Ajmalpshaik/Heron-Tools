@@ -137,7 +137,7 @@ namespace HeronTools.Services.GraphicsTools
                     completed = true;
                     return summary;
                 }
-                catch
+                catch (System.Exception)
                 {
                     if (!completed)
                     {
@@ -145,7 +145,7 @@ namespace HeronTools.Services.GraphicsTools
                         {
                             transaction.RollBack();
                         }
-                        catch
+                        catch (System.Exception)
                         {
                             // Preserve the original operation error.
                         }

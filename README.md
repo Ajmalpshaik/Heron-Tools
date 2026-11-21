@@ -89,8 +89,8 @@ it does not know.
 ## Install (for modellers)
 
 Run **`HeronToolsInstaller.exe`** - one file, nothing else to install first (it runs on the .NET Framework
-that every Windows 10 and 11 already has). It finds every Revit 2020 to 2027 on the PC, and installs Heron
-Tools into the ones you tick, for your Windows user only - no administrator needed.
+that every Windows 10 and 11 already has). It finds every Revit 2020 to 2027 on the PC (also Revit installed on
+another drive, such as `D:\Autodesk\Revit 2024`), and installs Heron Tools into the ones you tick, for your Windows user only - no administrator needed.
 
 <p align="center">
   <img src="docs/installer/installer-window.png" alt="The Heron Tools installer window" width="560">
@@ -98,12 +98,13 @@ Tools into the ones you tick, for your Windows user only - no administrator need
 
 - **Install** puts Heron Tools in the ticked versions (or replaces it - there is no separate Update or
   Repair). It never removes anything.
-- **Remove Heron Tools** (shown only while it is installed) takes it out of every Revit it is in. It asks
+- **Remove Heron Tools** (shown only while it is installed - also when only a leftover `.addin` or
+  `HeronTools` folder is there) takes it out of every Revit it is in. It asks
   first, with No already picked. To take it out of one version only: `/uninstall /years 2024` (below).
 - If one of those Revit versions is open, it **waits** and says so, and carries on by itself once Revit is
   closed. It never closes Revit.
 - It keeps the install it replaces (`%LocalAppData%\HeronTools\install-backup\<year>`), puts it back by
-  itself if a copy fails, and checks every file it writes against the build it carries.
+  itself if a copy fails (on a first install it takes out what it copied), and checks every file it writes against the build it carries.
 
 For an office rolling it out to many PCs, the same file runs without a window:
 
@@ -186,8 +187,9 @@ powershell -ExecutionPolicy Bypass -File build\uninstall.ps1
 
 It removes only `HeronTools.addin` and the `HeronTools` folder from each Revit year. Heron AI and every
 other add-in are left alone. Add `-DryRun` to see what it would remove, and `-RemoveBackups` to also delete
-the installs kept for `-Rollback`. A Revit that is open (or of unknown year) stops it; an all-users copy is
-reported, not removed (that needs admin rights).
+the installs kept for `-Rollback`. A Revit year that is open is skipped (close it and run again); an open
+Revit whose year cannot be told stops the whole run. An all-users copy is reported, not removed (that needs
+admin rights).
 
 ## How it shares the Heron tab
 
@@ -219,11 +221,11 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 - **Gates on every push** (GitHub Actions, `Gates`): the metadata check, then a compile against every
   Revit release 2020-2027. A compile is not a Revit test.
 
-- Every button that changes the model runs as **one named transaction** - one Undo entry, named
-  `Filter Pro: ...`. If anything in that run fails, the whole run is rolled back and the modeller is
-  told, in plain words, that nothing was changed.
-- Revit's API is called only from Revit's own thread. Filter Pro's window is modal, so it runs there;
-  any future modeless window must reach the API only through an `ExternalEvent`.
+- Every button that changes the model runs as **one named transaction** - one Undo entry, named for the
+  tool (for example `Filter Pro: ...`, `Assign Links to Workset`). If anything in that run fails, the whole
+  run is rolled back and the modeller is told, in plain words, that nothing was changed.
+- Revit's API is called only from Revit's own thread. Most windows are modal, so they run there; the one
+  modeless window (Quick Clash) reaches the API only through an `ExternalEvent`.
 - Version-specific API code lives only in `src/HeronTools/Helpers/` behind `REVIT<year>` /
   `REVIT<year>_OR_GREATER` compile symbols (units 2021, parameter types 2022, case-sensitive filter
   rules 2023, 64-bit `ElementId.Value` 2024, `IntegerValue` removed 2026).

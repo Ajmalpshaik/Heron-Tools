@@ -34,7 +34,7 @@ namespace HeronTools.Commands
 
                 return view.AreGraphicsOverridesAllowed();
             }
-            catch
+            catch (System.Exception)
             {
                 // Any unexpected issue keeps the button disabled rather than crashing the ribbon.
                 return false;

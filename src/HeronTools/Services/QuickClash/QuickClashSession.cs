@@ -42,12 +42,32 @@ namespace HeronTools.Services.QuickClash
         /// <summary>The view the last Run coloured (its memory belongs to this session), or -1.</summary>
         private long _colouredViewId = -1;
 
+        /// <summary>The model's memory key while a Save As runs (its path, or its title if never saved).</summary>
+        private string _docKeyBeforeSaveAs;
+
         /// <summary>The linked clash elements' solids the overlay shows now (all of them, or only the isolated clashes').</summary>
         private List<Solid> _linkedSolids = new List<Solid>();
 
         /// <summary>Every linked clash element's solids of the last Run, by linked element id.</summary>
         private Dictionary<long, List<Solid>> _linkedSolidsById = new Dictionary<long, List<Solid>>();
         private ClashColour _overlayColour;
+
+        /// <summary>
+        /// The link the overlay's shapes came from, and where it was at Run. The shapes were moved into this model's
+        /// coordinates then, so once the link is moved, unloaded or reloaded they are in the wrong place: dropped.
+        /// </summary>
+        private long _overlayLinkId = -1;
+        private Transform _overlayLinkTransform;
+        private Document _overlayLinkDoc;
+
+        /// <summary>
+        /// Selection B's link elements of the last full Refresh, for a quick refresh when a 3D view is activated again.
+        /// Forgotten on any change to this model, and never used by Run (which always collects afresh).
+        /// </summary>
+        private List<Element> _cachedLinkElements;
+        private long _cachedLinkViewId = -1;
+        private long _cachedLinkInstanceId = -1;
+        private Document _cachedLinkDoc;
 
         /// <summary>The Temporary Hide/Isolate on the results view is Quick Clash's own (Isolate), not the modeller's.</summary>
         private bool _isolatedByUs;
@@ -66,6 +86,15 @@ namespace HeronTools.Services.QuickClash
 
         /// <summary>The view the results list belongs to.</summary>
         private long _resultsViewId = -1;
+
+        /// <summary>
+        /// "Current selection" as Selection A: the element ids the last Run tested, or null. Clicking a clash selects its
+        /// two elements in Revit, so a later Run reuses these while the selection is still only what a click selected.
+        /// </summary>
+        private HashSet<long> _selectionAKeys;
+
+        /// <summary>Revit's selection just after Quick Clash itself selected clash elements (a click or Select), or null.</summary>
+        private HashSet<long> _clickSelectionKeys;
 
         internal static QuickClashSession Current { get; private set; }
 
@@ -135,6 +164,7 @@ namespace HeronTools.Services.QuickClash
             _uiApp.Application.DocumentChanged += OnDocumentChanged;
             _uiApp.Application.DocumentSaving += OnDocumentSaving;
             _uiApp.Application.DocumentSavingAs += OnDocumentSavingAs;
+            _uiApp.Application.DocumentSavedAs += OnDocumentSavedAs;
             _uiApp.Application.DocumentSynchronizingWithCentral += OnSynchronizing;
             _uiApp.Application.DocumentClosing += OnDocumentClosing;
             _uiApp.ViewActivated += OnViewActivated;
@@ -146,6 +176,7 @@ namespace HeronTools.Services.QuickClash
             _uiApp.Application.DocumentChanged -= OnDocumentChanged;
             _uiApp.Application.DocumentSaving -= OnDocumentSaving;
             _uiApp.Application.DocumentSavingAs -= OnDocumentSavingAs;
+            _uiApp.Application.DocumentSavedAs -= OnDocumentSavedAs;
             _uiApp.Application.DocumentSynchronizingWithCentral -= OnSynchronizing;
             _uiApp.Application.DocumentClosing -= OnDocumentClosing;
             _uiApp.ViewActivated -= OnViewActivated;
@@ -177,7 +208,12 @@ namespace HeronTools.Services.QuickClash
         // ------------------------------------------------------------------ lists
 
         /// <summary>Fills both category lists and the Selection B drop-down for the active view.</summary>
-        internal void Refresh(UIApplication app, QuickClashSettings ticks)
+        internal void Refresh(UIApplication app, QuickClashSettings ticks) => Refresh(app, ticks, reuseLinkList: false);
+
+        /// <param name="reuseLinkList">
+        /// True only for a 3D view being activated: a link already collected for that view is not walked again.
+        /// </param>
+        private void Refresh(UIApplication app, QuickClashSettings ticks, bool reuseLinkList)
         {
             if (_window == null) return;
             if (!TryActive3DView(app, out View3D view, out string why))
@@ -198,7 +234,7 @@ namespace HeronTools.Services.QuickClash
 
             List<Element> elementsB = chosen.IsThisModel
                 ? host
-                : ClashElementCollector.LinkElementsShown(_doc, view, (RevitLinkInstance)_doc.GetElement(ElementIdHelper.FromLong(chosen.LinkInstanceId)));
+                : LinkElementsForLists(view, (RevitLinkInstance)_doc.GetElement(ElementIdHelper.FromLong(chosen.LinkInstanceId)), reuseLinkList);
             List<ClashCategoryItem> rowsB = ClashElementCollector.CategoryRows(elementsB, s.CategoriesB);
 
             int selected = app.ActiveUIDocument.Selection.GetElementIds().Count;
@@ -206,58 +242,185 @@ namespace HeronTools.Services.QuickClash
             UpdateColouredState();
         }
 
+        /// <summary>
+        /// Selection B's link elements for the lists. A big link takes long to walk (on 2020-2022 the whole link
+        /// document), so on a view switch the last list for the same view and link is reused if nothing changed since.
+        /// </summary>
+        private List<Element> LinkElementsForLists(View3D view, RevitLinkInstance link, bool reuse)
+        {
+            long viewId = view.Id.LongValue();
+            long linkId = link.Id.LongValue();
+            Document linkDoc = link.GetLinkDocument();
+            if (reuse && _cachedLinkElements != null && _cachedLinkViewId == viewId && _cachedLinkInstanceId == linkId &&
+                _cachedLinkDoc != null && linkDoc != null && _cachedLinkDoc.Equals(linkDoc))
+                return _cachedLinkElements;
+
+            List<Element> elements = ClashElementCollector.LinkElementsShown(_doc, view, link);
+            _cachedLinkElements = elements;
+            _cachedLinkViewId = viewId;
+            _cachedLinkInstanceId = linkId;
+            _cachedLinkDoc = linkDoc;
+            return elements;
+        }
+
+        private void ForgetCachedLinkList()
+        {
+            _cachedLinkElements = null;
+            _cachedLinkViewId = -1;
+            _cachedLinkInstanceId = -1;
+            _cachedLinkDoc = null;
+        }
+
         // ------------------------------------------------------------------ Run
 
         /// <summary>
         /// Run is one Undo step "Quick Clash", even when it first ends Quick Clash's isolate (its own small transaction):
-        /// the group folds them together.
+        /// the group folds them together. The group is kept only when the run ends normally. On an error (or Esc) it is
+        /// rolled back - the ended isolate comes back too - so "nothing was changed" is true.
         /// </summary>
         internal void Run(UIApplication app, QuickClashSettings s)
         {
+            var before = new RunSnapshot(this);
+            bool keep = false;
             using (var group = new TransactionGroup(_doc, RunName))
             {
                 group.Start();
                 try
                 {
-                    RunCore(app, s);
+                    keep = RunCore(app, s, before);
                 }
                 finally
                 {
                     if (group.GetStatus() == TransactionStatus.Started)
-                        group.Assimilate();   // what committed inside stays; an empty group leaves no Undo step
+                    {
+                        if (keep)
+                        {
+                            group.Assimilate();   // what committed inside stays; an empty group leaves no Undo step
+                        }
+                        else
+                        {
+                            group.RollBack();     // the view is as it was before Run, isolate included
+                            before.Restore(this);
+                        }
+                    }
                 }
             }
         }
 
-        private void RunCore(UIApplication app, QuickClashSettings s)
+        /// <summary>What Run may change in this session, put back when the Run group is rolled back.</summary>
+        private sealed class RunSnapshot
         {
-            if (_window == null) return;
+            private readonly bool _isolatedByUs;
+            private readonly long _isolatedViewId;
+            private readonly List<ElementId> _isolatedIds;
+            private readonly List<ElementId> _hiddenSample;
+            private readonly long _colouredViewId;
+            private readonly long _resultsViewId;
+            private readonly List<Solid> _linkedSolids;
+            private readonly Dictionary<long, List<Solid>> _linkedSolidsById;
+            private readonly ClashColour _overlayColour;
+
+            // The view's memory when it was still coloured before this Run: a Run with new colours updates it, and a
+            // rollback brings the old colours back on the view - so the memory must say the old colours again, or
+            // Reset view would no longer see the view as coloured.
+            private ClashColourMemory _reusedMemory;
+            private ClashColour _oldA, _oldB, _oldRest;
+            private int _oldRestTransparency;
+
+            internal void RememberColours(ClashColourMemory memory)
+            {
+                _reusedMemory = memory;
+                _oldA = memory.ColourA;
+                _oldB = memory.ColourB;
+                _oldRest = memory.ColourRest;
+                _oldRestTransparency = memory.RestTransparency;
+            }
+
+            internal RunSnapshot(QuickClashSession s)
+            {
+                _isolatedByUs = s._isolatedByUs;
+                _isolatedViewId = s._isolatedViewId;
+                _isolatedIds = s._isolatedIds;
+                _hiddenSample = s._hiddenSample;
+                _colouredViewId = s._colouredViewId;
+                _resultsViewId = s._resultsViewId;
+                _linkedSolids = s._linkedSolids;
+                _linkedSolidsById = s._linkedSolidsById;
+                _overlayColour = s._overlayColour;
+            }
+
+            internal void Restore(QuickClashSession s)
+            {
+                s._isolatedByUs = _isolatedByUs;
+                s._isolatedViewId = _isolatedViewId;
+                s._isolatedIds = _isolatedIds;
+                s._hiddenSample = _hiddenSample;
+                s._colouredViewId = _colouredViewId;
+                s._resultsViewId = _resultsViewId;
+                s._linkedSolids = _linkedSolids;
+                s._linkedSolidsById = _linkedSolidsById;
+                s._overlayColour = _overlayColour;
+                if (_reusedMemory != null)
+                {
+                    _reusedMemory.SetColours(_oldA, _oldB, _oldRest, _oldRestTransparency, ClashColourMemory.SolidFillId(s._doc));
+                    _reusedMemory.SaveToDisk();
+                }
+                try
+                {
+                    s.UpdateColouredState();   // buttons and overlay follow the view as it is again
+                }
+                catch (Autodesk.Revit.Exceptions.ApplicationException)
+                {
+                    // best effort: the error that rolled the run back is the one the modeller is told about
+                }
+            }
+        }
+
+        /// <summary>
+        /// The run itself. True when it ended normally (whether or not it coloured anything); false when what it did
+        /// must be rolled back (Esc). An exception also rolls it back.
+        /// </summary>
+        private bool RunCore(UIApplication app, QuickClashSettings s, RunSnapshot before)
+        {
+            if (_window == null) return true;
             if (!TryActive3DView(app, out View3D view, out string why))
             {
                 _window.ShowNotA3DView(why);
-                return;
+                return true;
             }
             UIDocument uiDoc = app.ActiveUIDocument;
 
             // Quick Clash's own Isolate hides elements; a new test must see the whole view, so it ends first
             // (wherever it is - an isolate left on another view would otherwise be forgotten).
             if (!EndOwnIsolate())
-                return;
+                return true;
 
             // ---- who takes part
             List<Element> host = ClashElementCollector.HostElementsInView(_doc, view);
             List<Element> elementsA;
+            string selectionANote = "";
             if (s.UseSelectionA)
             {
-                var picked = new HashSet<long>(uiDoc.Selection.GetElementIds().Select(id => id.LongValue()));
+                var current = new HashSet<long>(uiDoc.Selection.GetElementIds().Select(id => id.LongValue()));
+                // The selection is only what a clash click selected: keep testing the Selection A of the last Run.
+                bool reuse = _selectionAKeys != null && _clickSelectionKeys != null &&
+                             current.Count > 0 && current.SetEquals(_clickSelectionKeys);
+                HashSet<long> picked = reuse ? _selectionAKeys : current;
                 elementsA = host.Where(e => picked.Contains(e.Id.LongValue())).ToList();
                 if (elementsA.Count == 0)
                 {
-                    _window.SetStatus(picked.Count == 0
+                    _window.SetStatus(reuse
+                        ? "The Selection A of the last Run is no longer shown in this view. Select the elements to test again, then press Run."
+                        : picked.Count == 0
                         ? "Nothing is selected in Revit. Select the elements to test as Selection A, or tick categories instead."
                         : "None of the selected elements is a model element shown in this view. Select elements you can see here.");
-                    return;
+                    return true;
                 }
+                _selectionAKeys = new HashSet<long>(picked);
+                string count = elementsA.Count.ToString("N0", CultureInfo.InvariantCulture);
+                selectionANote = reuse
+                    ? " Selection A: the same " + count + " element(s) as the last Run (the clash elements Quick Clash selected were not used). Select new elements to change it."
+                    : " Selection A: the " + count + " selected element(s).";
             }
             else
             {
@@ -277,9 +440,11 @@ namespace HeronTools.Services.QuickClash
                 link = _doc.GetElement(ElementIdHelper.FromLong(s.SourceLinkInstanceId)) as RevitLinkInstance;
                 if (link == null || link.GetLinkDocument() == null)
                 {
-                    _window.SetStatus("The link picked for Selection B is no longer loaded. Pick it again, or reload it in Manage Links.");
+                    // Refresh first: it rewrites the status line with the counts, which would hide why
+                    // nothing ran.
                     Refresh(app, s);
-                    return;
+                    _window.SetStatus("The link picked for Selection B is no longer loaded. Pick it again, or reload it in Manage Links.");
+                    return true;
                 }
                 elementsB = ClashElementCollector.LinkElementsShown(_doc, view, link)
                     .Where(e => catsB.Contains(e.Category.Id.LongValue())).ToList();
@@ -289,7 +454,7 @@ namespace HeronTools.Services.QuickClash
             {
                 _window.SetStatus((elementsA.Count == 0 ? "Selection A" : "Selection B") +
                     " has no elements shown in this view. Tick categories that have a count, or widen the section box.");
-                return;
+                return true;
             }
 
             Transform toHost = link?.GetTotalTransform();
@@ -307,7 +472,7 @@ namespace HeronTools.Services.QuickClash
                     "A tighter section box makes it quicker."))
             {
                 _window.SetStatus("Not run. Tighten the section box or tick fewer categories, then press Run.");
-                return;
+                return true;
             }
 
             // ---- step 2: shapes
@@ -315,7 +480,7 @@ namespace HeronTools.Services.QuickClash
             if (found.StoppedByEsc)
             {
                 _window.SetStatus("Stopped with Esc. Nothing was changed.");
-                return;
+                return false;
             }
 
             // ---- colour the view: one Undo step
@@ -326,6 +491,8 @@ namespace HeronTools.Services.QuickClash
             // colours (Reset, Undo, or changed by hand since), the copy is old: forget it and copy afresh, so a
             // second Run never puts back yesterday's overrides over the modeller's newer ones.
             ClashColourMemory memory = FreshOrStillColoured(view);
+            if (memory.StillColoured(_doc, view))
+                before.RememberColours(memory);
             View previous = ColouredView();
             ClashColourMemory previousMemory = null;
             if (previous != null && previous.Id.LongValue() != view.Id.LongValue())
@@ -363,23 +530,21 @@ namespace HeronTools.Services.QuickClash
                     var clashKeys = new HashSet<long>(idsA.Concat(idsB).Select(id => id.LongValue()));
                     List<ElementId> rest = inView.Where(id => !clashKeys.Contains(id.LongValue())).ToList();
 
-                    ElementId solid = SolidFillId(_doc);
-                    GraphicsElementService.ApplyOverrides(_doc, view, rest, Override(s.ColourRest, s.RestTransparency, solid));
-                    GraphicsElementService.ApplyOverrides(_doc, view, idsB, Override(s.ColourB, 0, solid));
-                    GraphicsElementService.ApplyOverrides(_doc, view, idsA, Override(s.ColourA, 0, solid)); // A wins
-                    memory.SetColours(s.ColourA, s.ColourB, s.ColourRest);
+                    ElementId solid = ClashColourMemory.SolidFillId(_doc);
+                    GraphicsElementService.ApplyOverrides(_doc, view, rest, ClashColourMemory.QuickClashOverride(s.ColourRest, s.RestTransparency, solid));
+                    GraphicsElementService.ApplyOverrides(_doc, view, idsB, ClashColourMemory.QuickClashOverride(s.ColourB, 0, solid));
+                    GraphicsElementService.ApplyOverrides(_doc, view, idsA, ClashColourMemory.QuickClashOverride(s.ColourA, 0, solid)); // A wins
+                    memory.SetColours(s.ColourA, s.ColourB, s.ColourRest, s.RestTransparency, solid);
                 }
 
                 if (t.Commit() != TransactionStatus.Committed)
                 {
                     ClashOverlayServer.Instance.Hide();
                     _window.SetStatus("Revit did not keep the colours, so the view is as it was. Try again.");
-                    return;
+                    return false;
                 }
             }
 
-            if (previousMemory != null)
-                ClashColourMemory.Forget(_doc, previous);
             if (coloured.Count > 0)
                 memory.SaveToDisk();
             else
@@ -391,17 +556,22 @@ namespace HeronTools.Services.QuickClash
             var linkedIds = new HashSet<long>(coloured.Where(c => c.BIsLinked).Select(c => c.ElementBId));
             _linkedSolidsById = itemsB.Where(i => linkedIds.Contains(i.Id))
                 .ToDictionary(i => i.Id, i => i.Solids.Select(p => p.Solid).ToList());
-            _linkedSolids = _linkedSolidsById.Values.SelectMany(x => x).ToList();
             _overlayColour = s.ColourB;
-            if (_linkedSolids.Count > 0)
-                ClashOverlayServer.Instance.Show(_doc, view, _linkedSolids, _overlayColour);
-            else
-                ClashOverlayServer.Instance.Hide();
+            _overlayLinkId = linkId;
+            _overlayLinkTransform = toHost;
+            _overlayLinkDoc = link?.GetLinkDocument();
+            ShowOverlay(view, _linkedSolidsById.Values.SelectMany(x => x).ToList());   // guarded: a refused overlay never stops the run
             uiDoc.RefreshActiveView();
 
             s.Save();
-            _window.ShowResults(clashes, RunStatus(found, itemsA.Count, itemsB.Count));
+            _window.ShowResults(clashes, RunStatus(found, itemsA.Count, itemsB.Count) + selectionANote);
             _window.SetColoured(coloured.Count > 0);
+
+            // Last, so an error above (which rolls the run back and colours the other view again) never leaves that
+            // view coloured with its memory gone.
+            if (previousMemory != null)
+                ClashColourMemory.Forget(_doc, previous);
+            return true;
         }
 
         /// <summary>The view's memory if its colours are still on; otherwise a new, empty one.</summary>
@@ -427,39 +597,10 @@ namespace HeronTools.Services.QuickClash
                 text += " Stopped at " + ClashEngine.MaxClashes + " clashes - tighten the section box to see the rest.";
             if (notChecked > 0)
                 text += " " + notChecked + " pair(s) could not be checked (Revit refused their shapes) - listed as Not checked.";
+            if (found.GapSampled > 0)
+                text += " " + found.GapSampled + " pair(s) had very detailed shapes, so their clearance was measured on a sample " +
+                        "of their edges - check those near misses by eye.";
             return text;
-        }
-
-        private static OverrideGraphicSettings Override(ClashColour colour, int transparency, ElementId solidFill)
-        {
-            var c = new Color(colour.R, colour.G, colour.B);
-            var o = new OverrideGraphicSettings();
-            o.SetProjectionLineColor(c);
-            o.SetCutLineColor(c);
-            if (solidFill != ElementId.InvalidElementId)
-            {
-                o.SetSurfaceForegroundPatternId(solidFill);
-                o.SetSurfaceForegroundPatternVisible(true);
-                o.SetSurfaceForegroundPatternColor(c);
-                o.SetCutForegroundPatternId(solidFill);
-                o.SetCutForegroundPatternVisible(true);
-                o.SetCutForegroundPatternColor(c);
-            }
-            o.SetSurfaceTransparency(Math.Max(0, Math.Min(100, transparency)));
-            return o;
-        }
-
-        /// <summary>The drafting solid fill - the one view overrides expect (as Highlight and Filter Pro use).</summary>
-        private static ElementId SolidFillId(Document doc)
-        {
-            return new FilteredElementCollector(doc)
-                .OfClass(typeof(FillPatternElement))
-                .Cast<FillPatternElement>()
-                .FirstOrDefault(p =>
-                {
-                    FillPattern fp = p.GetFillPattern();
-                    return fp != null && fp.IsSolidFill && fp.Target == FillPatternTarget.Drafting;
-                })?.Id ?? ElementId.InvalidElementId;
         }
 
         // ------------------------------------------------------------------ Reset
@@ -481,7 +622,10 @@ namespace HeronTools.Services.QuickClash
             PutBack(view, memory, clearList: true);
         }
 
-        /// <summary>The Reset transaction. The memory is kept, so an Undo of this Reset can be reset again.</summary>
+        /// <summary>
+        /// The Reset transaction. The memory is marked put back but kept for this session, so an Undo of this Reset
+        /// can be reset again; it counts as coloured again only when the full Quick Clash override is back on.
+        /// </summary>
         private bool PutBack(View view, ClashColourMemory memory, bool clearList)
         {
             bool endIsolate = OwnIsolateOn() && _isolatedViewId == view.Id.LongValue();
@@ -497,6 +641,7 @@ namespace HeronTools.Services.QuickClash
                     return false;
                 }
             }
+            memory.MarkPutBack();
             if (endIsolate)
                 ForgetIsolate();
             ClashOverlayServer.Instance.Hide();
@@ -623,13 +768,18 @@ namespace HeronTools.Services.QuickClash
             List<ElementId> sample = new FilteredElementCollector(_doc, view.Id).WhereElementIsNotElementType().ToElementIds()
                 .Where(id => !keys.Contains(id.LongValue())).Take(HiddenSampleSize).ToList();
 
+            // Quick Clash's own isolate on this view (clash 1, then clash 2 is picked) ends first, in the same Undo step:
+            // a new isolate on top of it could only show what the old one left visible. A Temporary Hide/Isolate of the
+            // modeller's is never ended here - OwnIsolateOn is false for it.
+            bool endOwnFirst = OwnIsolateOn() && _isolatedViewId == view.Id.LongValue();
+
             // Revit can refuse an id it cannot isolate (e.g. insulation of a hidden category): then try without the wraps.
             List<ElementId> isolated = ids;
-            string refused = TryIsolate(view, ids);
+            string refused = TryIsolate(view, ids, endOwnFirst);
             if (refused != null && ids.Count > bare.Count)
             {
                 isolated = bare;
-                refused = TryIsolate(view, bare);
+                refused = TryIsolate(view, bare, endOwnFirst);
             }
             if (refused != null)
             {
@@ -658,14 +808,19 @@ namespace HeronTools.Services.QuickClash
             _window?.SetStatus("Showing only " + Clashes(clashes.Count) + ". Show all brings back the rest of the view.");
         }
 
-        /// <summary>One Undo step "Quick Clash - Isolate". Null when done; otherwise what Revit said.</summary>
-        private string TryIsolate(View view, List<ElementId> ids)
+        /// <summary>
+        /// One Undo step "Quick Clash - Isolate". Null when done; otherwise what Revit said (and the view is as it was).
+        /// <paramref name="endOwnFirst"/>: Quick Clash's own isolate is on this view - it ends in the same transaction.
+        /// </summary>
+        private string TryIsolate(View view, List<ElementId> ids, bool endOwnFirst)
         {
             try
             {
                 using (var t = new Transaction(_doc, IsolateName))
                 {
                     t.Start();
+                    if (endOwnFirst)
+                        view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
                     view.IsolateElementsTemporary(ids);
                     return t.Commit() == TransactionStatus.Committed ? null : "Revit did not keep the change";
                 }
@@ -788,17 +943,21 @@ namespace HeronTools.Services.QuickClash
                 Element inLink = instance?.GetLinkDocument()?.GetElement(ElementIdHelper.FromLong(c.ElementBId));
                 linked.Add(new KeyValuePair<Element, RevitLinkInstance>(inLink, instance));
             }
+            int notSelected;
             try
             {
-                return LinkSelection.Select(uiDoc, hostIds, linked);
+                notSelected = LinkSelection.Select(uiDoc, hostIds, linked);
             }
             catch (Autodesk.Revit.Exceptions.ApplicationException)
             {
                 // A linked reference Revit will not select here (e.g. the link was reloaded): select this model's elements.
                 try { uiDoc.Selection.SetElementIds(hostIds); }
-                catch (Autodesk.Revit.Exceptions.ApplicationException) { return linked.Count; }
-                return linked.Count;
+                catch (Autodesk.Revit.Exceptions.ApplicationException) { /* nothing selected: the note below says so */ }
+                notSelected = linked.Count;
             }
+            // What Revit now reports as selected is Quick Clash's own selection, not a new Selection A of the modeller's.
+            _clickSelectionKeys = new HashSet<long>(uiDoc.Selection.GetElementIds().Select(id => id.LongValue()));
+            return notSelected;
         }
 
         private static string LinkedNotSelectedNote(int notSelected)
@@ -839,6 +998,13 @@ namespace HeronTools.Services.QuickClash
         private void ShowOverlay(View view, List<Solid> solids)
         {
             _linkedSolids = solids;
+            if (solids.Count > 0 && !OverlayLinkUnchanged())
+            {
+                DropLinkOverlay();
+                _window?.SetStatus("The link was moved, unloaded or reloaded since Run, so its clash elements are no longer " +
+                                   "drawn in colour. Press Run to test again.");
+                return;
+            }
             try
             {
                 if (solids.Count > 0)
@@ -853,6 +1019,29 @@ namespace HeronTools.Services.QuickClash
                 _linkedSolidsById = new Dictionary<long, List<Solid>>();
                 ClashOverlayServer.Instance.Hide();
             }
+        }
+
+        /// <summary>The link of the overlay is still loaded, the same file, and in the same place as at Run.</summary>
+        private bool OverlayLinkUnchanged()
+        {
+            if (_overlayLinkId < 0 || _overlayLinkTransform == null)
+                return false;
+            var link = _doc.GetElement(ElementIdHelper.FromLong(_overlayLinkId)) as RevitLinkInstance;
+            Document linkDoc = link?.GetLinkDocument();
+            if (linkDoc == null || (_overlayLinkDoc != null && !linkDoc.Equals(_overlayLinkDoc)))
+                return false;
+            return link.GetTotalTransform().AlmostEqual(_overlayLinkTransform);
+        }
+
+        /// <summary>Removes the overlay and forgets its shapes: they no longer match the link.</summary>
+        private void DropLinkOverlay()
+        {
+            _linkedSolids = new List<Solid>();
+            _linkedSolidsById = new Dictionary<long, List<Solid>>();
+            _overlayLinkId = -1;
+            _overlayLinkTransform = null;
+            _overlayLinkDoc = null;
+            ClashOverlayServer.Instance.Hide();
         }
 
         /// <summary>The active view is the one the clash list belongs to (zoom and isolate only make sense there).</summary>
@@ -890,8 +1079,19 @@ namespace HeronTools.Services.QuickClash
         private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
         {
             if (!e.GetDocument().Equals(_doc)) return;
-            if (e.Operation == UndoOperation.TransactionUndone || e.Operation == UndoOperation.TransactionRedone)
+            ForgetCachedLinkList();   // the model changed: the next view switch collects Selection B afresh
+            if (e.Operation == UndoOperation.TransactionUndone || e.Operation == UndoOperation.TransactionRedone || TouchesOverlayLink(e))
                 Post(app => UpdateColouredState());   // the overlay is switched on the ExternalEvent, not in here
+        }
+
+        /// <summary>The link the overlay was drawn from (or its type, as in Reload / Unload) was moved, changed or deleted.</summary>
+        private bool TouchesOverlayLink(DocumentChangedEventArgs e)
+        {
+            if (_overlayLinkId < 0 || _linkedSolidsById.Count == 0) return false;
+            var keys = new HashSet<long> { _overlayLinkId };
+            if (_doc.GetElement(ElementIdHelper.FromLong(_overlayLinkId)) is RevitLinkInstance link)
+                keys.Add(link.GetTypeId().LongValue());
+            return e.GetModifiedElementIds().Concat(e.GetDeletedElementIds()).Any(id => keys.Contains(id.LongValue()));
         }
 
         /// <summary>Looks at what is really on the view, and matches the overlay and the Reset button to it.</summary>
@@ -900,6 +1100,8 @@ namespace HeronTools.Services.QuickClash
             View view = ColouredView();
             ClashColourMemory memory = view != null ? ClashColourMemory.Find(_doc, view) : null;
             bool coloured = memory != null && memory.StillColoured(_doc, view);
+            if (coloured)
+                memory.MarkColouredAgain();   // an Undo of a Reset: the colours are back, so is the crash copy
             _window?.SetColoured(coloured);
 
             // The isolate may have been undone, or reset with Revit's own sunglasses button.
@@ -917,7 +1119,23 @@ namespace HeronTools.Services.QuickClash
         }
 
         private void OnDocumentSaving(object sender, DocumentSavingEventArgs e) => PutBackBeforeWriting(e.Document, "saving");
-        private void OnDocumentSavingAs(object sender, DocumentSavingAsEventArgs e) => PutBackBeforeWriting(e.Document, "saving");
+        private void OnDocumentSavingAs(object sender, DocumentSavingAsEventArgs e)
+        {
+            if (e.Document != null && e.Document.Equals(_doc))
+                _docKeyBeforeSaveAs = ClashColourMemory.DocKey(_doc);
+            PutBackBeforeWriting(e.Document, "saving");
+        }
+
+        /// <summary>Save As gave the model a new path: the view's memory moves with it, so Reset view still finds it.</summary>
+        private void OnDocumentSavedAs(object sender, DocumentSavedAsEventArgs e)
+        {
+            if (e.Document == null || !e.Document.Equals(_doc)) return;
+            string oldKey = _docKeyBeforeSaveAs ?? e.OriginalPath;
+            _docKeyBeforeSaveAs = null;
+            if (e.Status == RevitAPIEventStatus.Succeeded)
+                ClashColourMemory.MoveDocument(oldKey, ClashColourMemory.DocKey(_doc));
+        }
+
         private void OnSynchronizing(object sender, DocumentSynchronizingWithCentralEventArgs e) => PutBackBeforeWriting(e.Document, "Sync with Central");
 
         /// <summary>Ajmal's rule: no clash colour ever reaches the file or central. The list stays; Run colours again.</summary>
@@ -946,6 +1164,8 @@ namespace HeronTools.Services.QuickClash
         {
             if (e.Document != null && e.Document.Equals(_doc))
                 Shutdown();   // unsaved changes are thrown away by Revit; a save was already put back above
+            else if (e.Document != null && _overlayLinkDoc != null && e.Document.Equals(_overlayLinkDoc))
+                Post(app => UpdateColouredState());   // the overlay's link is closing (unloaded): drop its shapes once it has gone
         }
 
         private void OnApplicationClosing(object sender, ApplicationClosingEventArgs e) => Shutdown();
@@ -953,7 +1173,7 @@ namespace HeronTools.Services.QuickClash
         private void OnViewActivated(object sender, ViewActivatedEventArgs e)
         {
             if (_window != null)
-                Refresh(_uiApp, null);
+                Refresh(_uiApp, null, reuseLinkList: true);   // light: a link already collected for this view is not walked again
         }
 
         // ------------------------------------------------------------------ helpers

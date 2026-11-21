@@ -25,6 +25,10 @@ namespace HeronTools.Services.FilterPro
     /// Family Name / Type Name are no longer forced into the list when Revit cannot filter them for the
     /// picked categories; a missing family name is no longer replaced by the category name (that filter
     /// matched nothing); decimal values remember the spread of values behind each display text.
+    /// Heron Tools changes (issue #22): a decimal value covers the whole band its shown text stands for
+    /// (from Project Units rounding), not only the values seen; a parameter missing from the samples is
+    /// looked up across the whole category; element values are kept apart by id, not by name; values
+    /// come from placed elements (and their types) only; Family and Type has the same scan limit.
     /// </remarks>
     internal class FilterProDataProvider
     {
@@ -78,6 +82,7 @@ namespace HeronTools.Services.FilterPro
             // looked only at the FIRST element and FIRST type of each category, for every parameter: a shared
             // parameter missing from that first family vanished from the list, and big models were slow.
             List<Element> samples = CollectSampleElements(categoryIds);
+            var categoryFilter = new ElementMulticategoryFilter(categoryIds.ToList());
 
             foreach (ElementId pid in paramIds)
             {
@@ -92,7 +97,8 @@ namespace HeronTools.Services.FilterPro
 
                 if (storage == StorageType.None)
                 {
-                    sample = FindInSamples(samples, pid);
+                    sample = FindInSamples(samples, pid)
+                             ?? FindAnywhereInCategories(categoryFilter, pid);
                     storage = sample?.StorageType ?? StorageType.None;
                 }
 
@@ -118,21 +124,41 @@ namespace HeronTools.Services.FilterPro
                 return new List<FilterValueItem>();
 
             if (param.Id == SpecialParameterIds.FamilyAndType)
-                return LoadFamilyAndTypeValues(categoryIds);
+                return LoadFamilyAndTypeValues(categoryIds, out hitScanLimit);
 
             return LoadRegularParameterValues(param, categoryIds, out hitScanLimit);
         }
 
-        private List<FilterValueItem> LoadFamilyAndTypeValues(List<ElementId> catIds)
+        private List<FilterValueItem> LoadFamilyAndTypeValues(List<ElementId> catIds, out bool hitScanLimit)
         {
+            hitScanLimit = false;
+
+            // Placed elements only: a view filter colours elements in the view, so a type that is loaded but
+            // never placed gave a filter that matched nothing.
             var famTypeCollector = new FilteredElementCollector(_doc)
-                .WherePasses(new ElementMulticategoryFilter(catIds));
+                .WherePasses(new ElementMulticategoryFilter(catIds))
+                .WhereElementIsNotElementType();
 
             var famTypeSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var typesRead = new HashSet<long>();
             var familyAndTypeValues = new List<FilterValueItem>();
+            int scanned = 0;
 
             foreach (Element elem in famTypeCollector)
             {
+                // The same limit as every other parameter: a very big model no longer freezes Revit here.
+                scanned++;
+                if (scanned > Constants.ELEMENT_SCAN_LIMIT)
+                {
+                    hitScanLimit = true;
+                    break;
+                }
+
+                // Every element of one type gives the same family and type name: read it once per type.
+                ElementId typeId = elem.GetTypeId();
+                if (typeId != null && typeId != ElementId.InvalidElementId && !typesRead.Add(typeId.LongValue()))
+                    continue;
+
                 string familyName = elem.get_Parameter(BuiltInParameter.ALL_MODEL_FAMILY_NAME)?.AsString();
                 string typeName = elem.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_NAME)?.AsString();
 
@@ -161,8 +187,11 @@ namespace HeronTools.Services.FilterPro
         {
             hitScanLimit = false;
 
+            // Placed elements only (a type parameter is read from the element's type, below). Unplaced types
+            // used to be scanned too: their values made filters that matched nothing in any view, and they
+            // used up the scan limit.
             var filter = new ElementMulticategoryFilter(catIds);
-            var collector = new FilteredElementCollector(_doc).WherePasses(filter);
+            var collector = new FilteredElementCollector(_doc).WherePasses(filter).WhereElementIsNotElementType();
 
             bool isBuiltIn = ElementIdHelper.TryGetBuiltInParameter(param.Id, out BuiltInParameter builtInParam);
 
@@ -175,7 +204,12 @@ namespace HeronTools.Services.FilterPro
                 : (_doc.GetElement(param.Id) as ParameterElement)?.GetDefinition();
 
             var byKey = new Dictionary<string, FilterValueItem>(StringComparer.OrdinalIgnoreCase);
+            var typesRead = new HashSet<long>();
             int scanned = 0;
+
+            // Project Units rounding for a decimal parameter (null when Revit does not give one).
+            DisplayRounding rounding = null;
+            bool roundingRead = false;
 
             foreach (Element elem in collector)
             {
@@ -186,24 +220,15 @@ namespace HeronTools.Services.FilterPro
                     break;
                 }
 
-                Parameter p = null;
-
-                if (isBuiltIn)
-                    p = elem.get_Parameter(builtInParam);
-
-                if (p == null && paramDefinition != null)
-                    p = elem.get_Parameter(paramDefinition);
+                Parameter p = FindValueParameter(elem, param.Id, isBuiltIn, builtInParam, paramDefinition);
 
                 if (p == null)
                 {
-                    foreach (Parameter elemParam in elem.Parameters)
-                    {
-                        if (elemParam.Id == param.Id)
-                        {
-                            p = elemParam;
-                            break;
-                        }
-                    }
+                    // A type parameter lives on the element's type. Each type is read once: its value is the
+                    // same for every element of that type.
+                    ElementId typeId = elem.GetTypeId();
+                    if (typeId != null && typeId != ElementId.InvalidElementId && typesRead.Add(typeId.LongValue()))
+                        p = FindValueParameter(_doc.GetElement(typeId), param.Id, isBuiltIn, builtInParam, paramDefinition);
                 }
 
                 if (p == null || p.StorageType == StorageType.None || !p.HasValue)
@@ -213,27 +238,101 @@ namespace HeronTools.Services.FilterPro
                 if (item?.RawValue == null)
                     continue;
 
-                string key = item.StorageType == StorageType.String
-                    ? item.RawValue as string
-                    : item.Display;
+                // Text by its text; an element (Level, Design Option, System Type...) by its id - two
+                // different elements can carry the same name ("Option 1" in two option sets), and merging
+                // them by name made a filter that caught only one; a number by the text Revit shows.
+                string key;
+                if (item.StorageType == StorageType.String)
+                    key = item.RawValue as string;
+                else if (item.StorageType == StorageType.ElementId && item.ElementId != null)
+                    key = "#id:" + item.ElementId.LongValue();
+                else
+                    key = item.Display;
 
                 if (string.IsNullOrEmpty(key))
                     continue;
 
-                if (byKey.TryGetValue(key, out FilterValueItem known))
+                if (!byKey.TryGetValue(key, out FilterValueItem known))
                 {
-                    if (item.RawValue is double more)
-                        known.IncludeDouble(more);
-                }
-                else
-                {
-                    if (item.RawValue is double first)
-                        item.IncludeDouble(first);
                     byKey[key] = item;
+                    known = item;
+                }
+
+                if (item.RawValue is double d)
+                {
+                    known.IncludeDouble(d);
+
+                    // The whole band of values that show this text, from the project's rounding: an element
+                    // past the scan limit that shows "2700" but holds 2700.2 mm is caught too.
+                    if (!roundingRead)
+                    {
+                        rounding = DisplayRounding.For(_doc, p.Definition);
+                        roundingRead = true;
+                    }
+
+                    if (rounding != null && rounding.TryGetBand(d, out double lower, out double upper))
+                    {
+                        known.IncludeDouble(lower);
+                        known.IncludeDouble(upper);
+                    }
                 }
             }
 
-            return byKey.Values.OrderBy(v => v.Display).ToList();
+            return NameSameNamedElementsApart(byKey.Values).OrderBy(v => v.Display).ToList();
+        }
+
+        /// <summary>
+        /// Two different elements with the same name would show as two identical lines and give the same
+        /// filter name; the element id is added so the modeller can tell them apart.
+        /// </summary>
+        private static IEnumerable<FilterValueItem> NameSameNamedElementsApart(IEnumerable<FilterValueItem> values)
+        {
+            var list = values.ToList();
+            var shared = new HashSet<string>(
+                list.Where(v => v.StorageType == StorageType.ElementId && v.ElementId != null)
+                    .GroupBy(v => v.Display, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key),
+                StringComparer.OrdinalIgnoreCase);
+
+            if (shared.Count == 0)
+                return list;
+
+            return list.Select(v =>
+                v.StorageType == StorageType.ElementId && v.ElementId != null && shared.Contains(v.Display)
+                    ? new FilterValueItem($"{v.Display} (#{v.ElementId.LongValue()})", v.RawValue, v.StorageType, v.ElementId)
+                    : v);
+        }
+
+        /// <summary>The selected parameter on one element (or type), found by id, built-in or definition.</summary>
+        private static Parameter FindValueParameter(
+            Element element,
+            ElementId paramId,
+            bool isBuiltIn,
+            BuiltInParameter builtInParam,
+            Definition paramDefinition)
+        {
+            if (element == null)
+                return null;
+
+            Parameter p = null;
+
+            if (isBuiltIn)
+                p = element.get_Parameter(builtInParam);
+
+            if (p == null && paramDefinition != null)
+                p = element.get_Parameter(paramDefinition);
+
+            if (p == null)
+            {
+                foreach (Parameter elemParam in element.Parameters)
+                {
+                    if (elemParam.Id == paramId)
+                        return elemParam;
+                }
+            }
+
+            return p;
         }
 
         private FilterValueItem ExtractValueItem(
@@ -369,6 +468,42 @@ namespace HeronTools.Services.FilterPro
 
             foreach (Element element in samples)
             {
+                Parameter p = definition != null ? element.get_Parameter(definition) : null;
+                if (p == null)
+                    p = FindParameter(element, paramId, isBuiltIn, builtIn);
+                if (p != null)
+                    return p;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// A parameter the samples did not carry (a shared parameter on only one valve family, say): Revit
+        /// is asked for any element or type of the picked categories that has it - with a value first,
+        /// then empty - and only the first one is read.
+        /// </summary>
+        private Parameter FindAnywhereInCategories(ElementFilter categoryFilter, ElementId paramId)
+        {
+            bool isBuiltIn = ElementIdHelper.TryGetBuiltInParameter(paramId, out BuiltInParameter builtIn);
+            Definition definition = isBuiltIn ? null : (_doc.GetElement(paramId) as ParameterElement)?.GetDefinition();
+
+            FilterRule[] rules =
+            {
+                ParameterFilterRuleFactory.CreateHasValueParameterRule(paramId),
+                ParameterFilterRuleFactory.CreateHasNoValueParameterRule(paramId)
+            };
+
+            foreach (FilterRule rule in rules)
+            {
+                Element element = new FilteredElementCollector(_doc)
+                    .WherePasses(categoryFilter)
+                    .WherePasses(new ElementParameterFilter(rule))
+                    .FirstElement();
+
+                if (element == null)
+                    continue;
+
                 Parameter p = definition != null ? element.get_Parameter(definition) : null;
                 if (p == null)
                     p = FindParameter(element, paramId, isBuiltIn, builtIn);

@@ -40,9 +40,12 @@ namespace HeronTools.Commands.GraphicsTools
         private static readonly GraphicsColorValue HighlightColor = GraphicsColorValue.FromRgb(255, 0, 0);
         private static readonly GraphicsColorValue RestColor = GraphicsColorValue.FromRgb(128, 128, 128);
 
-        /// <summary>Per document + view: each touched element's overrides from before the highlight.</summary>
-        private static readonly Dictionary<string, Dictionary<long, OverrideGraphicSettings>> SavedByView =
-            new Dictionary<string, Dictionary<long, OverrideGraphicSettings>>();
+        /// <summary>
+        /// Per open model (the Document itself, so Save As keeps it) + view id: each touched element's overrides
+        /// from before the highlight.
+        /// </summary>
+        private static readonly PerDocumentMemory<Dictionary<long, Dictionary<long, OverrideGraphicSettings>>> SavedByView =
+            new PerDocumentMemory<Dictionary<long, Dictionary<long, OverrideGraphicSettings>>>();
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -56,19 +59,21 @@ namespace HeronTools.Commands.GraphicsTools
                 if (contextResult != Result.Succeeded)
                     return contextResult;
 
-                string key = ViewKey(context.Document, context.ActiveView);
+                Dictionary<long, Dictionary<long, OverrideGraphicSettings>> perDoc = SavedByView.GetOrAdd(
+                    context.Document, () => new Dictionary<long, Dictionary<long, OverrideGraphicSettings>>());
+                long key = context.ActiveView.Id.LongValue();
 
                 // Second click in a highlighted view: put it back - unless the highlight was already undone
                 // (Undo, or overrides changed by hand), in which case the old memory is dropped and this click
                 // highlights again.
-                if (SavedByView.TryGetValue(key, out Dictionary<long, OverrideGraphicSettings> saved))
+                if (perDoc.TryGetValue(key, out Dictionary<long, OverrideGraphicSettings> saved))
                 {
                     if (StillHighlighted(context.Document, context.ActiveView, saved))
-                        return Restore(context, key, saved);
-                    SavedByView.Remove(key);
+                        return Restore(context, saved);
+                    perDoc.Remove(key);
                 }
 
-                return Highlight(context, key);
+                return Highlight(context, perDoc, key);
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
             {
@@ -78,11 +83,12 @@ namespace HeronTools.Commands.GraphicsTools
             {
                 DialogHelper.ShowError(DialogTitle,
                     "Highlight Selection stopped, and nothing was changed.\n\nRevit said: " + ex.Message);
-                return Result.Failed;
+                return Result.Cancelled;
             }
         }
 
-        private static Result Highlight(GraphicsCommandContext context, string key)
+        private static Result Highlight(GraphicsCommandContext context,
+                                        Dictionary<long, Dictionary<long, OverrideGraphicSettings>> perDoc, long key)
         {
             SelectionCaptureResult selection = GraphicsSelectionService.GetPreselectedOrPromptElementIds(
                 context.UIDocument,
@@ -153,14 +159,13 @@ namespace HeronTools.Commands.GraphicsTools
                 return Result.Cancelled;
             }
 
-            SavedByView[key] = original;
+            perDoc[key] = original;
             return Result.Succeeded;
         }
 
-        private static Result Restore(GraphicsCommandContext context, string key,
-                                      Dictionary<long, OverrideGraphicSettings> saved)
+        private static Result Restore(GraphicsCommandContext context, Dictionary<long, OverrideGraphicSettings> saved)
         {
-            int restored = 0;
+            int restored = 0, refused = 0;
             using (var transaction = new Transaction(context.Document, "Clear Highlight"))
             {
                 transaction.Start();
@@ -177,15 +182,24 @@ namespace HeronTools.Commands.GraphicsTools
                     }
                     catch (Autodesk.Revit.Exceptions.ApplicationException)
                     {
-                        // one refused element must not stop the rest being put back
+                        refused++;   // one refused element must not stop the rest being put back
                     }
                 }
 
                 if (transaction.Commit() != TransactionStatus.Committed)
                 {
+                    // Our box is the message, so Cancelled (no second Revit box).
                     DialogHelper.ShowError(DialogTitle, "Revit did not keep the change, so the highlight is still on. Try again, or press Undo.");
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
+            }
+
+            // Some elements are still red or grey: a real problem the modeller must know about, so a pop-up.
+            if (refused > 0)
+            {
+                DialogHelper.ShowWarning(DialogTitle,
+                    $"Put back {restored} element(s), but Revit refused {refused} - they may still be red or grey. " +
+                    "A view template may now control this view's Visibility/Graphics: remove it from the view and click Highlight again, or press Undo.");
             }
 
             // The memory is kept: if this restore is undone, the next click restores again (StillHighlighted).
@@ -195,10 +209,11 @@ namespace HeronTools.Commands.GraphicsTools
         /// <summary>
         /// True if elements this tool coloured still carry the highlight: red or grey AND different from the
         /// element's own remembered colour (so an element the modeller had made red or grey himself does not count).
+        /// Every element is checked: a sample of the first 500 could all be ones reset by hand while later ones
+        /// are still red or grey, and the memory would be dropped with the highlight still on.
         /// </summary>
         private static bool StillHighlighted(Document doc, View view, Dictionary<long, OverrideGraphicSettings> saved)
         {
-            int looked = 0;
             foreach (KeyValuePair<long, OverrideGraphicSettings> entry in saved)
             {
                 ElementId id = ElementIdHelper.FromLong(entry.Key);
@@ -212,8 +227,6 @@ namespace HeronTools.Commands.GraphicsTools
                 bool sameAsOwn = own != null && own.IsValid && own.Red == c?.Red && own.Green == c?.Green && own.Blue == c?.Blue;
                 if (isHighlight && !sameAsOwn)
                     return true;
-                if (++looked >= 500)
-                    break;
             }
             return false;
         }
@@ -224,16 +237,11 @@ namespace HeronTools.Commands.GraphicsTools
         /// </summary>
         internal static List<long> HighlightedIds(Document doc, View view)
         {
-            if (SavedByView.TryGetValue(ViewKey(doc, view), out Dictionary<long, OverrideGraphicSettings> saved) &&
+            Dictionary<long, Dictionary<long, OverrideGraphicSettings>> perDoc = SavedByView.Get(doc);
+            if (perDoc != null && perDoc.TryGetValue(view.Id.LongValue(), out Dictionary<long, OverrideGraphicSettings> saved) &&
                 StillHighlighted(doc, view, saved))
                 return saved.Keys.ToList();
             return new List<long>();
-        }
-
-        private static string ViewKey(Document doc, View view)
-        {
-            string docKey = string.IsNullOrWhiteSpace(doc.PathName) ? doc.Title : doc.PathName;
-            return docKey + "|" + view.Id.LongValue();
         }
 
         private static OverrideGraphicSettings BuildSolidOverride(Document doc, GraphicsColorValue color)

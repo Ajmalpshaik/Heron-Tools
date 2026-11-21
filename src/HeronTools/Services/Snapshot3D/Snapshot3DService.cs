@@ -88,6 +88,12 @@ namespace HeronTools.Services.Snapshot3D
 
             /// <summary>Section-type marks whose view is not a section (a plan callout, a drafting reference...).</summary>
             internal int MarksNotSections { get; set; }
+
+            /// <summary>
+            /// Section marks whose name is shared by two or more section-type views, with nothing to tell which one
+            /// the mark stands for. 3D Snapshot does not guess; the modeller renames one view or opens it.
+            /// </summary>
+            internal int MarksSharedName { get; set; }
         }
 
         /// <summary>
@@ -181,7 +187,8 @@ namespace HeronTools.Services.Snapshot3D
 
                 if (e.Category != null && e.Category.Id == viewersId)
                 {
-                    View view = ViewOfMark(doc, e);
+                    View view = ViewOfMark(doc, e, out bool sharedName);
+                    if (sharedName) { read.MarksSharedName++; continue; }
                     if (view == null) { read.MarksNotSections++; continue; }
                     if (seenViews.Add(view.Id))
                         read.SectionViews.Add(view);
@@ -266,10 +273,13 @@ namespace HeronTools.Services.Snapshot3D
         /// <summary>
         /// The section view a selected section mark stands for. A mark is its own element (category Viewers)
         /// that carries its view's name; the view is found by that name and, if two section-type views share
-        /// it, by which one owns the mark.
+        /// it, by which one owns the mark. If that still does not decide, null with <paramref name="sharedName"/>
+        /// set: the API offers no other documented link from a mark to its view, and a guess could box the wrong
+        /// section.
         /// </summary>
-        private static View ViewOfMark(Document doc, Element mark)
+        private static View ViewOfMark(Document doc, Element mark, out bool sharedName)
         {
+            sharedName = false;
             string name = mark.get_Parameter(BuiltInParameter.VIEW_NAME)?.AsString();
             if (string.IsNullOrWhiteSpace(name))
                 name = mark.Name;
@@ -299,7 +309,8 @@ namespace HeronTools.Services.Snapshot3D
                 }
             }
 
-            return candidates[0];
+            sharedName = true;
+            return null;
         }
 
         private static View SingleElevationOf(Document doc, ElevationMarker marker)

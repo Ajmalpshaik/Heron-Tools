@@ -140,6 +140,19 @@ namespace HeronTools.Utils
         }
 
         /// <summary>
+        /// True when a typed number can be an Element ID in this Revit: any positive long from Revit 2024
+        /// (64-bit ids), at most int.MaxValue before it.
+        /// </summary>
+        internal static bool FitsElementId(long value)
+        {
+#if REVIT2024_OR_GREATER
+            return true;
+#else
+            return value <= int.MaxValue;
+#endif
+        }
+
+        /// <summary>
         /// Version-safe replacement for <c>new ElementId(int)</c>, which no longer exists on Revit
         /// 2027 (confirmed against the real installed API). Never construct an ElementId from a plain
         /// int directly at a call site - always go through this method.

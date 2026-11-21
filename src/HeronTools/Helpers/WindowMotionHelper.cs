@@ -81,7 +81,7 @@ namespace HeronTools.Utils
 
                 window.Loaded += onLoaded;
             }
-            catch
+            catch (System.Exception)
             {
                 // Motion is cosmetic - never let it stop a window from opening.
                 RestoreToRest(window);
@@ -109,7 +109,7 @@ namespace HeronTools.Utils
                 root.BeginAnimation(UIElement.OpacityProperty, fade);
                 translate.BeginAnimation(TranslateTransform.YProperty, rise);
             }
-            catch
+            catch (System.Exception)
             {
                 root.Opacity = 1.0;
                 root.RenderTransform = null;
@@ -159,7 +159,7 @@ namespace HeronTools.Utils
                     HandleClosing(window, state, e);
                 };
             }
-            catch
+            catch (System.Exception)
             {
                 // Motion is cosmetic - never let it stop a window from closing.
             }
@@ -202,12 +202,12 @@ namespace HeronTools.Utils
                 // MUST be read before the cancel below: WPF throws DialogResult away when a close is
                 // cancelled, so this is the only moment the real value is still available.
                 try { state.SavedDialogResult = window.DialogResult; }
-                catch { state.SavedDialogResult = null; }
+                catch (System.Exception) { state.SavedDialogResult = null; }
 
                 e.Cancel = true;
                 PlayExit(window, root, state);
             }
-            catch
+            catch (System.Exception)
             {
                 // If anything at all goes wrong, let the window close the normal way immediately.
                 e.Cancel = false;
@@ -256,7 +256,7 @@ namespace HeronTools.Utils
                 fade.Completed += delegate { FinishClose(window, state); };
                 root.BeginAnimation(UIElement.OpacityProperty, fade);
             }
-            catch
+            catch (System.Exception)
             {
                 FinishClose(window, state);
             }
@@ -279,7 +279,7 @@ namespace HeronTools.Utils
                     state.Timer = null;
                 }
             }
-            catch
+            catch (System.Exception)
             {
                 // A timer that cannot be stopped is harmless - FinishClose is single-shot.
             }
@@ -297,11 +297,11 @@ namespace HeronTools.Utils
                     window.Close();
                 }
             }
-            catch
+            catch (System.Exception)
             {
                 // Modeless windows throw when DialogResult is set. Close plainly instead.
                 try { window.Close(); }
-                catch { }
+                catch (System.Exception) { }
             }
         }
 
@@ -316,7 +316,7 @@ namespace HeronTools.Utils
                 root.Opacity = 1.0;
                 root.RenderTransform = null;
             }
-            catch
+            catch (System.Exception)
             {
                 // Nothing further to do - the window is already in whatever state it can reach.
             }

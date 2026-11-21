@@ -8,7 +8,10 @@
 // The Reset Graphics window. Modal (opened from its command), so its buttons may change the model directly:
 // each Reset or Restore is its own named Undo step, committed before the window carries on. The counting and
 // resetting are ResetGraphicsService's; this file only gathers the choices, shows the count, and says what
-// happened. It remembers its choices (WindowMemory "reset-graphics"): what, where, the picked views BY NAME,
+// happened. Ticking views does not count at once: the count waits until the ticking stops for a moment
+// (RecountSettle), so ticking ten views in a big model costs one count, not ten. The wait is a DispatcherTimer
+// on this window's own thread, which is Revit's thread while the window is open (it is modal), so the count
+// still calls the Revit API from the right place. It remembers its choices (WindowMemory "reset-graphics"): what, where, the picked views BY NAME,
 // and "leave Heron's colours".
 
 using System;
@@ -18,6 +21,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Autodesk.Revit.DB;
 using HeronTools.Services.ResetGraphics;
 using HeronTools.Utils;
@@ -29,9 +33,13 @@ namespace HeronTools.UI
         /// <summary>Counting many views on every click would be slow; beyond this many, Reset counts as it goes.</summary>
         private const int CountViewsUpTo = 15;
 
+        /// <summary>How long the ticking must pause before the count runs.</summary>
+        private static readonly TimeSpan RecountSettle = TimeSpan.FromMilliseconds(600);
+
         private readonly Document _doc;
         private readonly View _activeView;
         private readonly ObservableCollection<ViewChoice> _views = new ObservableCollection<ViewChoice>();
+        private readonly DispatcherTimer _recountTimer;
         private bool _loading = true;
 
         /// <summary>True when a Reset or Restore in this window committed a change.</summary>
@@ -47,12 +55,16 @@ namespace HeronTools.UI
             _activeView = activeView;
             ThisViewText.Text = "This view (" + (activeView?.Name ?? "none") + ")";
 
+            _recountTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = RecountSettle };
+            _recountTimer.Tick += (s, e) => Recount();
+            Closed += (s, e) => _recountTimer.Stop();
+
             foreach (View view in new FilteredElementCollector(doc).OfClass(typeof(View)).Cast<View>()
                          .Where(v => !v.IsTemplate && SafeOverridesAllowed(v))
                          .OrderBy(v => v.ViewType.ToString()).ThenBy(v => v.Name, StringComparer.OrdinalIgnoreCase))
             {
                 var choice = new ViewChoice(view);
-                choice.PropertyChanged += (s, e) => { if (!_loading) { UpdateViewsCount(); Recount(); } };
+                choice.PropertyChanged += (s, e) => { if (!_loading) { UpdateViewsCount(); RecountSoon(); } };
                 _views.Add(choice);
             }
             ViewsList.ItemsSource = _views;
@@ -146,7 +158,7 @@ namespace HeronTools.UI
                 choice.IsChecked = tick;
             _loading = false;
             UpdateViewsCount();
-            Recount();
+            RecountSoon();
         }
 
         private void UpdateViewsCount()
@@ -167,17 +179,37 @@ namespace HeronTools.UI
         private List<ViewResetPlan> Plan(List<View> views)
         {
             var plans = new List<ViewResetPlan>();
+            var check = new ResetGraphicsService.OverrideCheck();   // one per count, shared by every view
             foreach (View view in views)
             {
                 ISet<long> keep = KeepHeronCheck.IsChecked == true ? HeronColours.In(_doc, view) : null;
-                plans.Add(ResetGraphicsService.Plan(_doc, view, What, null, keep));
+                plans.Add(ResetGraphicsService.Plan(_doc, view, What, null, keep, check));
             }
             return plans;
+        }
+
+        /// <summary>
+        /// Counts once the ticking has paused for <see cref="RecountSettle"/>; every new tick starts the wait again.
+        /// Reset stays pressable meanwhile - it plans the views itself when pressed.
+        /// </summary>
+        private void RecountSoon()
+        {
+            _recountTimer.Stop();
+            int picked = TargetViews().Count;
+            if (picked == 0 || picked > CountViewsUpTo)
+            {
+                Recount();   // nothing to count in Revit - answer at once
+                return;
+            }
+            FoundText.Text = "Counting when you stop ticking...";
+            ResetButton.IsEnabled = true;
+            _recountTimer.Start();
         }
 
         /// <summary>The line above the footer: what a press of Reset would clear.</summary>
         private void Recount()
         {
+            _recountTimer.Stop();
             List<View> views = TargetViews();
             if (views.Count == 0)
             {
@@ -224,6 +256,7 @@ namespace HeronTools.UI
 
         private void OnReset()
         {
+            _recountTimer.Stop();   // Reset plans the views itself; a waiting count would only repeat it
             List<View> views = TargetViews();
             if (views.Count == 0)
             {
@@ -254,14 +287,20 @@ namespace HeronTools.UI
         {
             try
             {
-                (int elements, int categories, bool committed) = ResetGraphicsMemory.Restore(_doc);
+                (int elements, int categories, int refused, bool committed) = ResetGraphicsMemory.Restore(_doc);
+                string refusedNote = refused > 0
+                    ? $" {refused} could not be put back - Revit refused them (a view template may now control the view's Visibility/Graphics)."
+                    : "";
                 if (!committed)
                     ShowStatus("Revit did not accept the change, so nothing was restored.", problem: true);
                 else if (elements + categories == 0)
-                    ShowStatus("Nothing could be restored: the views or elements of the last reset are gone.", problem: true);
+                    ShowStatus(refused > 0
+                        ? "Nothing was restored." + refusedNote
+                        : "Nothing could be restored: the views or elements of the last reset are gone.", problem: true);
                 else
                 {
-                    ShowStatus($"Restored {elements} element(s) and {categories} categor{(categories == 1 ? "y" : "ies")} as they were before the last reset.", problem: false);
+                    ShowStatus($"Restored {elements} element(s) and {categories} categor{(categories == 1 ? "y" : "ies")} as they were before the last reset." + refusedNote,
+                               problem: refused > 0);
                     ChangedSomething = true;
                 }
             }

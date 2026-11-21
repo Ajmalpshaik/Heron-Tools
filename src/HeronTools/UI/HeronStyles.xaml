@@ -23,6 +23,17 @@ Shades are see-through versions of these, never new colours: Mist over Ink at 92
 72 % secondary, 55 % quiet, 14 % a line, 8 % / 4 % a faint fill.
 Never add a colour here that is not in that list - ask first.
 
+Quick Menu wheel shades (the "Wheel..." keys below): the wheel floats over the Revit view, not over a
+Heron window, so it needs a few more see-through steps of the same brand colours - still no new colour:
+    Surface 95 % / 90 %   slot fill / slot whose tool is not available here
+    Ink 98 % / 85 % / 50 %  hub fill / empty slot and halo / empty slot in the Settings preview
+    Ink 0 %               the halo's fade-out edge (gradient end only)
+    Mist 86 % / 45 %      slot name / slot that cannot run here
+    Mist 25 % / 20 % / 10 %  ruler tick / hub tick / rim
+    Accent 12 % to 42 %   the lit slot's glow (gradient)   Accent 45 % to 18 %  a lit bubble's glow
+    Success 28 %          the slot a tool is being dropped on (Settings preview)
+Only the Quick Menu wheels use them; a window uses the shades above.
+
 Font: Manrope, built into HeronTools.dll (Resources/Fonts, SIL Open Font License 1.1), with Segoe UI as
 the fallback.
 
@@ -78,6 +89,25 @@ by today's windows; they are kept for the next tools moved in, and use brand col
     <!-- Ink at 1/255: looks like nothing, but a see-through window still gets every click and key over it
          (Model Walk's overlay catches the mouse over the Revit view this way). -->
     <SolidColorBrush x:Key="InputCatcher" Color="#010F0F10"/>
+
+    <!-- Quick Menu wheel shades (see the header). Only the wheel and its Settings preview use these. -->
+    <SolidColorBrush x:Key="WheelSlotFill" Color="#F21B1B1F"/>            <!-- Surface 95 % -->
+    <SolidColorBrush x:Key="WheelSlotUnavailableFill" Color="#E61B1B1F"/> <!-- Surface 90 % -->
+    <SolidColorBrush x:Key="WheelSlotEmptyFill" Color="#D90F0F10"/>       <!-- Ink 85 % -->
+    <SolidColorBrush x:Key="WheelPreviewEmptyFill" Color="#800F0F10"/>    <!-- Ink 50 % -->
+    <SolidColorBrush x:Key="WheelHubFill" Color="#FA0F0F10"/>             <!-- Ink 98 % -->
+    <SolidColorBrush x:Key="WheelTextIdle" Color="#DBF7F5F2"/>            <!-- Mist 86 % -->
+    <SolidColorBrush x:Key="WheelTextDisabled" Color="#73F7F5F2"/>        <!-- Mist 45 % -->
+    <SolidColorBrush x:Key="WheelTick" Color="#40F7F5F2"/>                <!-- Mist 25 % -->
+    <SolidColorBrush x:Key="WheelHubTick" Color="#33F7F5F2"/>             <!-- Mist 20 % -->
+    <SolidColorBrush x:Key="WheelRim" Color="#1AF7F5F2"/>                 <!-- Mist 10 % -->
+    <SolidColorBrush x:Key="WheelDropFill" Color="#473ECF8E"/>            <!-- Success 28 % -->
+    <Color x:Key="WheelGlowInnerColor">#1FFD641A</Color>                  <!-- Accent 12 % -->
+    <Color x:Key="WheelGlowOuterColor">#6BFD641A</Color>                  <!-- Accent 42 % -->
+    <Color x:Key="WheelBubbleGlowCentreColor">#73FD641A</Color>           <!-- Accent 45 % -->
+    <Color x:Key="WheelBubbleGlowEdgeColor">#2EFD641A</Color>             <!-- Accent 18 % -->
+    <Color x:Key="WheelHaloColor">#D90F0F10</Color>                       <!-- Ink 85 % -->
+    <Color x:Key="WheelHaloFadeColor">#000F0F10</Color>                   <!-- Ink 0 % -->
 
     <!-- Aliases used by the templates below -->
     <SolidColorBrush x:Key="PrimaryBrush" Color="#FFFD641A"/>

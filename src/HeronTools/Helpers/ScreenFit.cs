@@ -10,7 +10,8 @@
 // a tall window does not fit a small or scaled laptop screen (Ajmal's View Crop window, 2026-11-08: "the
 // downside I cannot see"). On opening - and whenever it grows - the window is moved up (or left) into the
 // screen's usable area (the taskbar excluded) and, if it is still taller than that area, made exactly as tall
-// as it - its middle then scrolls where the window has a scroll area.
+// as it - its middle then scrolls where the window has a scroll area. The window's own size limits are
+// remembered, so moved to a bigger screen it gets them back instead of staying capped.
 // Every window that uses WindowMotionHelper.AttachStandardEntrance gets this.
 
 using System;
@@ -26,29 +27,58 @@ namespace HeronTools.Utils
         /// <summary>Space kept free between the window and the screen edge, in WPF units.</summary>
         private const double Gap = 8;
 
+        /// <summary>The window's own size limits, as its XAML set them, before any screen lowered them.</summary>
+        private sealed class OwnLimits
+        {
+            public double MinHeight, MinWidth, MaxHeight, MaxWidth;
+        }
+
         internal static void Attach(Window window)
         {
             if (window == null)
                 return;
-            window.Loaded += (s, e) => Fit(window);
-            window.SizeChanged += (s, e) => Fit(window);
+            OwnLimits own = null;
+            // Read the window's own limits once, when it first opens, so every later fit starts from
+            // them - a window opened on a laptop and dragged to a big monitor grows back to its own size.
+            window.Loaded += (s, e) =>
+            {
+                if (own == null)
+                    own = new OwnLimits
+                    {
+                        MinHeight = window.MinHeight,
+                        MinWidth = window.MinWidth,
+                        MaxHeight = window.MaxHeight,
+                        MaxWidth = window.MaxWidth
+                    };
+                Fit(window, own, true);
+            };
+            window.SizeChanged += (s, e) => Fit(window, own, true);
+            // Moved to another screen: only the limits follow that screen. The window is not pushed
+            // about while the modeller is still dragging it.
+            window.LocationChanged += (s, e) => Fit(window, own, false);
         }
 
-        private static void Fit(Window window)
+        private static void Fit(Window window, OwnLimits own, bool place)
         {
             try
             {
-                if (window.WindowState != WindowState.Normal || !window.IsLoaded)
+                if (own == null || window.WindowState != WindowState.Normal || !window.IsLoaded)
                     return;
                 if (!TryGetWorkArea(window, out Rect work))
                     work = SystemParameters.WorkArea;
 
                 double maxHeight = Math.Max(200, work.Height - 2 * Gap);
                 double maxWidth = Math.Max(300, work.Width - 2 * Gap);
-                if (window.MaxHeight > maxHeight)
-                    window.MaxHeight = maxHeight;
-                if (window.MaxWidth > maxWidth)
-                    window.MaxWidth = maxWidth;
+                // WPF lets MinHeight / MinWidth win over MaxHeight / MaxWidth, so a window whose
+                // minimum is taller than a small screen would still run off it (footer buttons
+                // unreachable). Lower the minimum first, then cap the maximum - always from the
+                // window's own limits, so a bigger screen gives them back.
+                SetIfChanged(window, FrameworkElement.MinHeightProperty, Math.Min(own.MinHeight, maxHeight));
+                SetIfChanged(window, FrameworkElement.MinWidthProperty, Math.Min(own.MinWidth, maxWidth));
+                SetIfChanged(window, FrameworkElement.MaxHeightProperty, Math.Min(own.MaxHeight, maxHeight));
+                SetIfChanged(window, FrameworkElement.MaxWidthProperty, Math.Min(own.MaxWidth, maxWidth));
+                if (!place)
+                    return;
 
                 double height = Math.Min(window.ActualHeight, maxHeight);
                 double width = Math.Min(window.ActualWidth, maxWidth);
@@ -67,6 +97,13 @@ namespace HeronTools.Utils
             {
                 // Never let placing a window stop it from working.
             }
+        }
+
+        /// <summary>Sets a size limit only when it really changes, so a fit never starts another layout pass for nothing.</summary>
+        private static void SetIfChanged(Window window, DependencyProperty property, double value)
+        {
+            if (!((double)window.GetValue(property)).Equals(value))
+                window.SetValue(property, value);
         }
 
         // ------------------------------------------------------------------ the usable area of THIS window's screen

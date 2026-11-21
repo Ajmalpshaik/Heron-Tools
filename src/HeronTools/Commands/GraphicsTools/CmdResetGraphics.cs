@@ -104,6 +104,7 @@ namespace HeronTools.Commands.GraphicsTools
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            ResetGraphicsWindow window = null;
             try
             {
                 Result contextResult = GraphicsCommandService.TryCreateContext(commandData, "Reset Graphics", ref message,
@@ -111,7 +112,7 @@ namespace HeronTools.Commands.GraphicsTools
                 if (contextResult != Result.Succeeded)
                     return contextResult;
 
-                var window = new ResetGraphicsWindow(context.Document, context.ActiveView);
+                window = new ResetGraphicsWindow(context.Document, context.ActiveView);
                 new WindowInteropHelper(window) { Owner = commandData.Application.MainWindowHandle };
                 window.ShowDialog();
                 // Each Reset / Restore in the window committed its own Undo step; nothing is open here.
@@ -119,7 +120,15 @@ namespace HeronTools.Commands.GraphicsTools
             }
             catch (Exception ex)
             {
-                DialogHelper.ShowError("Reset Graphics", "The Reset Graphics window could not open. Revit said: " + ex.Message);
+                // Any result but Succeeded makes Revit undo what this command committed - so a reset
+                // the modeller already made in the window is kept, and they are told so.
+                if (window != null && window.ChangedSomething)
+                {
+                    DialogHelper.ShowError("Reset Graphics", "The Reset Graphics window stopped. The resets already made were kept. Revit said: " + ex.Message);
+                    return Result.Succeeded;
+                }
+
+                DialogHelper.ShowError("Reset Graphics", "The Reset Graphics window could not open. Nothing was changed. Revit said: " + ex.Message);
                 return Result.Cancelled;
             }
         }
@@ -149,18 +158,26 @@ namespace HeronTools.Commands.GraphicsTools
 
             try
             {
-                (int restoredElements, int restoredCategories, bool committed) = ResetGraphicsMemory.Restore(doc);
+                (int restoredElements, int restoredCategories, int refused, bool committed) = ResetGraphicsMemory.Restore(doc);
                 if (!committed)
                 {
                     DialogHelper.ShowError(Title, "Revit did not accept the change, so nothing was restored. In a workshared model, check that no colleague owns the view.");
                     return Result.Cancelled;
                 }
+                string refusedNote = refused > 0
+                    ? $"{refused} override(s) could not be put back - Revit refused them. A view template may now control the view's Visibility/Graphics; remove it from the view, or set those overrides by hand."
+                    : null;
                 if (restoredElements + restoredCategories == 0)
                 {
-                    DialogHelper.ShowInfo(Title, "Nothing could be restored: the views or elements of the last reset are gone.");
+                    DialogHelper.ShowInfo(Title, refusedNote != null
+                        ? "Nothing was restored. " + refusedNote
+                        : "Nothing could be restored: the views or elements of the last reset are gone.");
                     return Result.Cancelled;
                 }
-                return Result.Succeeded;   // silent: the views show it
+                // Part of it is still in the reset look: the modeller must know, so this is a real problem pop-up.
+                if (refusedNote != null)
+                    DialogHelper.ShowWarning(Title, $"Restored {restoredElements + restoredCategories} override(s). " + refusedNote);
+                return Result.Succeeded;   // silent when complete: the views show it
             }
             catch (Exception ex)
             {

@@ -463,6 +463,9 @@
                     <Button x:Name="shuffle_colors_button" Content="Shuffle colours" Style="{StaticResource SecondaryButton}"
                             MinWidth="128" Margin="0,0,8,0"
                             ToolTip="Give the filters new random colours in the target views. Click again to re-shuffle."/>
+                    <Button x:Name="restore_colors_button" Content="Restore colours" Style="{StaticResource SecondaryButton}"
+                            MinWidth="128" Margin="0,0,8,0" IsEnabled="False"
+                            ToolTip="Put back the colours and patterns the filters had before Shuffle, in the target views.&#x0a;A filter you changed by hand after Shuffle is left as it is."/>
                     <Button x:Name="apply_view_button" Content="Apply to view" Style="{StaticResource PrimaryButton}"
                             MinWidth="140" Margin="0,0,16,0"
                             ToolTip="Make the filters and add them to the target views, first in the list."/>

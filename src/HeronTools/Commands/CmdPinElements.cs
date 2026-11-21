@@ -26,6 +26,7 @@ namespace HeronTools.Commands
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            PinElementsWindow window = null;
             try
             {
                 UIDocument uidoc = commandData?.Application?.ActiveUIDocument;
@@ -42,7 +43,7 @@ namespace HeronTools.Commands
                     return Result.Cancelled;
                 }
 
-                var window = new PinElementsWindow(doc);
+                window = new PinElementsWindow(doc);
                 new WindowInteropHelper(window)
                 {
                     Owner = commandData.Application.MainWindowHandle
@@ -55,8 +56,16 @@ namespace HeronTools.Commands
             }
             catch (System.Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                // Any result but Succeeded makes Revit undo what this command committed: keep a Pin /
+                // Unpin the modeller already ran in the window, and say so in plain words.
+                if (window != null && window.HasExecutedOperation)
+                {
+                    DialogHelper.ShowError(Title, "The Pin Elements window stopped. The pins already changed were kept. Revit said: " + ex.Message);
+                    return Result.Succeeded;
+                }
+
+                DialogHelper.ShowError(Title, "Pin Elements could not run. Nothing was changed. Revit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }

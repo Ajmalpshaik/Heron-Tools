@@ -311,8 +311,19 @@ namespace HeronTools.UI
                 status += string.Format(" {0} left alone - a colleague owns them.", summary.OwnedByOthersCount);
             }
 
+            if (summary.OutOfDateCount > 0)
+            {
+                status += string.Format(" {0} left alone - changed or deleted in the central model; use Reload Latest, then run again.",
+                    summary.OutOfDateCount);
+            }
+
+            if (summary.SkippedCount > 0 && !string.IsNullOrWhiteSpace(summary.FirstSkipReason))
+            {
+                status += " Skipped because " + summary.FirstSkipReason;
+            }
+
             HasExecutedOperation = summary.UpdatedCount > 0 || HasExecutedOperation;
-            UpdateUiState(status, isProblem: summary.OwnedByOthersCount > 0);
+            UpdateUiState(status, isProblem: summary.OwnedByOthersCount > 0 || summary.OutOfDateCount > 0 || summary.SkippedCount > 0);
         }
 
         private void OnCloseClick(object sender, RoutedEventArgs e)

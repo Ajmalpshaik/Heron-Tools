@@ -51,7 +51,6 @@ namespace HeronTools.Services.Colorize
                     continue;
                 }
 
-                ColorizeMemory.DropIfStale(doc, view);   // an undone earlier run must not keep its old originals
                 MergeSummary(summary, ApplyColorize(doc, view, selection, colors, skipped));
             }
 
@@ -160,7 +159,7 @@ namespace HeronTools.Services.Colorize
                 OverrideGraphicSettings settings = BuildOverrideSettings(selection, color, patternId);
 
                 matched = WithInsulationAndLining(doc, view, matched);
-                ColorizeMemory.Remember(doc, view, matched);   // so Restore original can put them back
+                ColorizeMemory.Remember(doc, view, matched, settings);   // so Restore original can put them back
                 MergeSummary(summary, GraphicsElementService.ApplyOverrides(doc, view, matched, settings));
             }
 
@@ -301,7 +300,7 @@ namespace HeronTools.Services.Colorize
                 OverrideGraphicSettings settings = BuildOverrideSettings(selection, color, patternId);
 
                 matched = WithInsulationAndLining(doc, view, matched);
-                ColorizeMemory.Remember(doc, view, matched);   // so Restore original can put them back
+                ColorizeMemory.Remember(doc, view, matched, settings);   // so Restore original can put them back
                 MergeSummary(summary, GraphicsElementService.ApplyOverrides(doc, view, matched, settings));
                 valueIndex++;
             }

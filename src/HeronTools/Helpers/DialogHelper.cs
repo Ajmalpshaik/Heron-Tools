@@ -118,6 +118,10 @@ namespace HeronTools.Utils
                 return ShowPlain(title, heading, message, details, secondText != null);
             }
 
+            // Once the Heron window has loaded, the modeller may already have seen (and answered) it. A failure
+            // after that must not ask the same question again as a TaskDialog - the second answer would win.
+            bool appeared = false;
+            window.Loaded += (s, e) => appeared = true;
             try
             {
                 window.ShowDialog();
@@ -125,6 +129,8 @@ namespace HeronTools.Utils
             }
             catch (Exception)
             {
+                if (appeared)
+                    return window.Accepted;   // a question not clearly answered Yes counts as No
                 return ShowPlain(title, heading, message, details, secondText != null);
             }
         }

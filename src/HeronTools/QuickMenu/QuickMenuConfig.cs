@@ -78,6 +78,12 @@ namespace HeronTools.Services.QuickMenu
         /// </summary>
         public bool LoadFailed { get; private set; }
 
+        /// <summary>
+        /// The full path a damaged layout file (empty, or not one line we know) was moved to, so this is
+        /// the DEFAULT layout and it is safe to save. Null when nothing was set aside.
+        /// </summary>
+        public string SetAsidePath { get; private set; }
+
         /// <summary>Reads the saved layout, or hands back the defaults if there is nothing saved
         /// or the saved file cannot be read (LoadFailed tells the two apart).</summary>
         internal static QuickMenuConfig Load()
@@ -85,90 +91,94 @@ namespace HeronTools.Services.QuickMenu
             var config = new QuickMenuConfig();
             var readSlots = new Dictionary<int, string>();
             int recognised = 0;
+            string path = AppDataConfigStore.GetPath(FileName);
+            string[] fileLines = null;
 
             try
             {
-                string path = AppDataConfigStore.GetPath(FileName);
                 if (File.Exists(path))
                 {
-                    foreach (string rawLine in File.ReadAllLines(path))
-                    {
-                        string line = (rawLine ?? string.Empty).Trim();
-                        if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))
-                        {
-                            continue;
-                        }
-
-                        int split = line.IndexOf('=');
-                        if (split <= 0)
-                        {
-                            continue;
-                        }
-
-                        string name = line.Substring(0, split).Trim();
-                        string value = line.Substring(split + 1).Trim();
-
-                        if (string.Equals(name, "SlotCount", StringComparison.OrdinalIgnoreCase))
-                        {
-                            recognised++;
-                            config.SlotCount = ParseInt(value, DefaultSlotCount);
-                        }
-                        else if (string.Equals(name, "Diameter", StringComparison.OrdinalIgnoreCase))
-                        {
-                            recognised++;
-                            config.Diameter = ParseInt(value, DefaultDiameter);
-                        }
-                        else if (string.Equals(name, "Style", StringComparison.OrdinalIgnoreCase))
-                        {
-                            recognised++;
-                            config.Style = QuickMenuLook.ParseStyle(value);
-                        }
-                        else if (string.Equals(name, "Names", StringComparison.OrdinalIgnoreCase))
-                        {
-                            recognised++;
-                            config.ShowNames = !string.Equals(value, "Off", StringComparison.OrdinalIgnoreCase);
-                        }
-                        else if (string.Equals(name, "Opening", StringComparison.OrdinalIgnoreCase))
-                        {
-                            recognised++;
-                            config.Opening = QuickMenuLook.ParseOpening(value);
-                        }
-                        else if (name.StartsWith("Slot", StringComparison.OrdinalIgnoreCase))
-                        {
-                            int slotNumber = ParseInt(name.Substring(4), 0);
-                            if (slotNumber >= 1 && slotNumber <= MaxSlotCount)
-                            {
-                                recognised++;
-                                readSlots[slotNumber] = value;
-                            }
-                        }
-                    }
-
-                    // A file with not one line we know (garbled, or emptied by a crash) is not a layout:
-                    // treat it like an unreadable file, so it is never saved over as an empty wheel.
-                    if (recognised == 0)
-                    {
-                        throw new InvalidDataException("The Quick Menu layout file has no readable lines.");
-                    }
-                }
-                else
-                {
-                    FillDefaultSlots(readSlots);
+                    fileLines = File.ReadAllLines(path);
                 }
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException ||
+                                       ex is System.Security.SecurityException)
             {
-                // The file is there but could not be read (locked, no access, ...). Show the default
-                // layout - not a half-read one, and not a wheel of empty slots - and flag it so the
-                // customise window does not save the defaults over the real file.
+                // The file is there but could not be read (locked by another program, no access, ...).
+                // Show the default layout and flag it, so the customise window does not save the
+                // defaults over the real file, which is most likely fine.
                 config.LoadFailed = true;
-                config.SlotCount = DefaultSlotCount;
-                config.Diameter = DefaultDiameter;
-                config.Style = QuickMenuLook.DefaultStyle;
-                config.ShowNames = true;
-                config.Opening = QuickMenuLook.DefaultOpening;
-                readSlots.Clear();
+            }
+
+            if (fileLines == null)
+            {
+                // No saved layout yet, or it could not be read (LoadFailed): the defaults.
                 FillDefaultSlots(readSlots);
+            }
+            else
+            {
+                foreach (string rawLine in fileLines)
+                {
+                    string line = (rawLine ?? string.Empty).Trim();
+                    if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    int split = line.IndexOf('=');
+                    if (split <= 0)
+                    {
+                        continue;
+                    }
+
+                    string name = line.Substring(0, split).Trim();
+                    string value = line.Substring(split + 1).Trim();
+
+                    if (string.Equals(name, "SlotCount", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.SlotCount = ParseInt(value, DefaultSlotCount);
+                    }
+                    else if (string.Equals(name, "Diameter", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.Diameter = ParseInt(value, DefaultDiameter);
+                    }
+                    else if (string.Equals(name, "Style", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.Style = QuickMenuLook.ParseStyle(value);
+                    }
+                    else if (string.Equals(name, "Names", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.ShowNames = !string.Equals(value, "Off", StringComparison.OrdinalIgnoreCase);
+                    }
+                    else if (string.Equals(name, "Opening", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.Opening = QuickMenuLook.ParseOpening(value);
+                    }
+                    else if (name.StartsWith("Slot", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int slotNumber = ParseInt(name.Substring(4), 0);
+                        if (slotNumber >= 1 && slotNumber <= MaxSlotCount)
+                        {
+                            recognised++;
+                            readSlots[slotNumber] = value;
+                        }
+                    }
+                }
+
+                // A file with not one line we know (empty, garbled, or emptied by a crash) is not a
+                // layout. Reading it again will never work, so set it aside as .bad (kept, not
+                // deleted) and start from the default layout - which may then be saved.
+                if (recognised == 0)
+                {
+                    config.SetAsidePath = SetAside(path);
+                    readSlots.Clear();
+                    FillDefaultSlots(readSlots);
+                }
             }
 
             config.SlotCount = Clamp(config.SlotCount, MinSlotCount, MaxSlotCount);
@@ -184,6 +194,30 @@ namespace HeronTools.Services.QuickMenu
             return config;
         }
 
+        /// <summary>
+        /// Renames a damaged layout file to quickmenu-slots.txt.bad (replacing an older .bad) and returns the
+        /// new path. If the rename fails, the damaged file stays where it is - it holds no layout, so a later
+        /// Save may write over it - and the old path is returned.
+        /// </summary>
+        private static string SetAside(string path)
+        {
+            string badPath = path + ".bad";
+            try
+            {
+                if (File.Exists(badPath))
+                {
+                    File.Delete(badPath);
+                }
+
+                File.Move(path, badPath);
+                return badPath;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return path;
+            }
+        }
+
         private static void FillDefaultSlots(Dictionary<int, string> slots)
         {
             for (int i = 0; i < DefaultSlotKeys.Length; i++)
@@ -192,9 +226,13 @@ namespace HeronTools.Services.QuickMenu
             }
         }
 
-        /// <summary>Writes the layout back. Best-effort - returns false if the file could not be written.</summary>
-        internal bool Save()
+        /// <summary>
+        /// Writes the layout back. Best-effort - returns false if the file could not be written, with
+        /// Windows' own reason in <paramref name="error"/> (null on success).
+        /// </summary>
+        internal bool Save(out string error)
         {
+            error = null;
             try
             {
                 Normalize();
@@ -235,8 +273,10 @@ namespace HeronTools.Services.QuickMenu
                 }
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // Hand back the real reason (locked, read-only, no access, disk full ...) - not a guess.
+                error = ex.Message;
                 return false;
             }
         }
