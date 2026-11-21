@@ -30,6 +30,9 @@ namespace HeronTools.Services.ViewCrop
             ref string message)
         {
             string extentSourceLabel = "(not yet set)";
+            // Set once the run's crops are kept. After that an error must not return Failed,
+            // because Revit then undoes everything this command committed.
+            bool workKept = false;
             try
             {
                 UIDocument uidoc = commandData.Application?.ActiveUIDocument;
@@ -116,9 +119,14 @@ namespace HeronTools.Services.ViewCrop
                     }
 
                     if (batch.UpdatedCount > 0)
+                    {
                         runGroup.Assimilate();
+                        workKept = true;
+                    }
                     else
+                    {
                         runGroup.RollBack();
+                    }
                 }
 
                 try
@@ -143,11 +151,26 @@ namespace HeronTools.Services.ViewCrop
             catch (Exception ex)
             {
                 string logPath = ViewCropReportPresenter.TryWriteErrorLog("ViewCrop", commandTitle, extentSourceLabel, ex);
-                DialogHelper.ShowError(
-                    commandTitle,
-                    $"{ex.Message}\n\nDetails log:\n{logPath}");
-                return Result.Failed;
+                return ReportUnexpectedError(commandTitle, ex, logPath, workKept);
             }
+        }
+
+        /// <summary>
+        /// Shows an unexpected error in plain words. The tool's own box is the message, so the
+        /// result is Cancelled (no second Revit box) - or Succeeded when crops were already kept,
+        /// because any other result makes Revit undo them.
+        /// </summary>
+        internal static Result ReportUnexpectedError(string commandTitle, Exception ex, string logPath, bool workKept)
+        {
+            string firstLine = workKept
+                ? "Something went wrong after the crops were made. The views already cropped were kept - use Undo if you do not want them."
+                : "Something went wrong, so nothing was changed.";
+
+            DialogHelper.ShowError(
+                commandTitle,
+                $"{firstLine}\n\nReason: {ex.Message}\n\nDetails log:\n{logPath}");
+
+            return workKept ? Result.Succeeded : Result.Cancelled;
         }
 
         internal static IList<View> ResolveTargetViews(
@@ -213,7 +236,9 @@ namespace HeronTools.Services.ViewCrop
             if (batch.UpdatedCount > 0)
                 return Result.Succeeded;
 
-            return batch.FailedCount > 0 ? Result.Failed : Result.Cancelled;
+            // Nothing was changed. Failed views are already listed in the tool's own summary box,
+            // so Cancelled - Failed would add a second, generic Revit error box.
+            return Result.Cancelled;
         }
 
         /// <summary>

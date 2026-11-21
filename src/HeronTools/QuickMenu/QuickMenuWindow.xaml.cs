@@ -37,26 +37,27 @@ namespace HeronTools.UI.QuickMenu
         /// </summary>
         private const double DesignRadius = QuickMenuDesign.DesignRadius;
 
-        // Heron brand only: Surface #1B1B1F and Ink #0F0F10 for the ring, Mist #F7F5F2 at an opacity for
-        // text and lines, Accent #FD641A for the slot being pointed at.
-        private static readonly Brush WedgeFill = MakeBrush(0xF2, 0x1B, 0x1B, 0x1F);            // Surface 95 %
-        private static readonly Brush WedgeFillEmpty = MakeBrush(0xD9, 0x0F, 0x0F, 0x10);       // Ink 85 %
-        private static readonly Brush WedgeFillUnavailable = MakeBrush(0xE6, 0x1B, 0x1B, 0x1F); // Surface 90 %
-        private static readonly Brush WedgeStroke = MakeBrush(0x24, 0xF7, 0xF5, 0xF2);          // Mist 14 %
-        private static readonly Brush WedgeStrokeHover = MakeBrush(0xFF, 0xFD, 0x64, 0x1A);     // Accent
-        private static readonly Brush WedgeStrokeHoverDisabled = MakeBrush(0x47, 0xF7, 0xF5, 0xF2); // Mist 28 %
-        private static readonly Brush RimIdle = MakeBrush(0x1A, 0xF7, 0xF5, 0xF2);              // Mist 10 %
-        private static readonly Brush RulerTick = MakeBrush(0x40, 0xF7, 0xF5, 0xF2);            // Mist 25 %
-        private static readonly Brush RulerTickMajor = MakeBrush(0xB3, 0xFD, 0x64, 0x1A);       // Accent 70 %
-        private static readonly Brush HubFill = MakeBrush(0xFA, 0x0F, 0x0F, 0x10);              // Ink 98 %
-        private static readonly Brush HubStroke = MakeBrush(0x24, 0xF7, 0xF5, 0xF2);            // Mist 14 %
-        private static readonly Brush HubTick = MakeBrush(0x33, 0xF7, 0xF5, 0xF2);              // Mist 20 %
-        private static readonly Brush InkText = MakeBrush(0xFF, 0x0F, 0x0F, 0x10);              // Ink, on Accent
-        private static readonly Brush TextPrimary = MakeBrush(0xFF, 0xFF, 0xFF, 0xFF);          // White on the lit slot
-        private static readonly Brush TextIdle = MakeBrush(0xDB, 0xF7, 0xF5, 0xF2);             // Mist 86 %
-        private static readonly Brush TextSecondary = MakeBrush(0xB8, 0xF7, 0xF5, 0xF2);        // Mist 72 %
-        private static readonly Brush TextDisabled = MakeBrush(0x73, 0xF7, 0xF5, 0xF2);         // Mist 45 %
-        private static readonly Brush TextAccent = MakeBrush(0xFF, 0xFD, 0x64, 0x1A);           // Accent
+        // Heron brand only, every brush from UI/HeronStyles.xaml: Surface and Ink for the ring, Mist at an
+        // opacity for text and lines, Accent for the slot being pointed at (the "Wheel..." shades are
+        // documented in that file's header).
+        private static readonly Brush WedgeFill = HeronPalette.Brush("WheelSlotFill");                       // Surface 95 %
+        private static readonly Brush WedgeFillEmpty = HeronPalette.Brush("WheelSlotEmptyFill");             // Ink 85 %
+        private static readonly Brush WedgeFillUnavailable = HeronPalette.Brush("WheelSlotUnavailableFill"); // Surface 90 %
+        private static readonly Brush WedgeStroke = HeronPalette.Brush("BorderSoft");                        // Mist 14 %
+        private static readonly Brush WedgeStrokeHover = HeronPalette.Brush("Accent");                       // Accent
+        private static readonly Brush WedgeStrokeHoverDisabled = HeronPalette.Brush("BorderStrong");         // Mist 28 %
+        private static readonly Brush RimIdle = HeronPalette.Brush("WheelRim");                              // Mist 10 %
+        private static readonly Brush RulerTick = HeronPalette.Brush("WheelTick");                           // Mist 25 %
+        private static readonly Brush RulerTickMajor = HeronPalette.Brush("AccentEdge");                     // Accent 70 %
+        private static readonly Brush HubFill = HeronPalette.Brush("WheelHubFill");                          // Ink 98 %
+        private static readonly Brush HubStroke = HeronPalette.Brush("BorderSoft");                          // Mist 14 %
+        private static readonly Brush HubTick = HeronPalette.Brush("WheelHubTick");                          // Mist 20 %
+        private static readonly Brush InkText = HeronPalette.Brush("TextOnAccent");                          // White on Accent (the name pill)
+        private static readonly Brush TextPrimary = HeronPalette.Brush("TextOnAccent");                      // White on the lit slot
+        private static readonly Brush TextIdle = HeronPalette.Brush("WheelTextIdle");                        // Mist 86 %
+        private static readonly Brush TextSecondary = HeronPalette.Brush("TextSecondary");                   // Mist 72 %
+        private static readonly Brush TextDisabled = HeronPalette.Brush("WheelTextDisabled");                // Mist 45 %
+        private static readonly Brush TextAccent = HeronPalette.Brush("Accent");                             // Accent
 
         /// <summary>The heron mark (designer's kit, 1080 x 1071 units), drawn in the hub.</summary>
         private const string HeronMarkData =
@@ -271,20 +272,41 @@ namespace HeronTools.UI.QuickMenu
                 }
 
                 // Screen pixels -> WPF units, so 125%/150% displays still land on the pointer.
-                var pointer = new Point(cursor.X, cursor.Y);
+                Matrix toUnits = Matrix.Identity;
                 PresentationSource source = PresentationSource.FromVisual(this);
                 if (source != null && source.CompositionTarget != null)
                 {
-                    pointer = source.CompositionTarget.TransformFromDevice.Transform(pointer);
+                    toUnits = source.CompositionTarget.TransformFromDevice;
                 }
+
+                Point pointer = toUnits.Transform(new Point(cursor.X, cursor.Y));
 
                 double left = pointer.X - (Width / 2.0);
                 double top = pointer.Y - (Height / 2.0);
 
-                double minLeft = SystemParameters.VirtualScreenLeft;
-                double minTop = SystemParameters.VirtualScreenTop;
-                double maxLeft = minLeft + SystemParameters.VirtualScreenWidth - Width;
-                double maxTop = minTop + SystemParameters.VirtualScreenHeight - Height;
+                // Keep the wheel inside the usable area (taskbar excluded) of the monitor the pointer is
+                // on - not the box round all monitors together, which with two different-sized screens
+                // takes in space no screen shows, so the lower slots could land off screen.
+                Rect area = new Rect(
+                    SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+                    SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+                IntPtr monitor = QuickMenuNative.MonitorFromPoint(cursor, QuickMenuNative.MonitorDefaultToNearest);
+                var info = new QuickMenuNative.MonitorInfo { Size = Marshal.SizeOf(typeof(QuickMenuNative.MonitorInfo)) };
+                if (monitor != IntPtr.Zero && QuickMenuNative.GetMonitorInfo(monitor, ref info))
+                {
+                    Rect work = new Rect(
+                        toUnits.Transform(new Point(info.Work.Left, info.Work.Top)),
+                        toUnits.Transform(new Point(info.Work.Right, info.Work.Bottom)));
+                    if (work.Width > 0 && work.Height > 0)
+                    {
+                        area = work;
+                    }
+                }
+
+                double minLeft = area.Left;
+                double minTop = area.Top;
+                double maxLeft = area.Right - Width;
+                double maxTop = area.Bottom - Height;
 
                 Left = maxLeft > minLeft ? Math.Min(Math.Max(left, minLeft), maxLeft) : minLeft;
                 Top = maxTop > minTop ? Math.Min(Math.Max(top, minTop), maxTop) : minTop;
@@ -546,8 +568,8 @@ namespace HeronTools.UI.QuickMenu
                 RadiusY = _outerRadius,
                 GradientStops =
                 {
-                    new GradientStop(Color.FromArgb(0x1F, 0xFD, 0x64, 0x1A), 0.42),   // Accent 12 %
-                    new GradientStop(Color.FromArgb(0x6B, 0xFD, 0x64, 0x1A), 1.0)     // Accent 42 %
+                    new GradientStop(HeronPalette.Colour("WheelGlowInnerColor"), 0.42),   // Accent 12 %
+                    new GradientStop(HeronPalette.Colour("WheelGlowOuterColor"), 1.0)     // Accent 42 %
                 }
             };
             _hoverFill.Freeze();
@@ -597,9 +619,9 @@ namespace HeronTools.UI.QuickMenu
                     {
                         GradientStops =
                         {
-                            new GradientStop(Color.FromArgb(0xD9, 0x0F, 0x0F, 0x10), 0.0),          // Ink 85 %
-                            new GradientStop(Color.FromArgb(0xD9, 0x0F, 0x0F, 0x10), (_ringOuter / radius) - 0.005),
-                            new GradientStop(Color.FromArgb(0x00, 0x0F, 0x0F, 0x10), 1.0)
+                            new GradientStop(HeronPalette.Colour("WheelHaloColor"), 0.0),          // Ink 85 %
+                            new GradientStop(HeronPalette.Colour("WheelHaloColor"), (_ringOuter / radius) - 0.005),
+                            new GradientStop(HeronPalette.Colour("WheelHaloFadeColor"), 1.0)      // Ink 0 %
                         }
                     }
                 };
@@ -742,8 +764,8 @@ namespace HeronTools.UI.QuickMenu
             {
                 GradientStops =
                 {
-                    new GradientStop(Color.FromArgb(0x73, 0xFD, 0x64, 0x1A), 0.0),   // Accent 45 %
-                    new GradientStop(Color.FromArgb(0x2E, 0xFD, 0x64, 0x1A), 1.0)    // Accent 18 %
+                    new GradientStop(HeronPalette.Colour("WheelBubbleGlowCentreColor"), 0.0),   // Accent 45 %
+                    new GradientStop(HeronPalette.Colour("WheelBubbleGlowEdgeColor"), 1.0)    // Accent 18 %
                 }
             };
             glowFill.Freeze();
@@ -1571,16 +1593,36 @@ namespace HeronTools.UI.QuickMenu
             return new Duration(TimeSpan.FromMilliseconds(milliseconds));
         }
 
-        private static Brush MakeBrush(byte alpha, byte red, byte green, byte blue)
-        {
-            var brush = new SolidColorBrush(Color.FromArgb(alpha, red, green, blue));
-            brush.Freeze();
-            return brush;
-        }
-
-        /// <summary>Minimal user32 interop - only to find out where the mouse pointer is.</summary>
+        /// <summary>Minimal user32 interop - only to find out where the mouse pointer is, and which screen it is on.</summary>
         internal static class QuickMenuNative
         {
+            internal const uint MonitorDefaultToNearest = 2;
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct NativeRect
+            {
+                public int Left;
+                public int Top;
+                public int Right;
+                public int Bottom;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MonitorInfo
+            {
+                public int Size;
+                public NativeRect Monitor;
+                public NativeRect Work;
+                public uint Flags;
+            }
+
+            [DllImport("user32.dll")]
+            public static extern IntPtr MonitorFromPoint(NativePoint point, uint flags);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+
             [StructLayout(LayoutKind.Sequential)]
             public struct NativePoint
             {

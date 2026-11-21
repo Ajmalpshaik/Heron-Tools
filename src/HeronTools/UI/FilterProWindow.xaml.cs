@@ -35,6 +35,10 @@ namespace HeronTools.UI
         private readonly List<FilterCategoryItem> _allCategories = new List<FilterCategoryItem>();
         private readonly List<FilterParameterItem> _allParameters = new List<FilterParameterItem>();
         private bool _restoringState;
+        // While the last choices are restored the status line is held back, so a load error or scan-limit
+        // note is kept here and shown at the end instead of "Opened with your last choices" over empty lists.
+        private string _restoreLoadError;
+        private string _restoreScanNote;
         private bool _isLoadingParameters;
         private bool _isLoadingValues;
         // Set when the picks change while a list is still loading; the load then runs once more, so the
@@ -93,6 +97,7 @@ namespace HeronTools.UI
                 UpdateStatus("Select categories to begin.");
 
             UpdateApplyScopeLabel();
+            UpdateRestoreButton();
         }
 
         private void WireEvents()
@@ -106,6 +111,10 @@ namespace HeronTools.UI
             create_button.Click += CreateButton_Click;
             apply_view_button.Click += ApplyViewButton_Click;
             shuffle_colors_button.Click += ShuffleColorsButton_Click;
+            restore_colors_button.Click += RestoreColorsButton_Click;
+            views_listbox.SelectionChanged += (s, e) => UpdateRestoreButton();
+            apply_active_radio.Checked += (s, e) => UpdateRestoreButton();
+            apply_multiple_radio.Checked += (s, e) => UpdateRestoreButton();
             refresh_views_button.Click += (s, e) => LoadViewsForApply();
 
             // List selection changes
@@ -328,7 +337,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading views: {ex.Message}");
+                ReportLoadError($"Error loading views: {ex.Message}");
             }
         }
 
@@ -364,7 +373,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading patterns: {ex.Message}");
+                ReportLoadError($"Error loading patterns: {ex.Message}");
             }
         }
 
@@ -605,6 +614,8 @@ namespace HeronTools.UI
             string restoredMessage = _restoringFromLastingMemory
                 ? "Opened with your last Filter Pro choices. Anything not in this model was skipped."
                 : "Restored previous Filter Pro selection.";
+            _restoreLoadError = null;
+            _restoreScanNote = null;
             _restoringState = true;
             try
             {
@@ -627,7 +638,28 @@ namespace HeronTools.UI
 
             UpdateCounts();
             UpdateRuleAvailability();
-            UpdateStatus(restoredMessage);
+
+            if (_restoreLoadError != null)
+            {
+                // A list failed to load while restoring: say so, never "opened with your last choices".
+                ShowProblem($"Your last Filter Pro choices could not all be restored. {_restoreLoadError}. Pick again.");
+            }
+            else
+            {
+                UpdateStatus(_restoreScanNote != null ? restoredMessage + " " + _restoreScanNote : restoredMessage);
+            }
+
+            _restoreLoadError = null;
+            _restoreScanNote = null;
+        }
+
+        /// <summary>A list could not be loaded: shown now, and kept for the end of a restore.</summary>
+        private void ReportLoadError(string message)
+        {
+            if (_restoringState && _restoreLoadError == null)
+                _restoreLoadError = message;
+
+            UpdateStatus(message);
         }
 
         private async Task RestoreCategoriesAndParameters(FilterProState lastState)
@@ -911,6 +943,7 @@ namespace HeronTools.UI
                         // Nothing to keep: roll back so no empty step lands in the Undo list.
                         t.RollBack();
                         FilterReorderer.DiscardPendingOrders();
+                        FilterColorMemory.DiscardPending();
                     }
                     else
                     {
@@ -919,12 +952,14 @@ namespace HeronTools.UI
                             throw new FilterProException(
                                 "Revit did not keep the changes (it reported: " + status + ").");
                         FilterReorderer.AcceptPendingOrders();
+                        FilterColorMemory.AcceptPending();
                         _madeChanges = true;
                     }
                 }
                 catch (Exception ex)
                 {
                     FilterReorderer.DiscardPendingOrders();
+                    FilterColorMemory.DiscardPending();
                     string reason = ex is FilterProException
                         ? ex.Message
                         : "Revit stopped the run: " + ex.Message;
@@ -953,6 +988,7 @@ namespace HeronTools.UI
 
             RememberState(selection);
             ShowReport(skipped);
+            UpdateRestoreButton();
             UpdateStatus(affected == 0
                 ? (skipped.Count > 0 ? "Nothing was changed. " : "Nothing needed changing. ") + BuildResultStatus(selection.Values.Count, affected, skipped)
                 : BuildResultStatus(selection.Values.Count, affected, skipped));
@@ -987,7 +1023,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading categories: {ex.Message}");
+                ReportLoadError($"Error loading categories: {ex.Message}");
             }
         }
 
@@ -1035,7 +1071,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading parameters: {ex.Message}");
+                ReportLoadError($"Error loading parameters: {ex.Message}");
             }
             finally
             {
@@ -1092,13 +1128,18 @@ namespace HeronTools.UI
                 UpdateCounts();
 
                 if (hitScanLimit)
-                    UpdateStatus($"Loaded {collectedValues.Count} unique value(s). Stopped after scanning 10,000 elements for performance.");
+                {
+                    string scanNote = $"Values were read from the first {Constants.ELEMENT_SCAN_LIMIT:N0} placed elements only, to keep Revit quick.";
+                    if (_restoringState)
+                        _restoreScanNote = scanNote;
+                    UpdateStatus($"Loaded {collectedValues.Count} unique value(s). {scanNote}");
+                }
                 else
                     UpdateStatus($"Loaded {collectedValues.Count} unique value(s).");
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading values: {ex.Message}");
+                ReportLoadError($"Error loading values: {ex.Message}");
             }
             finally
             {
@@ -1183,6 +1224,105 @@ namespace HeronTools.UI
             }
 
             RunAsOneUndoStep("Filter Pro: Shuffle Colors", selection, targetViews);
+        }
+
+        /// <summary>
+        /// Puts back the overrides each filter had before Shuffle colours, in the target views (Active view or
+        /// Picked views), as ONE named transaction. A filter changed by hand since the Shuffle is left alone.
+        /// </summary>
+        private void RestoreColorsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var targetViews = ResolveTargetViews(out _);
+            if (!targetViews.Any())
+                return;
+
+            var skipped = new List<string>();
+            int restored = 0;
+            int changedByHand = 0;
+
+            using (var t = new Transaction(_doc, "Filter Pro: Restore Colours"))
+            {
+                try
+                {
+                    t.Start();
+                    foreach (var view in targetViews)
+                    {
+                        if (!FilterColorMemory.CanRestore(_doc, view))
+                            continue;
+
+                        if (FilterApplier.IsViewControlledByTemplate(view))
+                        {
+                            skipped.Add(FilterApplier.TemplateSkipMessage(view));
+                            continue;
+                        }
+
+                        restored += FilterColorMemory.Restore(_doc, view, out int byHand);
+                        changedByHand += byHand;
+                    }
+
+                    if (restored == 0)
+                    {
+                        // Nothing to keep: roll back so no empty step lands in the Undo list.
+                        t.RollBack();
+                    }
+                    else
+                    {
+                        TransactionStatus status = t.Commit();
+                        if (status != TransactionStatus.Committed)
+                            throw new FilterProException(
+                                "Revit did not keep the changes (it reported: " + status + ").");
+                        _madeChanges = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    string reason = ex is FilterProException
+                        ? ex.Message
+                        : "Revit stopped the restore: " + ex.Message;
+                    try
+                    {
+                        if (t.GetStatus() == TransactionStatus.Started)
+                            t.RollBack();
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        reason += "\n\nRevit also reported, while undoing: " + rollbackEx.Message +
+                                  "\nCheck the model, and use Undo if anything from this restore is still there.";
+                    }
+
+                    ShowReport(null);
+                    ShowProblem("Nothing was changed - the restore was undone. " + reason);
+                    UpdateRestoreButton();
+                    return;
+                }
+            }
+
+            if (changedByHand > 0)
+                skipped.Add($"{changedByHand} filter(s) were changed by hand after Shuffle, so they were left as they are.");
+
+            ShowReport(skipped);
+            UpdateRestoreButton();
+            UpdateStatus(restored > 0
+                ? $"Put back the colours of {restored} filter(s) as they were before Shuffle."
+                : "Nothing to restore in the target views." + (skipped.Count > 0 ? " See the list above." : ""));
+        }
+
+        /// <summary>Restore colours is on only when a target view still shows colours from Shuffle.</summary>
+        private void UpdateRestoreButton()
+        {
+            if (restore_colors_button == null)
+                return;
+
+            List<View> views;
+            if (apply_active_radio.IsChecked == true)
+                views = _activeView != null ? new List<View> { _activeView } : new List<View>();
+            else
+                views = views_listbox.SelectedItems.Cast<ApplyViewItem>()
+                    .Select(i => _doc.GetElement(i.Id) as View)
+                    .Where(v => v != null)
+                    .ToList();
+
+            restore_colors_button.IsEnabled = views.Any(v => FilterColorMemory.CanRestore(_doc, v));
         }
 
         // Exposed to the external command so it can return Succeeded when changes were made.

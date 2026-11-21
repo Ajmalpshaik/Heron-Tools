@@ -112,6 +112,19 @@ namespace HeronTools.Utils
 #endif
         }
 
+        /// <summary>
+        /// True when a typed number can be an Element ID in this Revit: any positive long from Revit 2024
+        /// (64-bit ids), at most int.MaxValue before it.
+        /// </summary>
+        internal static bool FitsElementId(long value)
+        {
+#if REVIT2024_OR_GREATER
+            return true;
+#else
+            return value <= int.MaxValue;
+#endif
+        }
+
         internal static ElementId FromInt(int value)
         {
 #if REVIT2024_OR_GREATER

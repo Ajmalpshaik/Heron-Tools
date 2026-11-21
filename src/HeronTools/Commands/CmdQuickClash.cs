@@ -51,7 +51,7 @@ namespace HeronTools.Commands
             catch (Exception ex)
             {
                 DialogHelper.ShowError(DialogTitle, "Quick Clash could not open, and nothing was changed.\n\nRevit said: " + ex.Message);
-                return Result.Failed;
+                return Result.Cancelled;
             }
         }
     }

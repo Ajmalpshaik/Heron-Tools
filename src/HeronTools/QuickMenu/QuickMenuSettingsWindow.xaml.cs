@@ -68,19 +68,20 @@ namespace HeronTools.UI.QuickMenu
         // of the wheel - it is what Ajmal is about to get.
         // Heron brand only. The wheel sits on a Surface card, so the slots are Ink (one step deeper),
         // the picked slot is lit in Accent and a live drop target in Success - each at an opacity.
-        private static readonly Brush WedgeFill = MakeBrush(0xFF, 0x0F, 0x0F, 0x10);            // Ink
-        private static readonly Brush WedgeFillEmpty = MakeBrush(0x80, 0x0F, 0x0F, 0x10);       // Ink 50 %
-        private static readonly Brush WedgeFillDrop = MakeBrush(0x47, 0x3E, 0xCF, 0x8E);        // Success 28 %
-        private static readonly Brush WedgeStroke = MakeBrush(0x24, 0xF7, 0xF5, 0xF2);          // Mist 14 %
-        private static readonly Brush WedgeStrokeSelected = MakeBrush(0xFF, 0xFD, 0x64, 0x1A);  // Accent
-        private static readonly Brush WedgeStrokeDrop = MakeBrush(0xFF, 0x3E, 0xCF, 0x8E);      // Success
-        private static readonly Brush HubFill = MakeBrush(0xFF, 0x0F, 0x0F, 0x10);              // Ink
-        private static readonly Brush HubStroke = MakeBrush(0x24, 0xF7, 0xF5, 0xF2);            // Mist 14 %
-        private static readonly Brush WheelTextPrimary = MakeBrush(0xEB, 0xF7, 0xF5, 0xF2);     // Mist 92 %
-        private static readonly Brush WheelTextIdle = MakeBrush(0xB8, 0xF7, 0xF5, 0xF2);        // Mist 72 %
-        private static readonly Brush WheelTextDisabled = MakeBrush(0x73, 0xF7, 0xF5, 0xF2);    // Mist 45 %
-        private static readonly Brush RimIdle = MakeBrush(0x24, 0xF7, 0xF5, 0xF2);              // Mist 14 %
-        private static readonly Brush RulerTickMajor = MakeBrush(0xB3, 0xFD, 0x64, 0x1A);       // Accent 70 %
+        // Every brush from UI/HeronStyles.xaml (the "Wheel..." shades are documented in its header).
+        private static readonly Brush WedgeFill = HeronPalette.Brush("BackgroundDark");                 // Ink
+        private static readonly Brush WedgeFillEmpty = HeronPalette.Brush("WheelPreviewEmptyFill");     // Ink 50 %
+        private static readonly Brush WedgeFillDrop = HeronPalette.Brush("WheelDropFill");              // Success 28 %
+        private static readonly Brush WedgeStroke = HeronPalette.Brush("BorderSoft");                   // Mist 14 %
+        private static readonly Brush WedgeStrokeSelected = HeronPalette.Brush("Accent");               // Accent
+        private static readonly Brush WedgeStrokeDrop = HeronPalette.Brush("AccentSuccess");            // Success
+        private static readonly Brush HubFill = HeronPalette.Brush("BackgroundDark");                   // Ink
+        private static readonly Brush HubStroke = HeronPalette.Brush("BorderSoft");                     // Mist 14 %
+        private static readonly Brush WheelTextPrimary = HeronPalette.Brush("TextPrimary");             // Mist 92 %
+        private static readonly Brush WheelTextIdle = HeronPalette.Brush("TextSecondary");              // Mist 72 %
+        private static readonly Brush WheelTextDisabled = HeronPalette.Brush("WheelTextDisabled");      // Mist 45 %
+        private static readonly Brush RimIdle = HeronPalette.Brush("BorderSoft");                       // Mist 14 %
+        private static readonly Brush RulerTickMajor = HeronPalette.Brush("AccentEdge");                // Accent 70 %
 
         private readonly IList<QuickToolEntry> _allTools;
         private readonly List<string> _slotKeys = new List<string>();
@@ -101,6 +102,9 @@ namespace HeronTools.UI.QuickMenu
         private int _dropSlot = -1;
 
         private Point _dragOrigin;
+
+        /// <summary>True when the left button went down on a tool row in the list (not its scrollbar).</summary>
+        private bool _dragFromToolItem;
         private int _dragFromSlot = -1;
 
         /// <summary>
@@ -139,9 +143,15 @@ namespace HeronTools.UI.QuickMenu
             if (_layoutUnreadable)
             {
                 SaveButton.IsEnabled = false;
-                ShowError("Your saved Quick Menu layout could not be read, so the default layout is shown and " +
-                          "Save is turned off - saving now would replace your layout with these defaults. " +
-                          "Close this window and try again in a moment.");
+                ShowError("Your saved Quick Menu layout could not be opened (another program may have it open, " +
+                          "or Windows refused access), so the default layout is shown and Save is turned off - " +
+                          "saving now would replace your layout with these defaults. Close this window, close " +
+                          "whatever has quickmenu-slots.txt open, and open Quick Menu Settings again.");
+            }
+            else if (!string.IsNullOrEmpty(working.SetAsidePath))
+            {
+                ShowError("Your saved Quick Menu layout file was empty or damaged, so the default layout is shown. " +
+                          "The old file was kept as " + working.SetAsidePath + ". Save to start a new layout.");
             }
         }
 
@@ -165,7 +175,8 @@ namespace HeronTools.UI.QuickMenu
                 });
             }
 
-            SlotCountCombo.SelectedIndex = NearestIndex(SlotCountChoices, config.SlotCount);
+            SlotCountCombo.SelectedIndex = ChoiceIndex(SlotCountCombo, config.SlotCount,
+                config.SlotCount.ToString(CultureInfo.InvariantCulture) + " tools");
 
             for (int i = 0; i < WheelSizeChoices.Length; i++)
             {
@@ -176,7 +187,8 @@ namespace HeronTools.UI.QuickMenu
                 });
             }
 
-            WheelSizeCombo.SelectedIndex = NearestIndex(WheelSizeChoices, config.Diameter);
+            WheelSizeCombo.SelectedIndex = ChoiceIndex(WheelSizeCombo, config.Diameter,
+                "Custom (" + config.Diameter.ToString(CultureInfo.InvariantCulture) + ")");
 
             for (int i = 0; i < SourceFilterLabels.Length; i++)
             {
@@ -761,8 +773,8 @@ namespace HeronTools.UI.QuickMenu
                     RadiusX = OuterRadius,
                     RadiusY = OuterRadius
                 };
-                glow.GradientStops.Add(new GradientStop(Color.FromArgb(0x1F, 0xFD, 0x64, 0x1A), HubRadiusFraction)); // Accent 12 %
-                glow.GradientStops.Add(new GradientStop(Color.FromArgb(0x66, 0xFD, 0x64, 0x1A), 1.0));               // Accent 40 %
+                glow.GradientStops.Add(new GradientStop(HeronPalette.Colour("WheelGlowInnerColor"), HubRadiusFraction)); // Accent 12 %
+                glow.GradientStops.Add(new GradientStop(HeronPalette.Colour("WheelGlowOuterColor"), 1.0));               // Accent 42 %, as the real wheel
                 glow.Freeze();
                 _selectedFill = glow;
             }
@@ -773,13 +785,13 @@ namespace HeronTools.UI.QuickMenu
         private Brush _selectedFill;
 
         /// <summary>A picked bubble's fill: Accent, stronger in the middle (centred on each bubble).</summary>
-        private static readonly Brush BubbleSelectedFill = MakeRadial(0x73, 0x2E);
+        private static readonly Brush BubbleSelectedFill = MakeRadial(HeronPalette.Colour("WheelBubbleGlowCentreColor"), HeronPalette.Colour("WheelBubbleGlowEdgeColor"));
 
-        private static Brush MakeRadial(byte middleAlpha, byte edgeAlpha)
+        private static Brush MakeRadial(Color middle, Color edge)
         {
             var brush = new RadialGradientBrush();
-            brush.GradientStops.Add(new GradientStop(Color.FromArgb(middleAlpha, 0xFD, 0x64, 0x1A), 0.0));
-            brush.GradientStops.Add(new GradientStop(Color.FromArgb(edgeAlpha, 0xFD, 0x64, 0x1A), 1.0));
+            brush.GradientStops.Add(new GradientStop(middle, 0.0));
+            brush.GradientStops.Add(new GradientStop(edge, 1.0));
             brush.Freeze();
             return brush;
         }
@@ -798,13 +810,6 @@ namespace HeronTools.UI.QuickMenu
             WheelHintText.Text = entry != null
                 ? slotName + ": " + entry.DisplayName
                 : slotName + " is empty - drop a tool on it.";
-        }
-
-        private static Brush MakeBrush(byte a, byte r, byte g, byte b)
-        {
-            var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
-            brush.Freeze();
-            return brush;
         }
 
         /// <summary>
@@ -847,22 +852,36 @@ namespace HeronTools.UI.QuickMenu
             return entry != null ? entry.Key : null;
         }
 
-        private static int NearestIndex(int[] choices, int value)
+        /// <summary>
+        /// The combo item holding exactly <paramref name="value"/>. A saved value that is not one of the
+        /// standard choices (an older or hand-edited layout file, e.g. 5 slots or a 600 wheel) gets its own
+        /// item, in size order, so the window shows it as it is and Save keeps it - never quietly changed.
+        /// </summary>
+        private static int ChoiceIndex(ComboBox combo, int value, string label)
         {
-            int bestIndex = 0;
-            int bestDistance = int.MaxValue;
-
-            for (int i = 0; i < choices.Length; i++)
+            int insertAt = combo.Items.Count;
+            for (int i = 0; i < combo.Items.Count; i++)
             {
-                int distance = Math.Abs(choices[i] - value);
-                if (distance < bestDistance)
+                var item = combo.Items[i] as ComboBoxItem;
+                if (item == null || !(item.Tag is int))
                 {
-                    bestDistance = distance;
-                    bestIndex = i;
+                    continue;
+                }
+
+                int choice = (int)item.Tag;
+                if (choice == value)
+                {
+                    return i;
+                }
+
+                if (choice > value && insertAt == combo.Items.Count)
+                {
+                    insertAt = i;
                 }
             }
 
-            return bestIndex;
+            combo.Items.Insert(insertAt, new ComboBoxItem { Content = label, Tag = value });
+            return insertAt;
         }
 
         #endregion
@@ -937,6 +956,12 @@ namespace HeronTools.UI.QuickMenu
 
         private void OnToolListDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            // Only a double-click on a tool - not on the scrollbar or the empty space below the list.
+            if (ToolItemUnder(e.OriginalSource as DependencyObject) == null)
+            {
+                return;
+            }
+
             AssignSelectedTool();
         }
 
@@ -989,11 +1014,13 @@ namespace HeronTools.UI.QuickMenu
                 config.Slots[i] = _slotKeys[i];
             }
 
-            if (!config.Save())
+            string saveError;
+            if (!config.Save(out saveError))
             {
-                // Keep the window - and everything arranged in it - open, so nothing is lost.
-                ShowError("The layout could not be saved - the settings file may be locked or read-only. " +
-                          "Your arrangement is still here; try Save again.");
+                // Keep the window - and everything arranged in it - open, so nothing is lost. Say what
+                // Windows actually reported, not a guess.
+                ShowError("The layout could not be saved: " + saveError +
+                          " Your arrangement is still here - fix that and try Save again.");
                 return;
             }
 
@@ -1117,11 +1144,14 @@ namespace HeronTools.UI.QuickMenu
         private void OnToolListMouseDown(object sender, MouseButtonEventArgs e)
         {
             _dragOrigin = e.GetPosition(null);
+            // A drag may only start from a tool. Pressing on the scrollbar (to scroll the list) must
+            // never pick up the selected tool.
+            _dragFromToolItem = ToolItemUnder(e.OriginalSource as DependencyObject) != null;
         }
 
         private void OnToolListMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton != MouseButtonState.Pressed || !PastDragThreshold(e))
+            if (e.LeftButton != MouseButtonState.Pressed || !_dragFromToolItem || !PastDragThreshold(e))
             {
                 return;
             }
@@ -1274,6 +1304,30 @@ namespace HeronTools.UI.QuickMenu
             }
 
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// The tool row (ListBoxItem) the pointer is on, or null when it is on the list's scrollbar, its
+        /// empty space or anything else. Walks up from what was clicked, stopping at the list itself.
+        /// </summary>
+        private ListBoxItem ToolItemUnder(DependencyObject source)
+        {
+            DependencyObject current = source;
+            while (current != null && !ReferenceEquals(current, ToolList))
+            {
+                var item = current as ListBoxItem;
+                if (item != null)
+                {
+                    return item;
+                }
+
+                // Text runs are not part of the visual tree - step out through their logical parent.
+                current = current is Visual || current is System.Windows.Media.Media3D.Visual3D
+                    ? VisualTreeHelper.GetParent(current)
+                    : LogicalTreeHelper.GetParent(current);
+            }
+
+            return null;
         }
 
         private bool PastDragThreshold(MouseEventArgs e)

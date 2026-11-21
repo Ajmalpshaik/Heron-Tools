@@ -283,6 +283,13 @@ namespace HeronTools.Services.ViewCrop
                 return ViewCropResultState.Skipped;
             }
 
+            // A shaped (non-rectangular) crop is kept on purpose, so this is a skip, not a failure.
+            if (HasShapedCropToKeep(view, out reason))
+            {
+                item.MarkSkipped(reason);
+                return ViewCropResultState.Skipped;
+            }
+
             var tracker = new BoundTracker();
             ViewCropGeometryProjectionHelper.PlaneBounds bounds = _source == ViewCropExtentSource.ActiveViewElements
                 ? CollectBoundsFromActiveViewElements(view, tracker)
@@ -391,15 +398,8 @@ namespace HeronTools.Services.ViewCrop
                     .ToElements()
                     .ToList();
                 _linkElementsVisibleInView = new Dictionary<long, List<Element>>();
-#if REVIT2024_OR_GREATER
                 // Revit 2024+ can say which LINKED elements this view shows; collect them now, uncropped.
-                foreach (RevitLinkInstance link in elements.OfType<RevitLinkInstance>())
-                {
-                    if (link.GetLinkDocument() == null) continue;
-                    _linkElementsVisibleInView[link.Id.LongValue()] =
-                        new FilteredElementCollector(_doc, view.Id, link.Id).WhereElementIsNotElementType().ToElements().ToList();
-                }
-#endif
+                ViewCropCompat.CollectLinkElementsInView(_doc, view, elements, _linkElementsVisibleInView);
 
             foreach (Element element in elements)
             {
@@ -924,6 +924,21 @@ namespace HeronTools.Services.ViewCrop
             return hidden;
         }
 
+        private bool HasShapedCropToKeep(View view, out string reason)
+        {
+            reason = string.Empty;
+            if (_settings.RectangularCropOnly)
+                return false;
+
+            ViewCropRegionShapeManager shapeManager = view.GetCropRegionShapeManager();
+            if (shapeManager == null || !shapeManager.ShapeSet)
+                return false;
+
+            reason = "This view has a non-rectangular crop shape. It was left as it is so the shape is not lost - " +
+                     "use Reset Crop in Revit first if you want a rectangular crop fitted.";
+            return true;
+        }
+
         private bool TryApplyCrop(View view, ViewCropGeometryProjectionHelper.PlaneBounds bounds, out string reason)
         {
             reason = string.Empty;
@@ -931,14 +946,6 @@ namespace HeronTools.Services.ViewCrop
             if (currentCrop == null)
             {
                 reason = "View crop box is unavailable.";
-                return false;
-            }
-
-            ViewCropRegionShapeManager shapeManager = view.GetCropRegionShapeManager();
-            if (shapeManager != null && shapeManager.ShapeSet && !_settings.RectangularCropOnly)
-            {
-                reason = "This view has a non-rectangular crop shape. It was left as it is so the shape is not lost - " +
-                         "use Reset Crop in Revit first if you want a rectangular crop fitted.";
                 return false;
             }
 
@@ -1062,10 +1069,8 @@ namespace HeronTools.Services.ViewCrop
         {
             if (element is BasePoint)
                 return true;
-#if REVIT2021_OR_GREATER
-            if (element is InternalOrigin)
+            if (ViewCropCompat.IsInternalOrigin(element))
                 return true;
-#endif
             return false;
         }
 

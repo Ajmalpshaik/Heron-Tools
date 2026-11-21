@@ -8,8 +8,8 @@
 // Tool Name: Pin Elements Service
 // Description: Collects target groups and applies pin/unpin state in bulk.
 // Author: Ajmal P.S.
-// Version: 1.3.1
-// Last Updated: 2026-10-12
+// Version: 1.3.2
+// Last Updated: 2026-11-21
 // Revit Version: 2020
 
 using System;
@@ -186,30 +186,51 @@ namespace HeronTools.Services.PinTools
             if (candidateIds.Count == 0)
                 return summary;
 
-            using (var transaction = new Transaction(doc, pinState ? "Pin Elements" : "Unpin Elements"))
+            // Workshared checks run BEFORE the transaction: Revit's API notes say the central-model status
+            // "may not be dependable in the middle of a local transaction". One element a colleague owns, or
+            // one they changed or deleted and synced (Revit needs Reload Latest first), would make Revit refuse
+            // the whole run at commit - so those are left alone and counted, and the rest still change.
+            var elementsToSet = new List<Element>(candidateIds.Count);
+            foreach (long idValue in candidateIds)
             {
-                transaction.Start();
-
-                foreach (long idValue in candidateIds)
+                ElementId id = ElementIdHelper.FromLong(idValue);
+                Element element = doc.GetElement(id);
+                if (element == null)
                 {
-                    Element element = doc.GetElement(ElementIdHelper.FromLong(idValue));
-                    if (element == null)
-                    {
-                        summary.SkippedCount++;
-                        continue;
-                    }
+                    summary.SkippedCount++;
+                    summary.KeepFirstSkipReason("an element was deleted before the run.");
+                    continue;
+                }
 
-                    // One element borrowed by a colleague would make Revit refuse the whole run at commit.
-                    if (doc.IsWorkshared &&
-                        WorksharingUtils.GetCheckoutStatus(doc, element.Id) == CheckoutStatus.OwnedByOtherUser)
+                if (doc.IsWorkshared)
+                {
+                    if (WorksharingUtils.GetCheckoutStatus(doc, id) == CheckoutStatus.OwnedByOtherUser)
                     {
                         summary.OwnedByOthersCount++;
                         continue;
                     }
 
-                    if (!TrySetPinned(element, pinState, out bool changed))
+                    ModelUpdatesStatus central = WorksharingUtils.GetModelUpdatesStatus(doc, id);
+                    if (central == ModelUpdatesStatus.UpdatedInCentral || central == ModelUpdatesStatus.DeletedInCentral)
+                    {
+                        summary.OutOfDateCount++;
+                        continue;
+                    }
+                }
+
+                elementsToSet.Add(element);
+            }
+
+            using (var transaction = new Transaction(doc, pinState ? "Pin Elements" : "Unpin Elements"))
+            {
+                transaction.Start();
+
+                foreach (Element element in elementsToSet)
+                {
+                    if (!TrySetPinned(element, pinState, out bool changed, out string refusal))
                     {
                         summary.SkippedCount++;
+                        summary.KeepFirstSkipReason(refusal);
                         continue;
                     }
 
@@ -674,19 +695,25 @@ namespace HeronTools.Services.PinTools
             }
         }
 
-        private static bool TrySetPinned(Element element, bool pinState, out bool changed)
+        /// <summary>Sets Pinned; on a refusal, says in plain words why (Revit's own message).</summary>
+        private static bool TrySetPinned(Element element, bool pinState, out bool changed, out string refusal)
         {
             changed = false;
+            refusal = null;
             if (element == null)
+            {
+                refusal = "an element was deleted before the run.";
                 return false;
+            }
 
             bool current;
             try
             {
                 current = element.Pinned;
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
+                refusal = "Revit could not read the pin of one element: " + ex.Message;
                 return false;
             }
 
@@ -699,8 +726,9 @@ namespace HeronTools.Services.PinTools
                 changed = true;
                 return true;
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
+                refusal = "Revit refused one element: " + ex.Message;
                 return false;
             }
         }

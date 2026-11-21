@@ -23,6 +23,45 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - Docs: README transaction / modeless-window lines and the uninstall rule match the code; the metadata doc names the
   `installer/` folder; the bug report form lists every tool on the ribbon.
 
+### Fixed (issues #18-#37, one pull request each - every item still NEEDS A REAL REVIT TEST)
+- **Colorize** (#18): Restore no longer wipes an override set by hand after an earlier Restore; every element is checked,
+  not the first 500 (Highlight too); the memory follows the model through Save As.
+- **Quick Clash** (#19): after Reset view, Save / Sync / Close / the next Run never wipe overrides set by hand - "still
+  coloured" needs the full Quick Clash override; Save As keeps Reset view working.
+- **Filter Pro** (#20): Shuffle colours has a way back - **Restore colours** puts each filter's own overrides back.
+- **Filter Pro** (#21): Update existing filters never rewrites a same-named filter that tests another parameter or
+  other categories; it is skipped with a reason.
+- **Filter Pro** (#22): decimal Equals uses the shown rounding; parameters on only a few families are listed; Design
+  Option values are kept apart; unplaced types are not listed; a load error during restore is shown.
+- **Quick Clash** (#23): clicking a clash no longer replaces the Selection A used by the next Run.
+- **Quick Clash** (#24): with Hard and Clearance on, a small overlap is a 0 mm Clearance clash; Hard depth is measured
+  on the real overlap, not its box (diagonal runs).
+- **Quick Clash** (#25): the linked overlay frees its memory, skips repeat redraws and is dropped when the link moves
+  or is unloaded; switching 3D views is lighter.
+- **Quick Clash** (#26): "nothing was changed" is true after an error; isolating a second clash works; Esc is read
+  reliably; very detailed families are capped for the clearance check.
+- **Reassign Level** (#27): an element is not reassigned if that would move or delete a connected duct or pipe.
+- **Match Level Extents / Levels to Section Box** (#28): levels or views Revit refused are reported, "partly matched"
+  is said, no pop-up on full success.
+- **Commands** (#29): after the tool's own message Revit adds no second error box; no raw exception text; Crop View
+  skips shaped crops with a reason; Match Elevation checks the model is editable before the picks.
+- **Pin / Unpin** (#30): elements changed or deleted in central are skipped with "Reload Latest"; the first refusal
+  reason is shown; Restore Last Reset, Colorize Restore and Highlight count what Revit refused.
+- **Reset Graphics** (#31): the views list counts once after ticking stops, not on every tick (no freeze).
+- **3D Views by Workset / 3D Snapshot** (#32): name checks only against 3D views; failure reasons are kept; two views
+  with the same name are reported instead of guessed.
+- **Quick Menu Settings** (#33): the body scrolls on small screens; dragging the scrollbar no longer drags a tool; a
+  damaged layout file is set aside and Save works; custom sizes are kept; the real save error is shown; the wheel
+  opens inside the screen under the pointer.
+- **Brand** (#34): the wheel uses the built-in Manrope font and colours from HeronStyles.xaml; installer Install button
+  follows the palette.
+- **Installer** (#35): finds Revit on any drive; a leftover add-in file can be removed; a failed first install leaves
+  nothing behind; the installer version follows the add-in version.
+- **Build gates** (#36): a compiler warning now fails the build; the metadata check enforces the standard; a manual
+  Release run with no tag publishes nothing.
+- **Code rules** (#37): version-specific code moved into Helpers; a Yes/No question is never asked twice; Find by
+  Element ID tells copies of the same link apart.
+
 ## [1.1.0] - 2026-11-16
 
 ### Added

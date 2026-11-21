@@ -87,17 +87,19 @@ namespace HeronTools.Services.LevelExtents
                 if (datumViews.Count == 0)
                     return Fail(title, "No elevation, section, or 3D views found to write level extents.");
 
-                int updatedCount = 0;
+                // Counts what each level took, view by view, so a partial result is never silent.
+                LevelExtentsReport report = new LevelExtentsReport();
                 using (Transaction tx = new Transaction(doc, "Maximize Levels by Section Box"))
                 {
                     tx.Start();
                     foreach (Level level in levels)
                     {
-                        if (ApplyBoxToLevel(level, datumViews, minX, maxX, minY, maxY))
-                            updatedCount++;
+                        List<string> problems = new List<string>();
+                        int viewsChanged = ApplyBoxToLevel(level, datumViews, minX, maxX, minY, maxY, problems);
+                        report.AddLevel(level.Name, viewsChanged, problems);
                     }
 
-                    if (updatedCount == 0)
+                    if (report.Changed == 0)
                     {
                         tx.RollBack();
                     }
@@ -109,7 +111,7 @@ namespace HeronTools.Services.LevelExtents
                     }
                 }
 
-                if (updatedCount == 0)
+                if (report.Changed == 0 && !report.HasProblems)
                 {
                     DialogHelper.ShowInfo(
                         title,
@@ -118,8 +120,12 @@ namespace HeronTools.Services.LevelExtents
                     return Result.Cancelled;
                 }
 
-                // Normal success is silent - the levels update visibly in elevation/section/3D views.
-                return Result.Succeeded;
+                // A message only when something was not changed; a full success is silent -
+                // the levels update visibly in elevation/section/3D views.
+                if (report.HasProblems)
+                    report.Show(title, "stretched to the section box");
+
+                return report.Changed > 0 ? Result.Succeeded : Result.Cancelled;
             }
             catch (Exception ex)
             {
@@ -128,19 +134,28 @@ namespace HeronTools.Services.LevelExtents
             }
         }
 
-        private static bool ApplyBoxToLevel(Level level, List<View> datumViews, double minX, double maxX, double minY, double maxY)
+        /// <summary>
+        /// Writes the section box extent into every view that shows the level. Returns how many views took it;
+        /// each view that did not is added to <paramref name="problems"/> in plain words.
+        /// </summary>
+        private static int ApplyBoxToLevel(Level level, List<View> datumViews, double minX, double maxX, double minY, double maxY,
+            List<string> problems)
         {
-            bool anyApplied = false;
+            int viewsChanged = 0;
             double z = level.Elevation;
 
             foreach (View view in datumViews)
             {
+                // A view that does not show the level is not a level/view pair: nothing to write there.
                 Curve existing;
                 if (!TryGetCurve(level, view, DatumExtentType.Model, out existing))
                     continue;
 
                 if (!(existing is Line line))
+                {
+                    problems.Add(view.Name + ": the level line here is not straight, so it was left as it was.");
                     continue;
+                }
 
                 XYZ dir = line.Direction;
                 Line unbound = Line.CreateUnbound(line.GetEndPoint(0), dir);
@@ -167,7 +182,10 @@ namespace HeronTools.Services.LevelExtents
                 }
 
                 if (maxParam - minParam <= Constants.MIN_DISTANCE_TOLERANCE)
+                {
+                    problems.Add(view.Name + ": the section box gives no length along the level line here, so it was left as it was.");
                     continue;
+                }
 
                 try
                 {
@@ -176,15 +194,16 @@ namespace HeronTools.Services.LevelExtents
                     XYZ newP1 = unbound.Evaluate(maxParam, false);
                     Line newLine = Line.CreateBound(newP0, newP1);
                     level.SetCurveInView(DatumExtentType.Model, view, newLine);
-                    anyApplied = true;
+                    viewsChanged++;
                 }
-                catch (System.Exception)
+                catch (Exception ex)
                 {
-                    // skip this view
+                    // Revit refused this view (scope box, owned by a colleague, ...): counted and reported.
+                    problems.Add(view.Name + ": Revit refused the new extents (" + ex.Message + ")");
                 }
             }
 
-            return anyApplied;
+            return viewsChanged;
         }
 
         private static bool TryGetCurve(Level level, View view, DatumExtentType extentType, out Curve curve)

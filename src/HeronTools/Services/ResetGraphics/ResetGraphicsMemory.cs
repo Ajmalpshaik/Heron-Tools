@@ -31,30 +31,30 @@ namespace HeronTools.Services.ResetGraphics
             public readonly Dictionary<long, OverrideGraphicSettings> Categories = new Dictionary<long, OverrideGraphicSettings>();
         }
 
-        private static readonly Dictionary<string, List<ViewSnapshot>> LastReset = new Dictionary<string, List<ViewSnapshot>>();
-
-        private static string Key(Document doc) =>
-            string.IsNullOrWhiteSpace(doc.PathName) ? doc.Title : doc.PathName;
+        /// <summary>Keyed on the open model itself (not its path or title), so Save As keeps the copy.</summary>
+        private static readonly PerDocumentMemory<List<ViewSnapshot>> LastReset = new PerDocumentMemory<List<ViewSnapshot>>();
 
         /// <summary>Replaces the kept copy with this reset's.</summary>
         internal static void Keep(Document doc, List<ViewSnapshot> snapshot)
         {
-            LastReset[Key(doc)] = snapshot;
+            LastReset.Set(doc, snapshot);
         }
 
         internal static bool HasCopy(Document doc) =>
-            doc != null && LastReset.TryGetValue(Key(doc), out List<ViewSnapshot> kept) && kept.Count > 0;
+            LastReset.Get(doc)?.Count > 0;
 
         /// <summary>
         /// Puts the kept overrides back, in one transaction (one Undo step). The copy is kept afterwards, so an
-        /// Undo of the restore can be restored again. Returns (elements, categories) put back.
+        /// Undo of the restore can be restored again. Returns (elements, categories) put back, and how many
+        /// Revit refused (for example, a view template now controls the view's V/G) - those keep the reset look.
         /// </summary>
-        internal static (int Elements, int Categories, bool Committed) Restore(Document doc)
+        internal static (int Elements, int Categories, int Refused, bool Committed) Restore(Document doc)
         {
-            if (!LastReset.TryGetValue(Key(doc), out List<ViewSnapshot> kept) || kept.Count == 0)
-                return (0, 0, true);
+            List<ViewSnapshot> kept = LastReset.Get(doc);
+            if (kept == null || kept.Count == 0)
+                return (0, 0, 0, true);
 
-            int elements = 0, categories = 0;
+            int elements = 0, categories = 0, refused = 0;
             using (var t = new Transaction(doc, "Restore Last Reset"))
             {
                 t.Start();
@@ -69,24 +69,24 @@ namespace HeronTools.Services.ResetGraphics
                         if (doc.GetElement(id) == null)
                             continue;
                         try { view.SetElementOverrides(id, entry.Value); elements++; }
-                        catch (Autodesk.Revit.Exceptions.ApplicationException) { }
+                        catch (Autodesk.Revit.Exceptions.ApplicationException) { refused++; }   // one refusal must not stop the rest
                     }
                     foreach (KeyValuePair<long, OverrideGraphicSettings> entry in snapshot.Categories)
                     {
                         try { view.SetCategoryOverrides(ElementIdHelper.FromLong(entry.Key), entry.Value); categories++; }
-                        catch (Autodesk.Revit.Exceptions.ApplicationException) { }
+                        catch (Autodesk.Revit.Exceptions.ApplicationException) { refused++; }
                     }
                 }
 
                 if (elements + categories == 0)
                 {
                     t.RollBack();
-                    return (0, 0, true);
+                    return (0, 0, refused, true);
                 }
                 if (t.Commit() != TransactionStatus.Committed)
-                    return (0, 0, false);
+                    return (0, 0, 0, false);
             }
-            return (elements, categories, true);
+            return (elements, categories, refused, true);
         }
     }
 }
