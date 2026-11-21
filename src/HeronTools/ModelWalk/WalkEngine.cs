@@ -477,6 +477,19 @@ namespace HeronTools.Services.ModelWalk
             if (touchModel && doc.IsValidObject)
             {
                 View3D view = doc.GetElement(_session.WalkViewId) as View3D;
+                if (view != null && _thirdEye != null && _session.Position != null)
+                {
+                    // Third person left the walk view's camera 3 m behind the player. The next walk starts from the
+                    // walk view's camera, so put it back on the player's eyes - or that walk would start behind a wall.
+                    // No transaction: the same camera move every frame makes.
+                    try
+                    {
+                        double pitch = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, _session.Input.PitchDeg));
+                        view.SetOrientation(Orientation(_session.Position, _session.Input.YawDeg, pitch));
+                        _thirdEye = null;
+                    }
+                    catch (Autodesk.Revit.Exceptions.ApplicationException) { /* a locked view: the next walk starts from that camera */ }
+                }
                 if (view != null)
                 {
                     if (_session.Settings.KeepSnagColours)
