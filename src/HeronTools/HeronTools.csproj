@@ -40,6 +40,9 @@
     <!-- The brand font, built into the DLL so every PC shows it (no font install). SIL Open Font
          License 1.1 - its text ships beside it (Resources\Fonts\OFL.txt) and is named in NOTICE. -->
     <Resource Include="Resources\Fonts\*.ttf" />
+    <!-- Model Walk's third-person character (a site worker, glTF 2.0, about 470 KB), built into the DLL so it can never
+         go missing beside it. CC0 (public domain) - named in NOTICE. Read by ModelWalk\WalkCharacterModel.cs. -->
+    <EmbeddedResource Include="Resources\ModelWalk\WalkCharacter.gltf" LogicalName="HeronTools.ModelWalk.WalkCharacter.gltf" />
   </ItemGroup>
 
 </Project>
