@@ -75,6 +75,7 @@ namespace HeronTools.UI.ModelWalk
             Loaded += (s, e) => Guard(OnLoadedOnce);
             Deactivated += (s, e) => Guard(() => { if (!_paused && !_ending && !_closedDown) PauseWalk(); });
             LostMouseCapture += (s, e) => Guard(() => { if (!_paused && !_ending && !_closedDown) PauseWalk(); });
+            Closing += (s, e) => Guard(() => OnClosingRequest(e));
             Closed += OnClosedCleanup;
 
             PreviewKeyDown += (s, e) => Guard(() => OnWalkKeyDown(e));
@@ -195,6 +196,21 @@ namespace HeronTools.UI.ModelWalk
             _endTicks = _waitingForEngine ? EndWaitTicks : EndShowTicks;
             ShowPill(title, string.IsNullOrWhiteSpace(text) ? "The walk view stays in the project - run Model Walk again to carry on." : text,
                      _waitingForEngine ? "" : "Click or press Enter to close.");
+        }
+
+        /// <summary>
+        /// Alt+F4 (or anything else that asks the overlay to close) while the walk runs: not closed yet - the walk is
+        /// ended the normal way first, so the next frame shows what this walk hid again, writes the report and goes back
+        /// to the start view; the end sequence then closes the overlay. Model Walk's own closes come during the end
+        /// sequence or a fault and go through. When Revit itself shuts down, Windows destroys this owned window without
+        /// asking it to close, so nothing here can hold Revit up.
+        /// </summary>
+        private void OnClosingRequest(System.ComponentModel.CancelEventArgs e)
+        {
+            if (_ending || _closedDown || _failing || Dispatcher.HasShutdownStarted)
+                return;
+            e.Cancel = true;
+            RequestStop("You closed the walk.");
         }
 
         private void OnClosedCleanup(object sender, EventArgs e)
