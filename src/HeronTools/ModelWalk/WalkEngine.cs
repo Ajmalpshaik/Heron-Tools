@@ -266,6 +266,7 @@ namespace HeronTools.Services.ModelWalk
                     hud.ClearHeightMm = WalkTuning.FtToMm(down.DistanceFt + upHit.DistanceFt);
             }
 
+            UpdateRoom(doc, view, position, now, hud);
             UpdateStatus(doc, hud, input, position);
             UpdateViewRectangle(uidoc, hud, input);
 
@@ -300,6 +301,7 @@ namespace HeronTools.Services.ModelWalk
             _collision.Refresh();
             _levels = null;
             _forceFloorCheck = true;
+            _roomSourcesDirty = true;   // a link loaded or a room placed during a pause
         }
 
         private void HandleModeToggles(WalkInput input, WalkHudState hud)
@@ -353,7 +355,8 @@ namespace HeronTools.Services.ModelWalk
             foreach (KeyValuePair<double, string> level in _levels)
                 if (level.Key <= feetZ + WalkTuning.MmToFt(150))
                     levelName = level.Value;
-            hud.LocationLine = string.IsNullOrEmpty(levelName) ? "Below the lowest level" : levelName;
+            string location = string.IsNullOrEmpty(levelName) ? "Below the lowest level" : levelName;
+            hud.LocationLine = string.IsNullOrEmpty(hud.RoomText) ? location : location + "  -  " + hud.RoomText;
 
             // Yaw is measured from +X (east) towards +Y - project north, not true north.
             double angle = ((input.YawDeg % 360.0) + 360.0) % 360.0;
