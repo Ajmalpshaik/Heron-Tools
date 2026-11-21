@@ -8,8 +8,8 @@
 // Tool Name: Pin Operation Summary Model
 // Description: Captures pin/unpin execution counts for result reporting.
 // Author: Ajmal P.S.
-// Version: 1.0.0
-// Last Updated: 2026-04-15
+// Version: 1.1.0
+// Last Updated: 2026-11-21
 // Revit Version: 2020
 
 namespace HeronTools.Models.PinTools
@@ -29,6 +29,22 @@ namespace HeronTools.Models.PinTools
 
         /// <summary>Elements another user owns in a workshared model; left alone so the rest can change.</summary>
         public int OwnedByOthersCount { get; set; }
+
+        /// <summary>
+        /// Elements a colleague changed or deleted and synced (workshared model): Revit refuses them until this
+        /// model does Reload Latest, so they are left alone and the rest still change.
+        /// </summary>
+        public int OutOfDateCount { get; set; }
+
+        /// <summary>Why the first skipped element was skipped, in plain words; null when none was.</summary>
+        public string FirstSkipReason { get; private set; }
+
+        /// <summary>Keeps the first reason only - the status line has room for one.</summary>
+        public void KeepFirstSkipReason(string reason)
+        {
+            if (FirstSkipReason == null && !string.IsNullOrWhiteSpace(reason))
+                FirstSkipReason = reason;
+        }
 
         /// <summary>True when Revit refused the change at commit: nothing in the model changed.</summary>
         public bool NotCommitted { get; set; }

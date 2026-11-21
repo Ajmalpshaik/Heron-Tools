@@ -127,8 +127,12 @@ namespace HeronTools.Services.Colorize
             return ids;
         }
 
-        internal static int Restore(Document doc, View view)
+        internal static int Restore(Document doc, View view) => Restore(doc, view, out _);
+
+        /// <summary>Puts the remembered overrides back; <paramref name="refused"/> counts elements Revit refused.</summary>
+        internal static int Restore(Document doc, View view, out int refused)
         {
+            refused = 0;
             if (!Saved.TryGetValue(Key(doc, view), out Dictionary<long, OverrideGraphicSettings> perView))
                 return 0;
 
@@ -147,6 +151,7 @@ namespace HeronTools.Services.Colorize
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
                 {
+                    refused++;   // counted, so the status line can say the restore is not complete
                 }
             }
             return restored;

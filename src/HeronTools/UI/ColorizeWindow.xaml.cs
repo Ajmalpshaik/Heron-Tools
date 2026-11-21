@@ -610,14 +610,17 @@ namespace HeronTools.UI
             if (targetViews.Count == 0)
                 return;
 
-            int restored = 0;
+            int restored = 0, refused = 0;
             try
             {
                 using (var t = new Transaction(_doc, "Colorize: Restore original"))
                 {
                     t.Start();
                     foreach (View view in targetViews)
-                        restored += ColorizeMemory.Restore(_doc, view);
+                    {
+                        restored += ColorizeMemory.Restore(_doc, view, out int refusedHere);
+                        refused += refusedHere;
+                    }
 
                     if (restored == 0)
                     {
@@ -646,9 +649,16 @@ namespace HeronTools.UI
 
             ShowReport(null);
             UpdateRestoreButton();
-            UpdateStatus(restored > 0
+            string refusedNote = refused > 0
+                ? $" {refused} could not be put back - Revit refused them (a view template may now control the view's Visibility/Graphics)."
+                : "";
+            string restoreText = (restored > 0
                 ? $"Restored the original graphics of {restored} element(s)."
-                : "Nothing to restore in the target views.");
+                : refused > 0 ? "Nothing was restored." : "Nothing to restore in the target views.") + refusedNote;
+            if (refused > 0)
+                ShowProblem(restoreText);
+            else
+                UpdateStatus(restoreText);
         }
 
         /// <summary>The picks as a selection for ColorizeApplier, or null after saying what is missing.</summary>
