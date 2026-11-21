@@ -140,12 +140,14 @@ figure)** in Settings.
 
 - **Nothing is added to the model.** The figure is drawn on screen by Revit's own graphics, in the walk view only - no
   element, no Undo step, nothing saved. Walls and ducts hide it when it walks behind them.
-- When a wall is behind you, the camera **slides in** closer (never closer than 300 mm) so it never looks through it.
+- When a wall is behind you, the camera **slides in** closer, always stopping in front of the surface, so it never
+  looks through it.
 - You still walk, bump into walls, climb steps and go through doors as **you**, not the camera.
 - **Clicks act on what is under the crosshair**: Select, Snag, Hide, Measure, Go to point and the readout aim from the
   camera, so they hit what you see in the middle of the screen. The distance shown is from you, not from the camera.
 - **Viewpoints** and **Open snag** keep where *you* stood and looked, not the camera behind you. "Save as 3D view"
-  looks from your eyes (first person).
+  looks from your eyes (first person). When the walk ends, the walk view's camera goes back to your eyes, so the next
+  walk starts where you stood.
 - **Snag pictures never show the figure** (it is hidden for the moment the picture is taken). **Snapshots (K) do show
   it** - they are what you see. Press Q first for a snapshot without it.
 

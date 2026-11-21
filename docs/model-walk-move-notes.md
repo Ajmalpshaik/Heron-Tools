@@ -384,6 +384,8 @@ from AJ-Tools.
 | 38 Model closed while paused in third person | | | | |
 | 39 Pictures, viewpoints, Save as 3D view | | | | |
 | 40 Speed in third person (F12) | | | | |
+| 41 Next walk starts where you stood (after third person) | | | | |
+| 42 Camera under a low duct, looking down | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -457,13 +459,13 @@ the diffs in the HUD, keys and session). AJ-Tools was read only, never changed.
 | What | How |
 |---|---|
 | Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a figure)"; Q was free) and the setting **Third-person view (show a figure)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
-| Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** ray (`CastNear`, host + near links, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm. Cast only when the pivot or direction changed; past the 24-ray budget the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
+| Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** cast (`CastNear`, host + near links - up to 2 rays, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm - unless the surface is closer than 550 mm, then half way to it (always in front of it; stage 6 review). Cast only when the pivot or direction changed and both rays fit in the 24-ray budget; otherwise the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
 | Figure | `WalkFigureServer` (`IDirectContext3DServer`): about 17 shaded boxes (head, neck, body, pelvis, arms, legs, feet, a face stripe), 1810 mm tall, built fresh each redraw. Arms and legs swing with the distance walked (stride 900 mm; walk 26 degrees, run 43), easing to rest when you stop; a jump is not a step. Colours from the Heron palette only, as model-view colours like the snag red: Accent (body, arms), Surface (pelvis, legs), Mist (head, hands), Ink (feet, face stripe). Ambient / emissive / specular are darker steps of the same colour (shading, not new hues). Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
 | Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera, which is the picture the modeller aimed at. |
-| Rays | Third person adds at most **1** ray a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
+| Rays | Third person adds at most **1** cast (2 rays with near links) a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
 | Redraws | The camera moving already redraws. With no camera move, the view is refreshed only when the figure appears or goes, or while its limbs ease to rest (frames are asked for until they do). |
 | Snag pictures | The figure is hidden from the snag click until its picture is saved (`SnagAwaitingPicture`, then `SnagPictureBusy` from the HUD) - snag pictures show the model only. **Snapshots (K) show the figure** (they are what you see); Q first for one without it. |
-| Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. After a walk ended in third person, the walk view's own camera stays where the third-person camera was (only if you stay in the walk view - normally you go back to your start view). |
+| Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. When a walk ends in third person on Revit's thread, `End` puts the walk view's camera back on the player's eye (stage 6 review: the next walk starts from that camera). Only when the walk ends without Revit's thread (Revit busy, overlay fault) does it stay 3 m back. |
 
 ### Switching the figure off - what Revit allows
 
@@ -527,3 +529,31 @@ pictures.
 40. **Speed in third person (F12).** On the big model of step 21, press F12, walk for a minute in first person, then in
     third person. Write down both averages and the rays count: third person may add 1 ray a frame, the frame time should
     stay close to first person.
+
+## Stage 6 review (2026-11-21)
+
+A fresh read of the whole change (`git diff origin/main...HEAD`), the files it touches, and the Revit API notes in
+`Nice3point.Revit.Api` 2020-2027 for every graphics-service member used. Builds only - nothing here has run in Revit.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). Left: an end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view; that rare case still starts 3 m back. |
+| R2 | Medium | Wall slide: with a surface closer than 550 mm along the camera ray (a duct or slab just above the head while looking down), the camera was still put 300 mm out - past the surface, so the view looked from inside or behind it. | **Fixed** - the camera stops half way to such a surface, always in front of it. |
+| R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. |
+| R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and cancels a pending switch-off. `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
+| R5 | Checked, no defect | Quick snags: the "One moment" refusal, the picture hand-off (`SnagAwaitingPicture` cleared and `SnagPictureBusy` set in the same UI-thread call, so the figure cannot come back between them), `Snags.csv` rewritten through the temp file with the #41 separator and quoting for commas, quotes and line breaks, comment-box keys (Enter / Esc / repeats), Open still adds to the selection, the setting on = the old box. | - |
+| R6 | Note, not changed | A click uses the previous frame's camera with this frame's look direction; turning fast while clicking in third person can shift the hit by a few centimetres. First person has the same one-frame lag. A snag recorded and then paused within 0.1 s keeps no picture (as before this change). The "One moment" message also shows while a Snapshot (K) is being taken. | Left - no new behaviour asked for. |
+
+Extra Revit test steps:
+
+41. **Next walk starts where you stood.** In third person, walk next to a wall with a room behind you, end the walk
+    (End walk). Click Model Walk again: you start where the figure stood, not 3 m back.
+42. **Camera under a low duct.** In third person, stand under a duct or beam about 200 mm above your head and look
+    down. Expect the camera close above the figure, never inside or above the duct.
+
+| Check (stage 6) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 211 files |
+| XAML resource keys used by the change all in the theme | PASS |
+| R1-R3 in Revit (steps 35, 41, 42) | NEEDS REAL REVIT |
