@@ -15,14 +15,14 @@ it builds anything: a file without its header stops the build.
 | `Heron-Step` | The Heron Tools build step that introduced it | any value; `1` = the first release (Filter Pro moved in) |
 | `Heron-Status` | Lifecycle stage | `DISCOVERED` · `DRAFT` · `TESTING` · `VALIDATED` · `SHADOW` · `PROVEN` · `PRODUCTION` · `DEPRECATED` · `ARCHIVED` |
 | `Heron-Since` | The Heron Tools version it first appeared in | any value, e.g. `1.0.0` |
-| `Heron-Layer` | Which layer the file belongs to | `bridge` · `revit` · `brain` · `platform` · `test` · `tool` - add-in code is `revit`, build scripts are `tool` |
+| `Heron-Layer` | Which layer the file belongs to | `bridge` · `revit` · `brain` · `platform` · `test` · `tool` - add-in code is `revit`, build scripts are `tool`, the installer is `platform` |
 
 **Status follows the Heron trust model.** A file is `DRAFT` until it has been proven in a real Revit
 model, then `PROVEN`. Everything in Heron Tools 1.0.0 is `DRAFT` until the Filter Pro Revit test passes.
 
 ## Where the checker looks
 
-Every `.cs`, `.ps1` and `.xaml` file under `src/` and `build/`, skipping `bin`, `obj` and `.vs`. A field
+Every `.cs`, `.ps1` and `.xaml` file under `src/`, `build/` and `installer/`, skipping `bin`, `obj` and `.vs`. A field
 counts only in the file's first 41 lines, on a comment line.
 
 ## What it looks like

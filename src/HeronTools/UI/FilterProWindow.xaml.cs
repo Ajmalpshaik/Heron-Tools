@@ -1010,6 +1010,7 @@ namespace HeronTools.UI
                 if (!selectedCategories.Any())
                 {
                     _allParameters.Clear();
+                    _currentValues.Clear();   // else the value search box brings the old values back
                     parameters_listbox.ItemsSource = null;
                     values_listbox.ItemsSource = null;
                     UpdateStatus("Select one or more categories.");
@@ -1071,6 +1072,8 @@ namespace HeronTools.UI
 
                 if (param == null || !catIds.Any())
                 {
+                    _currentValues.Clear();   // else the value search box brings the old values back
+                    values_listbox.ItemsSource = null;
                     UpdateStatus("Select a parameter to load its values.");
                     return;
                 }

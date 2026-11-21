@@ -39,7 +39,7 @@ namespace HeronTools.Commands
 
                 return CanViewHaveFilters(activeView, out _);
             }
-            catch
+            catch (System.Exception)
             {
                 // If anything unexpected happens, keep the button disabled.
                 return false;

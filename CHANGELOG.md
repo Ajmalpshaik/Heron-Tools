@@ -2,6 +2,27 @@
 
 All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
+## [Unreleased]
+
+### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
+- **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
+  sub-transaction, never left with no bubble at either end while the rest commit.
+- **Reset Graphics, Pin / Unpin, Link Workset**: if the window stops on an error after a change was made, the change is
+  kept (Revit undoes a command's work when it does not return Succeeded) and the message says so. Link Workset now
+  returns Cancelled when nothing was moved.
+- **Crop View by Elements**: grids and reference planes in a linked model now count when "Levels, grids and reference
+  planes" is ticked (they were dropped as non-model categories - the same fix the host path already had).
+- **Quick Menu**: the wheel now closes if focus left it during the opening animation, instead of staying up over Revit.
+- **Every window**: a window whose minimum size is bigger than the screen is now shrunk to fit, so the bottom buttons
+  are always reachable (Quick Menu Settings on a 1080p laptop at 150%).
+- **Quick Clash**: "the link is no longer loaded" now stays on the status line instead of being overwritten.
+- **Filter Pro**: clearing the categories or parameter now also clears the remembered values, so the value search box
+  cannot bring back an old parameter's values.
+- **Match Elevation** selection filters compare 64-bit category ids (no `int` cut-down).
+- No bare `catch` left anywhere (CONTRIBUTING rule 5): each now names `System.Exception`. Behaviour is unchanged.
+- Docs: README transaction / modeless-window lines and the uninstall rule match the code; the metadata doc names the
+  `installer/` folder; the bug report form lists every tool on the ribbon.
+
 ## [1.1.0] - 2026-11-16
 
 ### Added

@@ -323,7 +323,7 @@ namespace HeronTools.Services.ViewCrop
                         commandTitle + " - Diagnostics",
                         "Diagnostics report could not be shown in a window and was copied to the clipboard instead.");
                 }
-                catch
+                catch (System.Exception)
                 {
                     DialogHelper.ShowError(
                         commandTitle + " - Diagnostics",

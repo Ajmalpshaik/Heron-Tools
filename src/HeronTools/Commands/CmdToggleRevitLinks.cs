@@ -101,7 +101,7 @@ namespace HeronTools.Commands
                     return false;
                 }
             }
-            catch
+            catch (System.Exception)
             {
                 reason = "Revit Links category visibility check failed. Please try in a different view.";
                 return false;

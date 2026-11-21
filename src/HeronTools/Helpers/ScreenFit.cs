@@ -45,6 +45,13 @@ namespace HeronTools.Utils
 
                 double maxHeight = Math.Max(200, work.Height - 2 * Gap);
                 double maxWidth = Math.Max(300, work.Width - 2 * Gap);
+                // WPF lets MinHeight / MinWidth win over MaxHeight / MaxWidth, so a window whose
+                // minimum is taller than a small screen would still run off it (footer buttons
+                // unreachable). Lower the minimum first, then cap the maximum.
+                if (window.MinHeight > maxHeight)
+                    window.MinHeight = maxHeight;
+                if (window.MinWidth > maxWidth)
+                    window.MinWidth = maxWidth;
                 if (window.MaxHeight > maxHeight)
                     window.MaxHeight = maxHeight;
                 if (window.MaxWidth > maxWidth)

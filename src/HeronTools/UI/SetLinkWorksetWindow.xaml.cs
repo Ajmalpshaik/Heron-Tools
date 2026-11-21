@@ -30,6 +30,9 @@ namespace HeronTools.UI
         private readonly Document _doc;
         private readonly ObservableCollection<LinkWorksetItem> _linkItems;
 
+        /// <summary>True once a move was committed - the command must then return Succeeded to keep it.</summary>
+        internal bool MovedSomething { get; private set; }
+
         /// <param name="selectedIds">Revit's selection when the tool started: only those links start ticked.</param>
         public SetLinkWorksetWindow(Document doc, ICollection<ElementId> selectedIds)
         {
@@ -218,6 +221,10 @@ namespace HeronTools.UI
                         ShowStatus("Revit did not keep the change, so no link was moved.", isProblem: true);
                         return;
                     }
+
+                    // A committed transaction (even one that only made the new workset) must be kept
+                    // by the command - Revit undoes it if the command returns anything but Succeeded.
+                    MovedSomething = true;
                 }
             }
             catch (Exception ex)

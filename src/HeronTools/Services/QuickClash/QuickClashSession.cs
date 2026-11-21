@@ -277,8 +277,10 @@ namespace HeronTools.Services.QuickClash
                 link = _doc.GetElement(ElementIdHelper.FromLong(s.SourceLinkInstanceId)) as RevitLinkInstance;
                 if (link == null || link.GetLinkDocument() == null)
                 {
-                    _window.SetStatus("The link picked for Selection B is no longer loaded. Pick it again, or reload it in Manage Links.");
+                    // Refresh first: it rewrites the status line with the counts, which would hide why
+                    // nothing ran.
                     Refresh(app, s);
+                    _window.SetStatus("The link picked for Selection B is no longer loaded. Pick it again, or reload it in Manage Links.");
                     return;
                 }
                 elementsB = ClashElementCollector.LinkElementsShown(_doc, view, link)

@@ -72,14 +72,14 @@ namespace HeronTools.Utils
     /// </summary>
     internal class MepSelectionFilter : ISelectionFilter
     {
-        private readonly HashSet<BuiltInCategory> _categories = new HashSet<BuiltInCategory>
+        private readonly HashSet<long> _categories = new HashSet<long>
         {
-            BuiltInCategory.OST_PipeCurves,
-            BuiltInCategory.OST_DuctCurves,
-            BuiltInCategory.OST_CableTray,
-            BuiltInCategory.OST_Conduit,
-            BuiltInCategory.OST_FlexDuctCurves,
-            BuiltInCategory.OST_FlexPipeCurves
+            (long)BuiltInCategory.OST_PipeCurves,
+            (long)BuiltInCategory.OST_DuctCurves,
+            (long)BuiltInCategory.OST_CableTray,
+            (long)BuiltInCategory.OST_Conduit,
+            (long)BuiltInCategory.OST_FlexDuctCurves,
+            (long)BuiltInCategory.OST_FlexPipeCurves
         };
 
         public bool AllowElement(Element elem)
@@ -88,7 +88,8 @@ namespace HeronTools.Utils
             if (cat == null)
                 return false;
 
-            return _categories.Contains((BuiltInCategory)cat.Id.IntValue());
+            // Compare 64-bit values: element ids are long from Revit 2024.
+            return _categories.Contains(cat.Id.LongValue());
         }
 
         public bool AllowReference(Reference reference, XYZ position)
@@ -111,7 +112,7 @@ namespace HeronTools.Utils
             if (cat == null)
                 return false;
 
-            return cat.Id.IntValue() == (int)BuiltInCategory.OST_DuctCurves;
+            return cat.Id.LongValue() == (long)BuiltInCategory.OST_DuctCurves;
         }
 
         public bool AllowReference(Reference reference, XYZ position)

@@ -30,7 +30,7 @@ namespace HeronTools.Commands
 
                 return IsPlanFamilyView(uiDoc.ActiveView);
             }
-            catch
+            catch (System.Exception)
             {
                 // Any unexpected issue keeps the button disabled rather than crashing the ribbon.
                 return false;

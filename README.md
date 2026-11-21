@@ -185,8 +185,9 @@ powershell -ExecutionPolicy Bypass -File build\uninstall.ps1
 
 It removes only `HeronTools.addin` and the `HeronTools` folder from each Revit year. Heron AI and every
 other add-in are left alone. Add `-DryRun` to see what it would remove, and `-RemoveBackups` to also delete
-the installs kept for `-Rollback`. A Revit that is open (or of unknown year) stops it; an all-users copy is
-reported, not removed (that needs admin rights).
+the installs kept for `-Rollback`. A Revit year that is open is skipped (close it and run again); an open
+Revit whose year cannot be told stops the whole run. An all-users copy is reported, not removed (that needs
+admin rights).
 
 ## How it shares the Heron tab
 
@@ -218,11 +219,11 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 - **Gates on every push** (GitHub Actions, `Gates`): the metadata check, then a compile against every
   Revit release 2020-2027. A compile is not a Revit test.
 
-- Every button that changes the model runs as **one named transaction** - one Undo entry, named
-  `Filter Pro: ...`. If anything in that run fails, the whole run is rolled back and the modeller is
-  told, in plain words, that nothing was changed.
-- Revit's API is called only from Revit's own thread. Filter Pro's window is modal, so it runs there;
-  any future modeless window must reach the API only through an `ExternalEvent`.
+- Every button that changes the model runs as **one named transaction** - one Undo entry, named for the
+  tool (for example `Filter Pro: ...`, `Assign Links to Workset`). If anything in that run fails, the whole
+  run is rolled back and the modeller is told, in plain words, that nothing was changed.
+- Revit's API is called only from Revit's own thread. Most windows are modal, so they run there; the one
+  modeless window (Quick Clash) reaches the API only through an `ExternalEvent`.
 - Version-specific API code lives only in `src/HeronTools/Helpers/` behind `REVIT<year>` /
   `REVIT<year>_OR_GREATER` compile symbols (units 2021, parameter types 2022, case-sensitive filter
   rules 2023, 64-bit `ElementId.Value` 2024, `IntegerValue` removed 2026).

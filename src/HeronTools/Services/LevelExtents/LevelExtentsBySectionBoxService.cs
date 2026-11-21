@@ -178,7 +178,7 @@ namespace HeronTools.Services.LevelExtents
                     level.SetCurveInView(DatumExtentType.Model, view, newLine);
                     anyApplied = true;
                 }
-                catch
+                catch (System.Exception)
                 {
                     // skip this view
                 }
@@ -197,7 +197,7 @@ namespace HeronTools.Services.LevelExtents
                 curve = curves.FirstOrDefault();
                 return curve != null && curve.IsBound;
             }
-            catch { return false; }
+            catch (System.Exception) { return false; }
         }
 
         private static Result Fail(string title, string message)

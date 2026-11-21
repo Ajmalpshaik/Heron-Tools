@@ -420,7 +420,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     bbox = element.get_BoundingBox(view);
                 }
-                catch
+                catch (System.Exception)
                 {
                     continue;
                 }
@@ -501,17 +501,26 @@ namespace HeronTools.Services.ViewCrop
                 if (category == null || category.Id == null)
                     continue;
 
-                if (category.CategoryType != CategoryType.Model)
-                    continue;
-
                 long categoryId = (category.Id).LongValue();
+
+                // Datums BEFORE the model-category test, as in ShouldUseElement: grids and reference
+                // planes are not model categories, so linked grids were always dropped here. Levels
+                // have no extent in a plan, so only grids and reference planes push the crop out.
+                bool isDatum = element is DatumPlane || IsDatumCategory(categoryId);
+                if (isDatum)
+                {
+                    if (!_settings.IncludeDatums || element is Level)
+                        continue;
+                }
+                else if (category.CategoryType != CategoryType.Model)
+                {
+                    continue;
+                }
+
                 if (categoryId == (int)BuiltInCategory.OST_Coordination_Model)
                     continue;
 
                 if (IsExcludedCategory(categoryId))
-                    continue;
-
-                if (!_settings.IncludeDatums && IsDatumCategory(categoryId))
                     continue;
 
                 if (_settings.IgnoreHiddenCategories && IsCategoryHidden(view, categoryId, hiddenCategoryCache))
@@ -538,7 +547,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     bbox = element.get_BoundingBox(null);
                 }
-                catch
+                catch (System.Exception)
                 {
                     continue;
                 }
@@ -648,7 +657,7 @@ namespace HeronTools.Services.ViewCrop
                     {
                         local = modelToView.OfPoint(corners[i]);
                     }
-                    catch
+                    catch (System.Exception)
                     {
                         continue;
                     }
@@ -710,17 +719,26 @@ namespace HeronTools.Services.ViewCrop
                         if (category == null || category.Id == null)
                             continue;
 
-                        if (category.CategoryType != CategoryType.Model)
-                            continue;
-
                         long categoryId = (category.Id).LongValue();
+
+                        // Datums BEFORE the model-category test, as in ShouldUseElement: grids and reference
+                        // planes are not model categories, so linked grids were always dropped here. Levels
+                        // have no extent in a plan, so only grids and reference planes push the crop out.
+                        bool isDatum = linkedElement is DatumPlane || IsDatumCategory(categoryId);
+                        if (isDatum)
+                        {
+                            if (!_settings.IncludeDatums || linkedElement is Level)
+                                continue;
+                        }
+                        else if (category.CategoryType != CategoryType.Model)
+                        {
+                            continue;
+                        }
+
                         if (categoryId == (int)BuiltInCategory.OST_Coordination_Model)
                             continue;
 
                         if (IsExcludedCategory(categoryId))
-                            continue;
-
-                        if (!_settings.IncludeDatums && IsDatumCategory(categoryId))
                             continue;
 
                         // Filter linked element design options
@@ -745,7 +763,7 @@ namespace HeronTools.Services.ViewCrop
                         {
                             linkedBbox = linkedElement.get_BoundingBox(null);
                         }
-                        catch
+                        catch (System.Exception)
                         {
                             continue;
                         }
@@ -788,7 +806,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     bbox = element.get_BoundingBox(null);
                 }
-                catch
+                catch (System.Exception)
                 {
                     continue;
                 }
@@ -873,7 +891,7 @@ namespace HeronTools.Services.ViewCrop
                     if (element.IsHidden(view))
                         return false;
                 }
-                catch
+                catch (System.Exception)
                 {
                     // If Revit cannot evaluate element-level hide state, keep the element.
                 }
@@ -897,7 +915,7 @@ namespace HeronTools.Services.ViewCrop
                 if (view.CanCategoryBeHidden(categoryElementId))
                     hidden = view.GetCategoryHidden(categoryElementId);
             }
-            catch
+            catch (System.Exception)
             {
                 hidden = false;
             }
@@ -1014,7 +1032,7 @@ namespace HeronTools.Services.ViewCrop
                 {
                     isShapeValid = manager.IsCropRegionShapeValid(loop);
                 }
-                catch
+                catch (System.Exception)
                 {
                     // If Revit does not expose validation, attempt SetCropShape directly.
                     isShapeValid = true;

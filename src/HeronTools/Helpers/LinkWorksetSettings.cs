@@ -40,7 +40,7 @@ namespace HeronTools.Utils
 
                 return text.TrimEnd('\r', '\n');
             }
-            catch
+            catch (System.Exception)
             {
                 return DefaultWorksetName;
             }

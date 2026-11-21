@@ -82,7 +82,7 @@ namespace HeronTools.Services.ViewCrop
                 File.WriteAllText(path, body.ToString());
                 return path;
             }
-            catch
+            catch (System.Exception)
             {
                 return "Could not write log file.";
             }

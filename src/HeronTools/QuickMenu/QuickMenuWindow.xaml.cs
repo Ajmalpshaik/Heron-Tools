@@ -140,6 +140,9 @@ namespace HeronTools.UI.QuickMenu
         private int _hoverIndex = -1;
         private bool _choiceMade;
         private bool _autoCloseArmed;
+        // Focus was lost before close-on-lose-focus was armed. Windows does not raise Deactivated a
+        // second time, so arming must act on it - or the wheel would stay up over a blocked Revit.
+        private bool _deactivatedBeforeArmed;
 
         /// <summary>
         /// False while the opening plays: pointing does not light anything until the tools have arrived,
@@ -316,8 +319,8 @@ namespace HeronTools.UI.QuickMenu
         {
             if (!MotionOn)
             {
-                _autoCloseArmed = true;
                 _opened = true;
+                ArmAutoClose();
                 return;
             }
 
@@ -327,7 +330,7 @@ namespace HeronTools.UI.QuickMenu
             {
                 landed.Stop();
                 _opened = true;
-                _autoCloseArmed = true;
+                ArmAutoClose();
                 if (!_choiceMade && IsLoaded)
                 {
                     SetHover(IndexAt(Mouse.GetPosition(WheelCanvas)));
@@ -343,7 +346,7 @@ namespace HeronTools.UI.QuickMenu
             hubScale.KeyFrames.Add(new EasingDoubleKeyFrame(0.42, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(202))));
             hubScale.KeyFrames.Add(new EasingDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(480)),
                 new BackEase { Amplitude = 0.3, EasingMode = EasingMode.EaseOut }));
-            hubScale.Completed += (s, e) => _autoCloseArmed = true;
+            hubScale.Completed += (s, e) => ArmAutoClose();
             _hubGrow.BeginAnimation(ScaleTransform.ScaleXProperty, hubScale);
             _hubGrow.BeginAnimation(ScaleTransform.ScaleYProperty, hubScale);
 
@@ -1540,6 +1543,22 @@ namespace HeronTools.UI.QuickMenu
             // Anything that takes focus away (Alt+Tab, a click that reaches Revit) closes the wheel
             // rather than leaving a floating ring behind.
             if (_autoCloseArmed && !_choiceMade)
+            {
+                CloseWithoutChoice(false);
+            }
+            else if (!_autoCloseArmed)
+            {
+                _deactivatedBeforeArmed = true;
+            }
+        }
+
+        /// <summary>Turns close-on-lose-focus on, and closes now if focus already left during the opening.</summary>
+        private void ArmAutoClose()
+        {
+            if (_autoCloseArmed)
+                return;
+            _autoCloseArmed = true;
+            if (_deactivatedBeforeArmed && !IsActive && !_choiceMade && IsLoaded)
             {
                 CloseWithoutChoice(false);
             }

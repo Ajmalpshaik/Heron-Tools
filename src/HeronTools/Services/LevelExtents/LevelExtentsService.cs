@@ -211,7 +211,7 @@ namespace HeronTools.Services.LevelExtents
                 curve = curves.FirstOrDefault();
                 return curve != null && curve.IsBound;
             }
-            catch
+            catch (System.Exception)
             {
                 return false;
             }

@@ -53,7 +53,7 @@ namespace HeronTools.Utils
 
                 window.Loaded += onLoaded;
             }
-            catch
+            catch (System.Exception)
             {
                 // Motion is cosmetic - never let it stop a window from opening.
             }
@@ -75,7 +75,7 @@ namespace HeronTools.Utils
                     AttachToTabControls(child);
                 }
             }
-            catch
+            catch (System.Exception)
             {
                 // A partially-walked tree is fine: whatever was reached keeps its transition.
             }
@@ -103,7 +103,7 @@ namespace HeronTools.Utils
 
                 PlayTransition(host);
             }
-            catch
+            catch (System.Exception)
             {
                 // Never let a cosmetic transition interfere with the tab actually changing.
             }
@@ -139,7 +139,7 @@ namespace HeronTools.Utils
                 host.BeginAnimation(UIElement.OpacityProperty, fade);
                 translate.BeginAnimation(TranslateTransform.YProperty, rise);
             }
-            catch
+            catch (System.Exception)
             {
                 host.Opacity = 1.0;
                 host.RenderTransform = null;

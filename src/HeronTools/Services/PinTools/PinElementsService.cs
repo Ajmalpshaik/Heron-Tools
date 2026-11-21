@@ -439,7 +439,7 @@ namespace HeronTools.Services.PinTools
 
                 AddElementIds(ids, sink);
             }
-            catch
+            catch (System.Exception)
             {
                 // Ignore unsupported sheet title block collection.
             }
@@ -459,7 +459,7 @@ namespace HeronTools.Services.PinTools
 
                 AddElementIds(ids, sink);
             }
-            catch
+            catch (System.Exception)
             {
                 // Ignore unsupported title block collection.
             }
@@ -475,7 +475,7 @@ namespace HeronTools.Services.PinTools
             {
                 viewportIds = sheet.GetAllViewports();
             }
-            catch
+            catch (System.Exception)
             {
                 return;
             }
@@ -513,7 +513,7 @@ namespace HeronTools.Services.PinTools
                     AddViewportIfMatching(doc, viewport, legendsOnly, sink);
                 }
             }
-            catch
+            catch (System.Exception)
             {
                 // Ignore unsupported viewport collection.
             }
@@ -560,7 +560,7 @@ namespace HeronTools.Services.PinTools
 
                 AddScheduleInstances(schedules, sink);
             }
-            catch
+            catch (System.Exception)
             {
                 // Ignore unsupported schedule collection.
             }
@@ -591,7 +591,7 @@ namespace HeronTools.Services.PinTools
 
                 AddScheduleInstances(schedules, sink);
             }
-            catch
+            catch (System.Exception)
             {
                 // Ignore unsupported schedule collection.
             }
@@ -624,7 +624,7 @@ namespace HeronTools.Services.PinTools
                 if (value is bool flag)
                     return flag;
             }
-            catch
+            catch (System.Exception)
             {
                 // Ignore API access issues and treat as normal schedule.
             }
@@ -655,7 +655,7 @@ namespace HeronTools.Services.PinTools
 
                     AddElementIds(ids, sink);
                 }
-                catch
+                catch (System.Exception)
                 {
                     // Ignore unsupported categories for this Revit version/document.
                 }
@@ -685,7 +685,7 @@ namespace HeronTools.Services.PinTools
             {
                 current = element.Pinned;
             }
-            catch
+            catch (System.Exception)
             {
                 return false;
             }
@@ -699,7 +699,7 @@ namespace HeronTools.Services.PinTools
                 changed = true;
                 return true;
             }
-            catch
+            catch (System.Exception)
             {
                 return false;
             }

@@ -104,6 +104,7 @@ namespace HeronTools.Commands.GraphicsTools
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            ResetGraphicsWindow window = null;
             try
             {
                 Result contextResult = GraphicsCommandService.TryCreateContext(commandData, "Reset Graphics", ref message,
@@ -111,7 +112,7 @@ namespace HeronTools.Commands.GraphicsTools
                 if (contextResult != Result.Succeeded)
                     return contextResult;
 
-                var window = new ResetGraphicsWindow(context.Document, context.ActiveView);
+                window = new ResetGraphicsWindow(context.Document, context.ActiveView);
                 new WindowInteropHelper(window) { Owner = commandData.Application.MainWindowHandle };
                 window.ShowDialog();
                 // Each Reset / Restore in the window committed its own Undo step; nothing is open here.
@@ -119,7 +120,15 @@ namespace HeronTools.Commands.GraphicsTools
             }
             catch (Exception ex)
             {
-                DialogHelper.ShowError("Reset Graphics", "The Reset Graphics window could not open. Revit said: " + ex.Message);
+                // Any result but Succeeded makes Revit undo what this command committed - so a reset
+                // the modeller already made in the window is kept, and they are told so.
+                if (window != null && window.ChangedSomething)
+                {
+                    DialogHelper.ShowError("Reset Graphics", "The Reset Graphics window stopped. The resets already made were kept. Revit said: " + ex.Message);
+                    return Result.Succeeded;
+                }
+
+                DialogHelper.ShowError("Reset Graphics", "The Reset Graphics window could not open. Nothing was changed. Revit said: " + ex.Message);
                 return Result.Cancelled;
             }
         }

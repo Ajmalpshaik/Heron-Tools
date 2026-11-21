@@ -26,6 +26,7 @@ namespace HeronTools.Commands
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            SetLinkWorksetWindow window = null;
             try
             {
                 UIDocument uidoc = commandData.Application?.ActiveUIDocument;
@@ -35,19 +36,27 @@ namespace HeronTools.Commands
                     return Result.Cancelled;
                 }
 
-                var window = new SetLinkWorksetWindow(uidoc.Document, uidoc.Selection.GetElementIds());
+                window = new SetLinkWorksetWindow(uidoc.Document, uidoc.Selection.GetElementIds());
                 var helper = new WindowInteropHelper(window)
                 {
                     Owner = commandData.Application.MainWindowHandle
                 };
 
                 window.ShowDialog();
-                return Result.Succeeded;
+                return window.MovedSomething ? Result.Succeeded : Result.Cancelled;
             }
             catch (System.Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                // Any result but Succeeded makes Revit undo what this command committed: keep a move
+                // the modeller already made in the window, and say so in plain words.
+                if (window != null && window.MovedSomething)
+                {
+                    DialogHelper.ShowError(Title, "The Set Link Workset window stopped. The links already moved were kept. Revit said: " + ex.Message);
+                    return Result.Succeeded;
+                }
+
+                DialogHelper.ShowError(Title, "Set Link Workset could not run. Nothing was changed. Revit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }

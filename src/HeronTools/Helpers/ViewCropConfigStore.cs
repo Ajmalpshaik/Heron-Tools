@@ -98,7 +98,7 @@ namespace HeronTools.Utils
                     }
                 }
             }
-            catch
+            catch (System.Exception)
             {
                 // Return default settings if reading fails.
             }
