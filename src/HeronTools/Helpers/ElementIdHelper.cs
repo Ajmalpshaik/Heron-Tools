@@ -127,11 +127,6 @@ namespace HeronTools.Utils
         }
 
         /// <summary>
-        /// Version-safe replacement for <c>new ElementId(int)</c>, which no longer exists on Revit
-        /// 2027 (confirmed against the real installed API). Never construct an ElementId from a plain
-        /// int directly at a call site - always go through this method.
-        /// </summary>
-        /// <summary>
         /// The ElementId for a value saved with LongValue(). Before Revit 2024 ids are 32-bit, so a value
         /// saved there always fits an int.
         /// </summary>
@@ -144,6 +139,11 @@ namespace HeronTools.Utils
 #endif
         }
 
+        /// <summary>
+        /// Version-safe replacement for <c>new ElementId(int)</c>, which no longer exists on Revit
+        /// 2027 (confirmed against the real installed API). Never construct an ElementId from a plain
+        /// int directly at a call site - always go through this method.
+        /// </summary>
         internal static ElementId FromInt(int value)
         {
 #if REVIT2024_OR_GREATER
