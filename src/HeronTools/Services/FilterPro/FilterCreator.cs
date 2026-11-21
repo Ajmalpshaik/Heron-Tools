@@ -425,8 +425,10 @@ namespace HeronTools.Services.FilterPro
         /// <summary>
         /// Decimal (length, area, flow...) rules. Values are listed by the text Revit shows, and several
         /// slightly different internal values can show the same text (e.g. "1500"). The rule therefore
-        /// covers the whole spread of values behind that text, so the filter catches every element the
-        /// user saw listed under it.
+        /// covers the whole band behind that text (MinDouble/MaxDouble: the Project Units rounding band,
+        /// widened by any value seen), so the filter catches every element that shows it - also elements
+        /// past the value list's scan limit. "Greater than 2700" starts above that band, "at least 2700"
+        /// at its bottom.
         /// </summary>
         private static IList<FilterRule> BuildDoubleRules(
             FilterParameterItem parameter,

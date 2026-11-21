@@ -31,8 +31,9 @@ namespace HeronTools.Models
         public ElementId ElementId { get; }
 
         /// <summary>
-        /// Decimal values only: the smallest and largest internal value seen behind this display text.
-        /// Several values can show the same text ("1500"); the filter rule covers all of them.
+        /// Decimal values only: the smallest and largest internal value behind this display text - the
+        /// values seen, widened to the whole band the Project Units rounding shows as this text
+        /// ("2700" = 2699.5 to 2700.5 mm). The filter rule covers all of it.
         /// </summary>
         public double? MinDouble { get; private set; }
         public double? MaxDouble { get; private set; }

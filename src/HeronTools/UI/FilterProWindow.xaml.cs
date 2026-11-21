@@ -35,6 +35,10 @@ namespace HeronTools.UI
         private readonly List<FilterCategoryItem> _allCategories = new List<FilterCategoryItem>();
         private readonly List<FilterParameterItem> _allParameters = new List<FilterParameterItem>();
         private bool _restoringState;
+        // While the last choices are restored the status line is held back, so a load error or scan-limit
+        // note is kept here and shown at the end instead of "Opened with your last choices" over empty lists.
+        private string _restoreLoadError;
+        private string _restoreScanNote;
         private bool _isLoadingParameters;
         private bool _isLoadingValues;
         // Set when the picks change while a list is still loading; the load then runs once more, so the
@@ -333,7 +337,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading views: {ex.Message}");
+                ReportLoadError($"Error loading views: {ex.Message}");
             }
         }
 
@@ -369,7 +373,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading patterns: {ex.Message}");
+                ReportLoadError($"Error loading patterns: {ex.Message}");
             }
         }
 
@@ -610,6 +614,8 @@ namespace HeronTools.UI
             string restoredMessage = _restoringFromLastingMemory
                 ? "Opened with your last Filter Pro choices. Anything not in this model was skipped."
                 : "Restored previous Filter Pro selection.";
+            _restoreLoadError = null;
+            _restoreScanNote = null;
             _restoringState = true;
             try
             {
@@ -632,7 +638,28 @@ namespace HeronTools.UI
 
             UpdateCounts();
             UpdateRuleAvailability();
-            UpdateStatus(restoredMessage);
+
+            if (_restoreLoadError != null)
+            {
+                // A list failed to load while restoring: say so, never "opened with your last choices".
+                ShowProblem($"Your last Filter Pro choices could not all be restored. {_restoreLoadError}. Pick again.");
+            }
+            else
+            {
+                UpdateStatus(_restoreScanNote != null ? restoredMessage + " " + _restoreScanNote : restoredMessage);
+            }
+
+            _restoreLoadError = null;
+            _restoreScanNote = null;
+        }
+
+        /// <summary>A list could not be loaded: shown now, and kept for the end of a restore.</summary>
+        private void ReportLoadError(string message)
+        {
+            if (_restoringState && _restoreLoadError == null)
+                _restoreLoadError = message;
+
+            UpdateStatus(message);
         }
 
         private async Task RestoreCategoriesAndParameters(FilterProState lastState)
@@ -996,7 +1023,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading categories: {ex.Message}");
+                ReportLoadError($"Error loading categories: {ex.Message}");
             }
         }
 
@@ -1044,7 +1071,7 @@ namespace HeronTools.UI
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading parameters: {ex.Message}");
+                ReportLoadError($"Error loading parameters: {ex.Message}");
             }
             finally
             {
@@ -1101,13 +1128,18 @@ namespace HeronTools.UI
                 UpdateCounts();
 
                 if (hitScanLimit)
-                    UpdateStatus($"Loaded {collectedValues.Count} unique value(s). Stopped after scanning 10,000 elements for performance.");
+                {
+                    string scanNote = $"Values were read from the first {Constants.ELEMENT_SCAN_LIMIT:N0} placed elements only, to keep Revit quick.";
+                    if (_restoringState)
+                        _restoreScanNote = scanNote;
+                    UpdateStatus($"Loaded {collectedValues.Count} unique value(s). {scanNote}");
+                }
                 else
                     UpdateStatus($"Loaded {collectedValues.Count} unique value(s).");
             }
             catch (Exception ex)
             {
-                UpdateStatus($"Error loading values: {ex.Message}");
+                ReportLoadError($"Error loading values: {ex.Message}");
             }
             finally
             {
