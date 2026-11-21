@@ -9,6 +9,8 @@
 // are copied (Highlight's idea); Reset puts the copies back. The copies are the TRUE originals: a second Run
 // first puts them back, then colours again, so they are never replaced by the colours of an earlier run.
 // They are also written to %LocalAppData%\HeronTools\QuickClash\ so a Revit crash does not lose them.
+// "Still coloured?" asks for the FULL Quick Clash override on an element (solid fill, colour, transparency), never
+// the line colour alone - so a modeller's own red, green or grey set after Reset view is never taken for ours.
 
 using System;
 using System.Collections.Generic;
@@ -28,7 +30,7 @@ namespace HeronTools.Services.QuickClash
         private static readonly Dictionary<string, ClashColourMemory> ByView = new Dictionary<string, ClashColourMemory>();
 
         private readonly Dictionary<long, OverrideGraphicSettings> _originals = new Dictionary<long, OverrideGraphicSettings>();
-        private readonly string _key;
+        private string _key;
 
         private ClashColourMemory(string key) { _key = key; }
 
@@ -36,15 +38,48 @@ namespace HeronTools.Services.QuickClash
         public ClashColour ColourA { get; private set; }
         public ClashColour ColourB { get; private set; }
         public ClashColour ColourRest { get; private set; }
+        public int RestTransparency { get; private set; } = QuickClashSettings.DefaultRestTransparency;
+
+        /// <summary>The solid fill the last Run used; -1 when not known (an older disk copy).</summary>
+        private long _solidFillId = -1;
+
+        /// <summary>False until a Run (or the disk copy) has said which colours went on.</summary>
+        private bool _hasColours;
+
+        /// <summary>
+        /// True once the view has been put back (Reset, Save, Sync, Close). The copies stay in this session only, so
+        /// an Undo of that Reset can be reset again; the disk copy is gone, so a later Revit never brings them back.
+        /// </summary>
+        public bool IsPutBack { get; private set; }
 
         public bool HasOriginals => _originals.Count > 0;
 
         // ------------------------------------------------------------------ finding one
 
-        internal static string ViewKey(Document doc, View view)
+        internal static string ViewKey(Document doc, View view) => DocKey(doc) + "|" + view.Id.LongValue();
+
+        /// <summary>The model part of the key: its file path, or its title before it is first saved.</summary>
+        internal static string DocKey(Document doc) => string.IsNullOrWhiteSpace(doc.PathName) ? doc.Title : doc.PathName;
+
+        /// <summary>
+        /// Save As gave the model a new path: every memory of the old path moves to the new one (with its disk copy),
+        /// so Reset view, Save and Close still find it.
+        /// </summary>
+        internal static void MoveDocument(string oldDocKey, string newDocKey)
         {
-            string docKey = string.IsNullOrWhiteSpace(doc.PathName) ? doc.Title : doc.PathName;
-            return docKey + "|" + view.Id.LongValue();
+            if (string.IsNullOrEmpty(oldDocKey) || string.IsNullOrEmpty(newDocKey) || oldDocKey == newDocKey)
+                return;
+            string prefix = oldDocKey + "|";
+            foreach (string oldKey in ByView.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            {
+                ClashColourMemory memory = ByView[oldKey];
+                ByView.Remove(oldKey);
+                DeleteDiskCopy(oldKey);
+                memory._key = newDocKey + "|" + oldKey.Substring(prefix.Length);
+                ByView[memory._key] = memory;
+                if (!memory.IsPutBack)
+                    memory.SaveToDisk();
+            }
         }
 
         /// <summary>This view's memory, from this session or (after a crash) from the copy on disk; null if none.</summary>
@@ -75,6 +110,11 @@ namespace HeronTools.Services.QuickClash
         {
             string key = ViewKey(doc, view);
             ByView.Remove(key);
+            DeleteDiskCopy(key);
+        }
+
+        private static void DeleteDiskCopy(string key)
+        {
             try { File.Delete(DiskPath(key)); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
@@ -82,14 +122,23 @@ namespace HeronTools.Services.QuickClash
 
         // ------------------------------------------------------------------ inside a transaction
 
-        /// <summary>Puts every remembered override back. Deleted elements are passed over. Returns how many were put back.</summary>
+        /// <summary>
+        /// Puts the remembered overrides back - only on elements that still carry a Quick Clash colour. An element the
+        /// modeller has given an override of their own since is left as it is. Deleted elements are passed over.
+        /// Returns how many were put back.
+        /// </summary>
         internal int PutBack(Document doc, View view)
         {
             int count = 0;
+            if (!_hasColours)
+                return 0;   // never coloured (an empty, fresh memory): nothing of ours to take off
+            ElementId solid = SolidFill(doc);
             foreach (KeyValuePair<long, OverrideGraphicSettings> entry in _originals)
             {
                 ElementId id = ElementIdHelper.FromLong(entry.Key);
                 if (doc.GetElement(id) == null)
+                    continue;
+                if (!CarriesOurOverride(view.GetElementOverrides(id), solid))
                     continue;
                 try
                 {
@@ -115,39 +164,116 @@ namespace HeronTools.Services.QuickClash
             }
         }
 
-        internal void SetColours(ClashColour a, ClashColour b, ClashColour rest)
+        /// <summary>The colours a Run has just put on. The view is coloured again: not put back.</summary>
+        internal void SetColours(ClashColour a, ClashColour b, ClashColour rest, int restTransparency, ElementId solidFill)
         {
             ColourA = a; ColourB = b; ColourRest = rest;
+            _hasColours = true;
+            RestTransparency = Clamp(restTransparency);
+            _solidFillId = (solidFill ?? ElementId.InvalidElementId).LongValue();
+            IsPutBack = false;
         }
+
+        /// <summary>
+        /// The view is back to its own colours. Call only after the put-back transaction committed. The disk copy goes,
+        /// so no later Revit session brings these old copies back over the modeller's newer overrides.
+        /// </summary>
+        internal void MarkPutBack()
+        {
+            IsPutBack = true;
+            DeleteDiskCopy(_key);
+        }
+
+        /// <summary>An Undo of a Reset brought the colours back: keep the disk copy again, in case Revit closes.</summary>
+        internal void MarkColouredAgain()
+        {
+            if (!IsPutBack) return;
+            IsPutBack = false;
+            SaveToDisk();
+        }
+
+        // ------------------------------------------------------------------ the Quick Clash override
+
+        /// <summary>The override a Run puts on: line, cut line and solid fill in one colour, and a transparency.</summary>
+        internal static OverrideGraphicSettings QuickClashOverride(ClashColour colour, int transparency, ElementId solidFill)
+        {
+            var c = new Color(colour.R, colour.G, colour.B);
+            var o = new OverrideGraphicSettings();
+            o.SetProjectionLineColor(c);
+            o.SetCutLineColor(c);
+            if (solidFill != null && solidFill != ElementId.InvalidElementId)
+            {
+                o.SetSurfaceForegroundPatternId(solidFill);
+                o.SetSurfaceForegroundPatternVisible(true);
+                o.SetSurfaceForegroundPatternColor(c);
+                o.SetCutForegroundPatternId(solidFill);
+                o.SetCutForegroundPatternVisible(true);
+                o.SetCutForegroundPatternColor(c);
+            }
+            o.SetSurfaceTransparency(Clamp(transparency));
+            return o;
+        }
+
+        /// <summary>The drafting solid fill - the one view overrides expect (as Highlight and Filter Pro use).</summary>
+        internal static ElementId SolidFillId(Document doc)
+        {
+            return new FilteredElementCollector(doc)
+                .OfClass(typeof(FillPatternElement))
+                .Cast<FillPatternElement>()
+                .FirstOrDefault(p =>
+                {
+                    FillPattern fp = p.GetFillPattern();
+                    return fp != null && fp.IsSolidFill && fp.Target == FillPatternTarget.Drafting;
+                })?.Id ?? ElementId.InvalidElementId;
+        }
+
+        private ElementId SolidFill(Document doc) =>
+            _solidFillId >= 0 ? ElementIdHelper.FromLong(_solidFillId) : SolidFillId(doc);
+
+        /// <summary>True when the element carries the whole override of colour A, B or the rest - every field a Run sets.</summary>
+        private bool CarriesOurOverride(OverrideGraphicSettings now, ElementId solid)
+        {
+            return SameQuickClashFields(now, QuickClashOverride(ColourA, 0, solid))
+                || SameQuickClashFields(now, QuickClashOverride(ColourB, 0, solid))
+                || SameQuickClashFields(now, QuickClashOverride(ColourRest, RestTransparency, solid));
+        }
+
+        // The fields QuickClashOverride sets, compared one by one (64-bit ids, colours as numbers).
+        private static bool SameQuickClashFields(OverrideGraphicSettings x, OverrideGraphicSettings y)
+        {
+            return C(x.ProjectionLineColor) == C(y.ProjectionLineColor)
+                && C(x.CutLineColor) == C(y.CutLineColor)
+                && I(x.SurfaceForegroundPatternId) == I(y.SurfaceForegroundPatternId)
+                && C(x.SurfaceForegroundPatternColor) == C(y.SurfaceForegroundPatternColor)
+                && x.IsSurfaceForegroundPatternVisible == y.IsSurfaceForegroundPatternVisible
+                && I(x.CutForegroundPatternId) == I(y.CutForegroundPatternId)
+                && C(x.CutForegroundPatternColor) == C(y.CutForegroundPatternColor)
+                && x.IsCutForegroundPatternVisible == y.IsCutForegroundPatternVisible
+                && x.Transparency == y.Transparency;
+        }
+
+        private static int Clamp(int transparency) => Math.Max(0, Math.Min(100, transparency));
 
         // ------------------------------------------------------------------ is it still on?
 
         /// <summary>
-        /// True when elements in the view still carry this tool's colours - a clash or grey colour that is not the
-        /// element's own remembered colour. Tells an undone Run from one still on screen.
+        /// True when an element in the view still carries the full Quick Clash override (solid fill, colour and
+        /// transparency of colour A, B or the rest) that is not its own remembered override. Every entry is looked at.
+        /// Tells an undone Run - or a Reset - from colours still on screen, or brought back by an Undo of a Reset.
+        /// A modeller's own colour (a red line, a green fill) is not the full override, so it never counts.
         /// </summary>
         internal bool StillColoured(Document doc, View view)
         {
-            int looked = 0;
+            if (!_hasColours)
+                return false;   // no Run ever coloured with this memory
+            ElementId solid = SolidFill(doc);
             foreach (KeyValuePair<long, OverrideGraphicSettings> entry in _originals)
             {
                 ElementId id = ElementIdHelper.FromLong(entry.Key);
                 if (doc.GetElement(id) == null)
                     continue;
-                Color c = view.GetElementOverrides(id).ProjectionLineColor;
-                if (c == null || !c.IsValid)
-                {
-                    if (++looked >= 500) break;
-                    continue;
-                }
-                var now = new ClashColour(c.Red, c.Green, c.Blue);
-                bool ours = now.SameAs(ColourA) || now.SameAs(ColourB) || now.SameAs(ColourRest);
-                Color own = entry.Value.ProjectionLineColor;
-                bool sameAsOwn = own != null && own.IsValid && now.SameAs(new ClashColour(own.Red, own.Green, own.Blue));
-                if (ours && !sameAsOwn)
+                if (CarriesOurOverride(view.GetElementOverrides(id), solid) && !CarriesOurOverride(entry.Value, solid))
                     return true;
-                if (++looked >= 500)
-                    break;
             }
             return false;
         }
@@ -163,7 +289,9 @@ namespace HeronTools.Services.QuickClash
                 {
                     "# Heron Tools - Quick Clash: the view's own graphic overrides, kept until the view is put back.",
                     "key=" + _key,
-                    "colours=" + ColourA + ";" + ColourB + ";" + ColourRest
+                    "colours=" + ColourA + ";" + ColourB + ";" + ColourRest,
+                    "rest-transparency=" + RestTransparency.ToString(CultureInfo.InvariantCulture),
+                    "solid-fill=" + _solidFillId.ToString(CultureInfo.InvariantCulture)
                 };
                 lines.AddRange(_originals.Select(e => e.Key.ToString(CultureInfo.InvariantCulture) + "\t" + Write(e.Value)));
                 string path = DiskPath(_key);
@@ -194,9 +322,24 @@ namespace HeronTools.Services.QuickClash
                     {
                         string[] c = line.Substring(8).Split(';');
                         if (c.Length == 3)
-                            memory.SetColours(ClashColour.Parse(c[0], QuickClashSettings.DefaultColourA),
-                                              ClashColour.Parse(c[1], QuickClashSettings.DefaultColourB),
-                                              ClashColour.Parse(c[2], QuickClashSettings.DefaultColourRest));
+                        {
+                            memory.ColourA = ClashColour.Parse(c[0], QuickClashSettings.DefaultColourA);
+                            memory.ColourB = ClashColour.Parse(c[1], QuickClashSettings.DefaultColourB);
+                            memory.ColourRest = ClashColour.Parse(c[2], QuickClashSettings.DefaultColourRest);
+                            memory._hasColours = true;
+                        }
+                        continue;
+                    }
+                    if (line.StartsWith("rest-transparency=", StringComparison.Ordinal))
+                    {
+                        if (int.TryParse(line.Substring(18), NumberStyles.Integer, CultureInfo.InvariantCulture, out int rt))
+                            memory.RestTransparency = Clamp(rt);
+                        continue;
+                    }
+                    if (line.StartsWith("solid-fill=", StringComparison.Ordinal))
+                    {
+                        if (long.TryParse(line.Substring(11), NumberStyles.Integer, CultureInfo.InvariantCulture, out long sf))
+                            memory._solidFillId = sf;
                         continue;
                     }
                     int tab = line.IndexOf('\t');
