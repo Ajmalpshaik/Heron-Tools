@@ -66,7 +66,7 @@ namespace HeronTools.Commands.ModelWalk
             try
             {
                 SnagColourMemory.Watch(uiapp);
-                WalkFigureServer.Prepare(uiapp);   // the third-person figure's switch-off event and model-close watch (once)
+                WalkCharacterServer.Prepare(uiapp);   // the third-person character's switch-off event and model-close watch (once)
                 WalkSettings settings = WalkSettings.Load();
                 if (!settings.KeepSnagColours)
                     GiveBackLeftovers(doc);   // kept colours stay until Clear snag colours, a save or a sync

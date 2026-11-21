@@ -20,6 +20,17 @@ not licensed under the Apache License.
 
 ---
 
+Model Walk's third-person character (a site worker in a hard hat;
+src/HeronTools/Resources/ModelWalk/WalkCharacter.gltf, built into HeronTools.dll)
+is a trimmed copy of a free 3D character released under CC0 1.0 Universal
+(public domain dedication, https://creativecommons.org/publicdomain/zero/1.0/):
+no credit is required and no licence terms apply to it. It came to Heron Tools
+from the AJ-Tools Game Mode (v1.61.0), trimmed to one mesh, its skeleton, six
+plain colours and three animations. It is not covered by the Apache License
+grant beyond what CC0 already allows.
+
+---
+
 Heron Tools integrates with Autodesk Revit through the Revit API.
 
 Autodesk and Revit are trademarks or registered trademarks of Autodesk, Inc.

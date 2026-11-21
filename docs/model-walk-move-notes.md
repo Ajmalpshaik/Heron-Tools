@@ -32,7 +32,8 @@ step-by-step Revit test script. The user guide is [model-walk-guide.md](model-wa
 | nested `GameNative` | `WalkNative.cs` |
 | `GameKeySettingsWindow.xaml` / `.xaml.cs` | `ModelWalkKeysWindow.xaml` / `.xaml.cs` |
 | - (stage 4) | `WalkSettings.cs` + `ModelWalkSettingsWindow.xaml` / `.xaml.cs` (Settings), `WalkViewpointStore.cs` (viewpoints per model), `WalkEngine.Rooms.cs` (room in the location line), `ModelWalkHudWindow.Entry.cs` (comment / name box), `ModelWalkHudWindow.Pause.cs` (pause menu) |
-| `GameCharacterServer.cs`, `GameMotionEngine.ThirdPerson.cs` (AJ-Tools v1.60.0, `a5eb30b`, added after the first move) | `WalkFigureServer.cs` (the figure, DirectContext3D, switch on / off), `WalkEngine.ThirdPerson.cs` (camera and pose) - see "Third-person view" at the end |
+| `GameCharacterServer.cs`, `GameMotionEngine.ThirdPerson.cs` (AJ-Tools v1.60.0, `a5eb30b`, added after the first move; v1.61.0, `ab98e2e`) | `WalkCharacterServer.cs` (the character, DirectContext3D, switch on / off), `WalkEngine.ThirdPerson.cs` (camera, place, speed) - see "Third-person view" and "The real character" at the end |
+| `GameCharacterModel.cs`, `GameCharacterAnimator.cs`, `Resources/GameCharacter.gltf` (AJ-Tools v1.61.0, `ab98e2e`) | `WalkCharacterModel.cs` + `WalkJson.cs` (reader), `WalkCharacterAnimator.cs`, `Resources/ModelWalk/WalkCharacter.gltf` (embedded in the DLL) |
 | `Resources/GameMode.png`, `GameGun.png`, `GameRifle.png`, `GameSnagGun.png` | `Resources/Icons/ModelWalk16.png`, `ModelWalk32.png` (new, house style, embedded); gun pictures dropped |
 | `RibbonManager.BuildGamePanel` | `App/HeronToolsApp.cs`, Coordination panel, button "Model Walk" |
 
@@ -380,12 +381,17 @@ from AJ-Tools.
 | 34 Third person on / off | | | | |
 | 35 Camera slides in at a wall | | | | |
 | 36 Clicks land on the crosshair | | | | |
-| 37 Figure gone on every end | | | | |
+| 37 Character gone on every end | | | | |
 | 38 Model closed while paused in third person | | | | |
 | 39 Pictures, viewpoints, Save as 3D view | | | | |
 | 40 Speed in third person (F12) | | | | |
 | 41 Next walk starts where you stood (after third person) | | | | |
 | 42 Camera under a low duct, looking down | | | | |
+| 43 The real character: stand, walk, run | | | | |
+| 44 Feet at speed, and turning | | | | |
+| 45 Standing still costs no redraws | | | | |
+| 46 Big model speed with the character (F12) | | | | |
+| 47 Colours, walls and pictures with the character | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -458,33 +464,33 @@ the diffs in the HUD, keys and session). AJ-Tools was read only, never changed.
 
 | What | How |
 |---|---|
-| Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a figure)"; Q was free) and the setting **Third-person view (show a figure)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
+| Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a character)"; Q was free) and the setting **Third-person view (show a character)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
 | Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** cast (`CastNear`, host + near links - up to 2 rays, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm - unless the surface is closer than 550 mm, then half way to it (always in front of it; stage 6 review). Cast only when the pivot or direction changed and both rays fit in the 24-ray budget; otherwise the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
-| Figure | `WalkFigureServer` (`IDirectContext3DServer`): about 17 shaded boxes (head, neck, body, pelvis, arms, legs, feet, a face stripe), 1810 mm tall, built fresh each redraw. Arms and legs swing with the distance walked (stride 900 mm; walk 26 degrees, run 43), easing to rest when you stop; a jump is not a step. Colours from the Heron palette only, as model-view colours like the snag red: Accent (body, arms), Surface (pelvis, legs), Mist (head, hands), Ink (feet, face stripe). Ambient / emissive / specular are darker steps of the same colour (shading, not new hues). Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
+| Character | Was: about 17 shaded boxes in the Heron colours. **Replaced** by the real character - see "The real character (2026-11-21, stage 8)" at the end. Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
 | Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera, which is the picture the modeller aimed at. |
 | Rays | Third person adds at most **1** cast (2 rays with near links) a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
-| Redraws | The camera moving already redraws. With no camera move, the view is refreshed only when the figure appears or goes, or while its limbs ease to rest (frames are asked for until they do). |
-| Snag pictures | The figure is hidden from the snag click until its picture is saved (`SnagAwaitingPicture`, then `SnagPictureBusy` from the HUD) - snag pictures show the model only. **Snapshots (K) show the figure** (they are what you see); Q first for one without it. |
+| Redraws | The camera moving already redraws. With no camera move, the view is refreshed only when the character appears or goes, or while it walks, runs or blends on the spot (frames are asked for until it stands). |
+| Snag pictures | The character is hidden from the snag click until its picture is saved (`SnagAwaitingPicture`, then `SnagPictureBusy` from the HUD) - snag pictures show the model only. **Snapshots (K) show the character** (they are what you see); Q first for one without it. |
 | Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. When a walk ends in third person on Revit's thread, `End` puts the walk view's camera back on the player's eye (stage 6 review: the next walk starts from that camera). Only when the walk ends without Revit's thread (Revit busy, overlay fault) does it stay 3 m back. |
 
-### Switching the figure off - what Revit allows
+### Switching the character off - what Revit allows
 
 The Revit API notes for `ExternalService.RemoveServer` (identical in the 2020, 2021, 2022, 2023, 2024, 2025, 2026 and
 2027 `Nice3point.Revit.Api` XML) say a server that **has drawn in a model that is still open cannot be removed**
-(`ArgumentException`). So the figure is never left drawing, but the server object can stay registered, inactive,
+(`ArgumentException`). So the character is never left drawing, but the server object can stay registered, inactive,
 until the model closes. AJ-Tools leaves its server registered and active for the whole Revit session; Model Walk does
 this instead:
 
 | When | What happens |
 |---|---|
-| Walk starts | `WalkFigureServer.Prepare` (inside the command): makes the switch-off `ExternalEvent` and watches models closing, once per Revit session. Nothing is registered yet. |
+| Walk starts | `WalkCharacterServer.Prepare` (inside the command): makes the switch-off `ExternalEvent` and watches models closing, once per Revit session. Nothing is registered yet. |
 | First third-person frame | `SwitchOn` (inside the frame `ExternalEvent`): `AddServer` the first time, then put on the active list. A refusal turns third person off with a plain message. |
-| Every walk end on Revit's thread - End walk, Esc Esc, the ribbon button, model closed, view switched, walk view deleted, locked view, a fault in the frame | `WalkEngine.End` calls `SwitchOff` **first**: hidden (`CanExecute` false), off the active list, `RemoveServer` tried; the view is refreshed so the figure goes at once. |
-| Alt+F4 / overlay closed, Revit busy for 3 s, an overlay fault (`Guard`) | `EndWithoutRevit` - no Revit API there: `SwitchOffSoon` hides the figure at once (plain .NET flag) and raises the switch-off event, which runs `SwitchOff` and refreshes the view on Revit's next idle moment (skipped if a new walk switched it on meanwhile). Alt+F4 normally goes the Revit-thread way first (it ends the walk the normal way). |
+| Every walk end on Revit's thread - End walk, Esc Esc, the ribbon button, model closed, view switched, walk view deleted, locked view, a fault in the frame | `WalkEngine.End` calls `SwitchOff` **first**: hidden (`CanExecute` false), off the active list, `RemoveServer` tried; the view is refreshed so the character goes at once. |
+| Alt+F4 / overlay closed, Revit busy for 3 s, an overlay fault (`Guard`) | `EndWithoutRevit` - no Revit API there: `SwitchOffSoon` hides the character at once (plain .NET flag) and raises the switch-off event, which runs `SwitchOff` and refreshes the view on Revit's next idle moment (skipped if a new walk switched it on meanwhile). Alt+F4 normally goes the Revit-thread way first (it ends the walk the normal way). |
 | A model closing | `DocumentClosing`: if it is the walk's model, `SwitchOff` (also covers a close while paused). `DocumentClosed`: `RemoveServer` tried again when no walk uses it - this is when Revit lets it go. |
 | Revit closing | `HeronToolsApp.OnShutdown` calls `SwitchOff`. |
 
-No transaction anywhere for the figure. Every member used (`ExternalServiceRegistry.GetService`,
+No transaction anywhere for the character. Every member used (`ExternalServiceRegistry.GetService`,
 `MultiServerService.AddServer / RemoveServer / IsRegisteredServerId / GetActiveServerIds / SetActiveServers`, the
 `IDirectContext3DServer` members, `DrawContext.IsAvailable / FlushBuffer`, `VertexBuffer`, `IndexBuffer`,
 `EffectInstance`) has the same signature in all eight years' API notes, so there is no version-specific code.
@@ -497,35 +503,35 @@ No transaction anywhere for the figure. Every member used (`ExternalServiceRegis
 | Metadata check (rules of `build/check-metadata.ps1`, run in Python - no pwsh here) | PASS - 211 files |
 | XAML: HUD and Settings well-formed, every resource key (XAML, `SetResourceReference`) in the theme, no raw colours | PASS |
 | XAML rendered to a picture | NOT RUN - WPF needs Windows |
-| The figure draws, swings, hides behind walls; the camera slides; switch-off on every end path | NEEDS REAL REVIT |
+| The figure (now the character) draws, hides behind walls; the camera slides; switch-off on every end path | NEEDS REAL REVIT |
 | Quick snags, the pause menu comment box and its keys | NEEDS REAL REVIT |
 
 **Owner decisions:** (1) the second Esc after closing the comment box ends the walk (as Esc in the pause menu does
-today) - say if it should carry on walking instead; (2) the figure's colours (orange body) - any palette colour can be
-swapped in `WalkFigureServer.GroupColors`; (3) snapshots (K) show the figure - say if they should hide it like snag
+today) - say if it should carry on walking instead; (2) the figure's colours - superseded: the blocky figure is gone, the character keeps its
+own colours (stage 8); (3) snapshots (K) show the character - say if they should hide it like snag
 pictures.
 
 ### Revit test steps (third person)
 
-34. **Third person on / off.** Start a walk, press Q. Expect: the camera jumps back about 3 m and a little right, an
-    orange figure stands where you were, the status line says "Third person". Walk: arms and legs swing; stop: they
-    come to rest. Shift: bigger swing. Q again: "First person", the figure is gone. Tick the setting, start a new
+34. **Third person on / off.** Start a walk, press Q. Expect: the camera jumps back about 3 m and a little right, a
+    site worker stands where you were, the status line says "Third person". Walk: he walks; stop: he stands. Shift: he
+    runs. Q again: "First person", he is gone. Tick the setting, start a new
     walk: it starts in third person.
 35. **Camera slides in at a wall.** In third person, walk backwards towards a wall (look away from it). Expect the
     camera to come closer instead of looking through the wall, and to go back out as you step away. Walk behind a
-    column: the figure is hidden by it.
+    column: the character is hidden by it.
 36. **Clicks land on the crosshair.** In third person: Inspect a duct (the readout names what is under the crosshair,
-    the distance is from the figure), Select it, Snag another, Hide a third, Measure two points, Go to point on a floor.
-    Each acts on what is under the crosshair, not on something in front of the figure.
-37. **Figure gone on every end.** In third person, end the walk with: End walk; Esc Esc; the ribbon button; Alt+F4 on
-    the overlay; switching to another view. Each time open the walk view afterwards: no figure. Then save and reopen the
-    model: no figure, nothing in the model, no "Model Walk" Undo step for it.
+    the distance is from the character), Select it, Snag another, Hide a third, Measure two points, Go to point on a floor.
+    Each acts on what is under the crosshair, not on something in front of the character.
+37. **Character gone on every end.** In third person, end the walk with: End walk; Esc Esc; the ribbon button; Alt+F4 on
+    the overlay; switching to another view. Each time open the walk view afterwards: no character. Then save and reopen the
+    model: no character, nothing in the model, no "Model Walk" Undo step for it.
 38. **Model closed while paused.** In third person press Esc, then close the model (Save: No). Expect no error; open
-    another model, start Model Walk in it: no leftover figure in the new model. Close Revit with a walk paused in third
+    another model, start Model Walk in it: no leftover character in the new model. Close Revit with a walk paused in third
     person: Revit closes normally.
-39. **Pictures, viewpoints, Save as 3D view.** In third person: a snag's picture has no figure; a Snapshot (K) has it.
+39. **Pictures, viewpoints, Save as 3D view.** In third person: a snag's picture has no character; a Snapshot (K) has him.
     Press B, walk away, press 1: you stand where you saved, camera behind you again. Save that viewpoint as a 3D view:
-    it looks from your eyes, no figure in it.
+    it looks from your eyes, no character in it.
 40. **Speed in third person (F12).** On the big model of step 21, press F12, walk for a minute in first person, then in
     third person. Write down both averages and the rays count: third person may add 1 ray a frame, the frame time should
     stay close to first person.
@@ -547,9 +553,9 @@ A fresh read of the whole change (`git diff origin/main...HEAD`), the files it t
 Extra Revit test steps:
 
 41. **Next walk starts where you stood.** In third person, walk next to a wall with a room behind you, end the walk
-    (End walk). Click Model Walk again: you start where the figure stood, not 3 m back.
+    (End walk). Click Model Walk again: you start where the character stood, not 3 m back.
 42. **Camera under a low duct.** In third person, stand under a duct or beam about 200 mm above your head and look
-    down. Expect the camera close above the figure, never inside or above the duct.
+    down. Expect the camera close above the character, never inside or above the duct.
 
 | Check (stage 6) | State |
 |---|---|
@@ -557,3 +563,103 @@ Extra Revit test steps:
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 211 files |
 | XAML resource keys used by the change all in the theme | PASS |
 | R1-R3 in Revit (steps 35, 41, 42) | NEEDS REAL REVIT |
+
+## The real character (2026-11-21, stage 8)
+
+The owner's request: "remove all the character and keep this character" - the blocky code-built figure goes, the real
+character from AJ-Tools PR #51 (Game Mode v1.61.0, `ab98e2e`, merged) comes in. AJ-Tools was read only, never changed.
+Builds and an outside-Revit check only - nothing here has run in Revit yet.
+
+| What | How |
+|---|---|
+| The character | A site worker: yellow hard hat, safety vest, shirt, trousers; 1850 mm to the top of the hat. glTF 2.0 with its data inside the file: one skinned mesh (6 colour parts, 4,620 vertices, 2,524 triangles), 23 bones, clips Idle (4.17 s), Walk (1.25 s), Run (0.88 s). |
+| Where it lives | `src/HeronTools/Resources/ModelWalk/WalkCharacter.gltf` (469 KB), an **embedded resource** in `HeronTools.dll` (`HeronTools.ModelWalk.WalkCharacter.gltf`) - not a file beside the DLL, so the installer needs nothing new and it cannot go missing. The only change to the AJ-Tools file: its `generator` text says Heron Tools. |
+| Reading it | `WalkCharacterModel` (from `GameCharacterModel.cs`). AJ-Tools reads the JSON with Newtonsoft.Json; Heron Tools ships no JSON library and .NET Framework 4.7.2 / 4.8 (Revit 2020-2024) has no `System.Text.Json`, so `WalkJson.cs` is a small plain-.NET JSON reader (invariant culture for numbers - a decimal-comma Windows region reads 0.5 right). Every index and data block is checked against the file before use; a broken file gives a plain reason, never an exception. Read once per Revit session, the first time third person is used (about 40 ms). |
+| Animation | `WalkCharacterAnimator` (from `GameCharacterAnimator.cs`): linear-blend skinning, 0.2 s cross-fade between clips, Walk / Run keep the step phase. Speed below 180 mm/s = Idle. The clips' own speeds, measured from the feet: **Walk 982 mm/s, Run 1725 mm/s**. Rate = player speed / clip speed, capped at 2.2x (walk) and 2.4x (run). So Walk plays true to about 2.2 m/s and Run to about 4.1 m/s; above that the feet slide (speed steps 3.5, 5.5 and 8 m/s, and Shift x3). Kept on purpose: legs that still read as walking. Heron change: the scratch matrices are fields - **0 bytes allocated per frame**. |
+| Speed hand-over | The engine passes the player's **horizontal** speed (distance the feet moved this frame / frame time - going straight up stairs or flying up is not walking), smoothed over about 0.12 s so one late frame does not flick the legs, and **Shift** (`input.Run`) for Run. A jump (viewpoint, go to point, door, back to start - over 1800 mm in one frame) is not a step. |
+| Drawing | `WalkCharacterServer` (was `WalkFigureServer`, same server id): one shaded triangle list per colour part. File axes (Y up, facing +Z, +X = its left) become the walk's (Z up, facing the yaw, +Y = its left) - a cyclic swap, so triangles keep their winding; soles on the floor under the eye. Revit's buffers are **kept between redraws**: triangles and colours made once, the vertices rebuilt only when the pose moved on (a new walk frame), and anything Revit says is no longer valid (`IsValid()`, as the API notes ask) is made again. A replaced buffer is disposed at once (`VertexBuffer`, `IndexBuffer`, `EffectInstance` and `VertexFormat` are `IDisposable` in all eight years - read from the reference assemblies). |
+| Redraws | Walking or running with no camera move (pushing into a wall, viewpoint play) refreshes the view each frame, as the limb swing did. Standing: once the blend into Idle is done, no extra refresh - the idle pose moves only on redraws Revit does anyway (looking around). Standing still with the mouse still costs nothing. |
+| No fallback | The blocky figure is **removed** (code, colours, docs). If the character cannot be read, third person still works - camera behind, nothing drawn, the graphics server not even switched on - and the walk says once: "Third person without the character: *reason*. The camera is behind you; nothing else changes." |
+| Colours | The file's own plain colours (linear light turned into screen colour), its black skin and white eyes swapped for a skin tone and dark eyes, as in AJ-Tools. These are **model-view graphics**, like Colorize's palette - CONTRIBUTING rule 6 and `HeronStyles.xaml` govern **window** colours, so the yellow hat stays. No window colour was added. |
+| Licence | The character is CC0 1.0 (public domain, no credit required). Recorded in `NOTICE` next to the Manrope font entry, as the repo does for third-party assets. AJ-Tools did not record the original author or download page; the owner may want to add it (owner decision 2 below). |
+| Kept from stage 6 | Server registered only while walking in third person, switched off on every end path; `RemoveServer` only when Revit allows (model closed, Revit closing); the camera put back on the player's eye at End; wall slide stops in front of a surface; 24 rays a frame; snag pictures hide the character, snapshots show it; aim rays from the camera. None of that code changed - only names. |
+
+API check (`Nice3point.Revit.Api` XML 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027): `VertexBuffer(int)`, `Map`,
+`Unmap`, `IsValid`, `GetVertexStreamPositionNormal`, `VertexStreamPositionNormal.AddVertex`, `VertexPositionNormal(XYZ,
+XYZ)`, `GetSizeInFloats`, `IndexBuffer(int)` ("measured in short integers"), `GetIndexStreamTriangle`, `AddTriangle`,
+`IndexTriangle(int,int,int)`, `GetSizeInShortInts`, `EffectInstance(VertexFormatBits)` and its `Set...Color`,
+`IsValid`, `VertexFormat(VertexFormatBits)`, `IsValid`, `DrawContext.IsAvailable`, `FlushBuffer` (9 arguments) - the
+same in every year. No version-specific code. The .NET side uses only `System`, `System.IO`, `System.Text`,
+`System.Globalization`, `System.Reflection` members that exist in net472 (it builds for 2020).
+
+**Owner decisions:** (1) standing still, the character holds his idle pose until something redraws the view (he does not
+breathe on his own) - chosen so a big model is not redrawn 30 times a second for him; say if he should breathe anyway;
+(2) the character's original source (author / page) is not recorded in AJ-Tools - CC0 needs no credit, but name it if
+you know it and it can go in `NOTICE`; (3) at the faster speed steps the feet slide (above about 2.2 m/s walking,
+4.1 m/s running) - raising the caps makes the legs blur instead.
+
+### Revit test steps (the real character)
+
+43. **Stand, walk, run.** Start a walk, press Q. Expect a site worker in a yellow hard hat where you stand, facing where
+    you look, feet on the floor. Stand: idle pose. W at the second speed step (1.5 m/s): he walks, legs in step. Hold
+    Shift: he runs. Let go of everything: he slows and stands, with no snap between the three.
+44. **Feet at speed, and turning.** At the 3.5 m/s step and with Shift, expect the legs to stay readable and the feet to
+    slide a little (expected). Turn on the spot with the mouse: he turns with you. Walk up a stair: he walks and rises
+    with you (his feet do not fit each tread - there is no foot placement).
+45. **Standing still costs no redraws.** In third person, stand still and do not touch the mouse for 10 s with F12 on:
+    the frame count stays at about four a second and Revit stays idle (Task Manager CPU low).
+46. **Big model speed with the character (F12).** On the model of step 21: F12, walk one minute in first person, then in
+    third person. Write down both averages. The character's own cost was 0.26 ms a frame outside Revit; the redraw cost
+    is only measurable here.
+47. **Colours, walls and pictures.** He is shaded (hat yellow, vest, skin tone, dark eyes), lit from the view like the
+    model, in Shaded and Realistic. Walk behind a wall: he is hidden. A snag's picture has no character; a Snapshot (K)
+    has him. End the walk in every way of step 37: he is gone each time.
+
+### Results (stage 8)
+
+| Check | State |
+|---|---|
+| Build Revit 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027 (`dotnet build ... -p:EnableWindowsTargeting=true`, Linux) | PASS - 0 warnings, 0 errors each |
+| DLL size | 1.44 MB to 1.93 MB in every year (+488 KB: the character file) |
+| Metadata rules (Python copy of `build/check-metadata.ps1` - no pwsh here) | PASS - 214 files |
+| Settings XAML well-formed; only text changed, no new resource key | PASS |
+| Character resource inside the built DLL (2020 and 2027, read from the DLL's resource table) | PASS |
+| Reader + animator outside Revit (throwaway .NET test, not committed): file read through `TryLoad` from an embedded resource, 46 ms; standing 1850 mm, soles at 0 mm, face to the front; Walk at 1.5 m/s rate 1.53, at 3.5 m/s rate 2.20 (cap); Run at 4.5 and 10.5 m/s rate 2.40 (cap); back to Idle after stopping; no NaN; broken files give a plain reason | PASS |
+| Cost per frame of posing + skinning (same test, 3,000 frames) | PASS - 0.26 ms, 0 bytes allocated |
+| Turning the pose into Revit's buffers (one `XYZ` pair per vertex, about 4,600 a rebuilt frame) | NEEDS REAL REVIT (F12, step 46) |
+| The character draws, animates, hides behind walls; snag / snapshot pictures; switch-off on every end path | NEEDS REAL REVIT (steps 43-47, 37) |
+| Install into Revit on the build PC | NOT RUN - Linux build machine, no Revit |
+
+## Stage 8 review (2026-11-21)
+
+A fresh read of the whole change (`git diff origin/main...HEAD`), every Model Walk file it touches, `NOTICE`, and the
+`Nice3point.Revit.Api` XML for the DirectContext3D members. The reader and animator were run outside Revit in a
+throwaway .NET test (not committed) in en-US, **de-DE** and fr-FR, with 18 broken files. Builds only - nothing here
+has run in Revit.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| S1 | Important | `WalkJson`: a file nested very deep (100,000 `[`) ran the reader out of stack. A stack overflow cannot be caught - it ends Revit, not just the character. | **Fixed** (`8ad405d`) - deeper than 64 levels is refused with a plain reason ("nested too deep"). The glTF file nests about six. |
+| S2 | Medium | Animator: one NaN speed went into the clip time and stayed there - every later frame was NaN (character gone or garbage) for the rest of the walk. | **Fixed** (`d1efd9b`) - a NaN or negative speed counts as standing. An infinite speed was already capped. |
+| S3 | Medium | glTF reader: a damaged `count` (2,000,000,000) made its array first and checked the buffer after - 7.4 GB allocated inside Revit's process before the refusal. | **Fixed** (`c26f1f7`) - count, view and buffer range checked before the array is made; one block capped at 4 million values (the shipped file's biggest: 10,368). Now refused with 2 MB used. |
+| S4 | Low | Animator: `w <= 0.0` lets a NaN bone weight through, so one damaged weight makes its vertex NaN. | **Fixed** (`daf09b4`) - guard only, the shipped file has none. |
+| S5 | Checked, no defect | JSON numbers: invariant culture, exponents (`1.5e2`, `-0.25E-1`) right in de-DE; `\u` escapes incl. surrogate pairs; base64 `data:` buffers; component types byte / ubyte / short / ushort / uint / float and `normalized`; accessor + view offsets, stride, bounds (long maths, no overflow); triangle indices and skin joints checked; bone loops cannot hang (`BuildOrder`); every failure is caught in `TryLoad` / `EnsureCharacter` / `Advance` with a plain reason. | - |
+| S6 | Checked, no defect | Animator: parents before children, inverse bind matrices column-major to row-major right, weights re-normalised when they do not sum to 1, clip time wraps, dt NaN / negative / huge clamped; **0 bytes allocated per frame** (measured, 300 frames walk / run / blend), 0.17-0.23 ms a frame. The posed character stays inside `GetBoundingBox` (widest 675 mm of 1200, highest 1870 mm of 2000). Stops into Idle and `IsMoving` goes false. | - |
+| S7 | Checked, no defect | Server: vertex format, effect and stream are all PositionNormal; index count = triangles x 3 shorts; parts over 65,535 vertices skipped (16-bit indices); every buffer tested with `IsValid()` before use; `CanExecute` needs Visible + view id + document; `RenderScene` and `CanExecute` cannot throw; nothing drawn while hidden (snag pictures). Switch on / off, `Prepare`, `TryRemove` and the end paths are line-for-line the stage 6 code (diffed against `main`). Camera back on the eye at End, wall slide and the 24-ray budget unchanged. | - |
+| S8 | Checked, no defect | The embedded resource `HeronTools.ModelWalk.WalkCharacter.gltf` is in every year's DLL (net472, net48 x4, net8 x2, net10), full 469,422 bytes - read from each DLL's resource table. No `int` element id, no transaction, no window colour, no model change; every new file has its 5-field header; `NOTICE` CC0 entry sits with the Manrope entry and says what the Apache grant does not cover. | - |
+| S9 | Note, not changed | A replaced Revit buffer is disposed on the next redraw after it was drawn. The API notes say nothing about disposing a buffer that was already drawn, so this is not proven. | NEEDS REAL REVIT - step 48. |
+| S10 | Note, not changed | The animator is kept for the Revit session, so a new walk (or Q again) starts from the clip it was in last time and blends 0.2 s into Idle - a short settle, not a snap. | Left - cosmetic, no new behaviour asked for. |
+
+Extra Revit test step:
+
+48. **Long walk, many redraws.** In third person, walk and run for five minutes in one model, end, open a second model
+    and do the same (F12 on). Expect no flicker, no missing parts and no slow-down over time; Revit's memory (Task
+    Manager) climbs no more than a few MB across the two walks.
+
+| Check (stage 8 review) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Character resource in all eight DLLs | PASS |
+| Reader + animator outside Revit, en-US / de-DE / fr-FR, 18 broken files, NaN / infinite input | PASS (S1-S3 failed before their fixes) |
+| Buffer reuse and dispose over a long walk and two models (step 48) | NEEDS REAL REVIT |

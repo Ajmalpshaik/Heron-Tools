@@ -88,7 +88,7 @@ namespace HeronTools.Services.ModelWalk
             new WalkKeyAction(Help,           "Help card on / off",                         Key.H),
             new WalkKeyAction(Pause,          "Pause",                                      Key.P),
             new WalkKeyAction(FrameTiming,    "Frame timing on / off",                      Key.F12),
-            new WalkKeyAction(ThirdPerson,    "First / third person (show a figure)",       Key.Q),
+            new WalkKeyAction(ThirdPerson,    "First / third person (show a character)",    Key.Q),
         };
 
         /// <summary>Keys no action may take: they are fixed, or Windows owns them.</summary>

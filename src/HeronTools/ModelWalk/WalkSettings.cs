@@ -77,7 +77,7 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>
         /// Off (standard): the walk starts in first person. On: it starts in third person - the camera behind the
-        /// player and a simple figure drawn where the player stands (screen graphics only, nothing in the model). The
+        /// player and a character (a site worker) drawn where the player stands (screen graphics only, nothing in the model). The
         /// third-person key switches it during a walk either way.
         /// </summary>
         public bool ThirdPerson;

@@ -5,17 +5,23 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ## [Unreleased]
 
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Third person now shows a real character** (from AJ-Tools Game Mode v1.61.0): a site worker in a yellow hard hat,
+  1850 mm tall, in place of the blocky figure, which is removed. He stands when you stop, walks when you move and runs
+  with Shift, blending smoothly between them; his legs speed up with you up to a limit, so at the faster speed steps
+  his feet slide a little. Drawn in the walk view only, walls still hide him, nothing is added to the model. The
+  character is built into HeronTools.dll (CC0, see NOTICE). If it cannot be read, third person still works without
+  him and the walk says so once. The setting and the key now say "show a character".
 - **Quick snags** (standard): in Snag mode click snag after snag - each one is recorded, coloured red and pictured,
   with a short message and no comment box, so the walk carries on at once. Press Esc and write each snag's comment in
   the pause menu's snag list (one comment box; Enter saves and goes to the next snag with no comment; "No comment yet"
   shows which are missing). `Snags.csv` is saved again after each comment. The old box after each snag is the new
   setting **Ask for a comment at each snag** (off by default). Open on a row still goes back to the snag.
 - **Third-person view** (from AJ-Tools Game Mode v1.60.0): Q (remappable) switches between first and third person; the
-  setting **Third-person view (show a figure)** (off by default) starts the walk in it. The camera sits 3000 mm behind
-  and 500 mm right of you and slides in when a wall is behind; a simple figure in the Heron colours is drawn in the walk
-  view with Revit's own graphics service (nothing added to the model, no Undo step), arms and legs swinging as you walk.
+  setting **Third-person view (show a character)** (off by default) starts the walk in it. The camera sits 3000 mm behind
+  and 500 mm right of you and slides in when a wall is behind; the character (above) is drawn in the walk view with
+  Revit's own graphics service (nothing added to the model, no Undo step).
   Collision, steps and doors stay with you; clicks, Measure and the readout aim from the camera so they land on the
-  crosshair. The status line says First person / Third person. Snag pictures hide the figure; snapshots show it.
+  crosshair. The status line says First person / Third person. Snag pictures hide the character; snapshots show him.
 
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
