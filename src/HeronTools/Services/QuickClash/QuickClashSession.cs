@@ -42,6 +42,9 @@ namespace HeronTools.Services.QuickClash
         /// <summary>The view the last Run coloured (its memory belongs to this session), or -1.</summary>
         private long _colouredViewId = -1;
 
+        /// <summary>The model's memory key while a Save As runs (its path, or its title if never saved).</summary>
+        private string _docKeyBeforeSaveAs;
+
         /// <summary>The linked clash elements' solids the overlay shows now (all of them, or only the isolated clashes').</summary>
         private List<Solid> _linkedSolids = new List<Solid>();
 
@@ -135,6 +138,7 @@ namespace HeronTools.Services.QuickClash
             _uiApp.Application.DocumentChanged += OnDocumentChanged;
             _uiApp.Application.DocumentSaving += OnDocumentSaving;
             _uiApp.Application.DocumentSavingAs += OnDocumentSavingAs;
+            _uiApp.Application.DocumentSavedAs += OnDocumentSavedAs;
             _uiApp.Application.DocumentSynchronizingWithCentral += OnSynchronizing;
             _uiApp.Application.DocumentClosing += OnDocumentClosing;
             _uiApp.ViewActivated += OnViewActivated;
@@ -146,6 +150,7 @@ namespace HeronTools.Services.QuickClash
             _uiApp.Application.DocumentChanged -= OnDocumentChanged;
             _uiApp.Application.DocumentSaving -= OnDocumentSaving;
             _uiApp.Application.DocumentSavingAs -= OnDocumentSavingAs;
+            _uiApp.Application.DocumentSavedAs -= OnDocumentSavedAs;
             _uiApp.Application.DocumentSynchronizingWithCentral -= OnSynchronizing;
             _uiApp.Application.DocumentClosing -= OnDocumentClosing;
             _uiApp.ViewActivated -= OnViewActivated;
@@ -365,11 +370,11 @@ namespace HeronTools.Services.QuickClash
                     var clashKeys = new HashSet<long>(idsA.Concat(idsB).Select(id => id.LongValue()));
                     List<ElementId> rest = inView.Where(id => !clashKeys.Contains(id.LongValue())).ToList();
 
-                    ElementId solid = SolidFillId(_doc);
-                    GraphicsElementService.ApplyOverrides(_doc, view, rest, Override(s.ColourRest, s.RestTransparency, solid));
-                    GraphicsElementService.ApplyOverrides(_doc, view, idsB, Override(s.ColourB, 0, solid));
-                    GraphicsElementService.ApplyOverrides(_doc, view, idsA, Override(s.ColourA, 0, solid)); // A wins
-                    memory.SetColours(s.ColourA, s.ColourB, s.ColourRest);
+                    ElementId solid = ClashColourMemory.SolidFillId(_doc);
+                    GraphicsElementService.ApplyOverrides(_doc, view, rest, ClashColourMemory.QuickClashOverride(s.ColourRest, s.RestTransparency, solid));
+                    GraphicsElementService.ApplyOverrides(_doc, view, idsB, ClashColourMemory.QuickClashOverride(s.ColourB, 0, solid));
+                    GraphicsElementService.ApplyOverrides(_doc, view, idsA, ClashColourMemory.QuickClashOverride(s.ColourA, 0, solid)); // A wins
+                    memory.SetColours(s.ColourA, s.ColourB, s.ColourRest, s.RestTransparency, solid);
                 }
 
                 if (t.Commit() != TransactionStatus.Committed)
@@ -432,38 +437,6 @@ namespace HeronTools.Services.QuickClash
             return text;
         }
 
-        private static OverrideGraphicSettings Override(ClashColour colour, int transparency, ElementId solidFill)
-        {
-            var c = new Color(colour.R, colour.G, colour.B);
-            var o = new OverrideGraphicSettings();
-            o.SetProjectionLineColor(c);
-            o.SetCutLineColor(c);
-            if (solidFill != ElementId.InvalidElementId)
-            {
-                o.SetSurfaceForegroundPatternId(solidFill);
-                o.SetSurfaceForegroundPatternVisible(true);
-                o.SetSurfaceForegroundPatternColor(c);
-                o.SetCutForegroundPatternId(solidFill);
-                o.SetCutForegroundPatternVisible(true);
-                o.SetCutForegroundPatternColor(c);
-            }
-            o.SetSurfaceTransparency(Math.Max(0, Math.Min(100, transparency)));
-            return o;
-        }
-
-        /// <summary>The drafting solid fill - the one view overrides expect (as Highlight and Filter Pro use).</summary>
-        private static ElementId SolidFillId(Document doc)
-        {
-            return new FilteredElementCollector(doc)
-                .OfClass(typeof(FillPatternElement))
-                .Cast<FillPatternElement>()
-                .FirstOrDefault(p =>
-                {
-                    FillPattern fp = p.GetFillPattern();
-                    return fp != null && fp.IsSolidFill && fp.Target == FillPatternTarget.Drafting;
-                })?.Id ?? ElementId.InvalidElementId;
-        }
-
         // ------------------------------------------------------------------ Reset
 
         /// <summary>Reset view: puts every element's own overrides back (one Undo step) and removes the overlay.</summary>
@@ -483,7 +456,10 @@ namespace HeronTools.Services.QuickClash
             PutBack(view, memory, clearList: true);
         }
 
-        /// <summary>The Reset transaction. The memory is kept, so an Undo of this Reset can be reset again.</summary>
+        /// <summary>
+        /// The Reset transaction. The memory is marked put back but kept for this session, so an Undo of this Reset
+        /// can be reset again; it counts as coloured again only when the full Quick Clash override is back on.
+        /// </summary>
         private bool PutBack(View view, ClashColourMemory memory, bool clearList)
         {
             bool endIsolate = OwnIsolateOn() && _isolatedViewId == view.Id.LongValue();
@@ -499,6 +475,7 @@ namespace HeronTools.Services.QuickClash
                     return false;
                 }
             }
+            memory.MarkPutBack();
             if (endIsolate)
                 ForgetIsolate();
             ClashOverlayServer.Instance.Hide();
@@ -902,6 +879,8 @@ namespace HeronTools.Services.QuickClash
             View view = ColouredView();
             ClashColourMemory memory = view != null ? ClashColourMemory.Find(_doc, view) : null;
             bool coloured = memory != null && memory.StillColoured(_doc, view);
+            if (coloured)
+                memory.MarkColouredAgain();   // an Undo of a Reset: the colours are back, so is the crash copy
             _window?.SetColoured(coloured);
 
             // The isolate may have been undone, or reset with Revit's own sunglasses button.
@@ -919,7 +898,23 @@ namespace HeronTools.Services.QuickClash
         }
 
         private void OnDocumentSaving(object sender, DocumentSavingEventArgs e) => PutBackBeforeWriting(e.Document, "saving");
-        private void OnDocumentSavingAs(object sender, DocumentSavingAsEventArgs e) => PutBackBeforeWriting(e.Document, "saving");
+        private void OnDocumentSavingAs(object sender, DocumentSavingAsEventArgs e)
+        {
+            if (e.Document != null && e.Document.Equals(_doc))
+                _docKeyBeforeSaveAs = ClashColourMemory.DocKey(_doc);
+            PutBackBeforeWriting(e.Document, "saving");
+        }
+
+        /// <summary>Save As gave the model a new path: the view's memory moves with it, so Reset view still finds it.</summary>
+        private void OnDocumentSavedAs(object sender, DocumentSavedAsEventArgs e)
+        {
+            if (e.Document == null || !e.Document.Equals(_doc)) return;
+            string oldKey = _docKeyBeforeSaveAs ?? e.OriginalPath;
+            _docKeyBeforeSaveAs = null;
+            if (e.Status == RevitAPIEventStatus.Succeeded)
+                ClashColourMemory.MoveDocument(oldKey, ClashColourMemory.DocKey(_doc));
+        }
+
         private void OnSynchronizing(object sender, DocumentSynchronizingWithCentralEventArgs e) => PutBackBeforeWriting(e.Document, "Sync with Central");
 
         /// <summary>Ajmal's rule: no clash colour ever reaches the file or central. The list stays; Run colours again.</summary>
