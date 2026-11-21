@@ -348,3 +348,31 @@ Issues opened by the review session for later work: #40, #41, #42.
 Add to the owner's test script: **16. Held Esc.** Walk, hold Esc for two seconds: paused, not ended. **17. Alt+F4.**
 Hide something, Alt+F4 on the walk: the walk ends, the element shows again, back in your 3D view. **18. Kept red,
 snag again.** With colours kept from an earlier walk, snag the same element: a new report row, still red.
+
+## Extra Revit checks (steps 19-27, from the audit)
+
+The audit fixes below are in the code but can only be proven in Revit. Do them after steps 1-18. Write PASS / FAIL
+next to each, with the Revit year.
+
+19. **Big model speed (GM-A05).** Open the largest federated model you have (MEP + links). Start Model Walk, press F12,
+    walk for one minute. Expect the frame time to stay under about 100 ms and Revit to stay usable. Write down the
+    average ms and the rays count shown.
+20. **Levels with survey elevation (GM-A04).** In a project where the levels' Elevation Base is Survey Point, or the
+    project base point is moved, walk onto a floor. Expect the location line to name the right level.
+21. **Revit dialogs stay on top (GM-A08).** During a walk, press Esc, then open Visibility/Graphics (VV). Expect the
+    dialog to show above the walk and to be clickable. Close it; carry on walking - the walk still covers the view.
+22. **Screen scaling and two monitors (GM-A14).** Set Windows display scaling to 150 %, then 200 %. Pause the walk:
+    the pause menu is the right size and sharp. Move Revit to a second monitor and repeat.
+23. **Workshared, two users (GM-A18).** On a central model, two people start Model Walk. Expect one walk view each
+    ("Heron Model Walk - <user>"). If one tries to snag in a view the other owns, the snag is recorded but not
+    coloured, with a plain message.
+24. **Locked view and reopen (GM-A11).** Lock the walk view (Save Orientation and Lock View), start Model Walk.
+    Expect a plain message, no error box. Unlock, walk somewhere, end, close and reopen the model, start again:
+    note where the camera starts.
+25. **Shared coordinates (GM-A22).** Snag a duct end. Place a Spot Coordinate on the same point. Expect E / N / Z in
+    `Snags.csv` to match the spot coordinate (mm).
+26. **Snapshot is clean (GM-A30).** Take a snag and a Snapshot (K). Open both pictures: no HUD text, crosshair or
+    menu in them.
+27. **J clears only snag colours.** Give a pipe your own colour override first. Snag two other elements, then
+    change one of them by hand in Override Graphics in View. Press J. Expect: the one you changed keeps your change,
+    the other snag gets its own colours back, and the pipe you coloured first is untouched.
