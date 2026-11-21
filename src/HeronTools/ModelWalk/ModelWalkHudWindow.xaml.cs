@@ -87,6 +87,8 @@ namespace HeronTools.UI.ModelWalk
 
             if (session.Keys.LoadWarnings.Count > 0)
                 session.Hud.Toast(session.Keys.LoadWarnings[0], WalkToastKind.Refused);
+            else if (session.Settings.LoadWarnings.Count > 0)
+                session.Hud.Toast(session.Settings.LoadWarnings[0], WalkToastKind.Refused);
         }
 
         /// <summary>Shows the overlay; only once it is up does the ribbon button know a walk is running.</summary>
@@ -326,7 +328,7 @@ namespace HeronTools.UI.ModelWalk
             ReleaseLook();
             ClearHeldKeys();
             ShowPill("Paused", "Click here to carry on walking",
-                "Revit is free to use - change Visibility/Graphics, filters, anything. S = key settings, Esc = end the walk.");
+                "Revit is free to use - change Visibility/Graphics, filters, anything. S = settings, K = keys, Esc = end the walk.");
         }
 
         private void ShowPill(string title, string line1, string line2)

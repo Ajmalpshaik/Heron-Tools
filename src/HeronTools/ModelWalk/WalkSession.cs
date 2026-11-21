@@ -53,15 +53,13 @@ namespace HeronTools.Services.ModelWalk
     {
         private const double FtPerMm = 1.0 / Constants.FEET_TO_MM;
 
-        // --- Body ---
-        public const double EyeHeightMm = 1700.0;     // eye above the floor
-        public const double LowEyeHeightMm = 1000.0;  // C in Walk: low eye, for looking under ducts and into ceiling voids
+        // --- Body. Eye height, low eye and step-up height are the modeller's own (WalkSettings, standard 1700 /
+        //     1000 / 350 mm). ---
         public const double BodyRadiusMm = 350.0;     // how close the eye gets to a face
-        public const double StepUpMm = 350.0;         // the most a step, stair or threshold may rise or drop and be walked
 
-        // --- Speeds: five fixed steps (+ / - or the mouse wheel), walk speed in mm/s. Fly is twice the step. ---
-        public static readonly double[] SpeedStepsMmPerSec = { 800.0, 1500.0, 3500.0, 5500.0, 8000.0 };
-        public const int DefaultSpeedStep = 2;        // 3.5 m/s - the speed the old tool walked at
+        // --- Speeds: five steps (+ / - or the mouse wheel), set in WalkSettings. Fly is twice the step. ---
+        public const int DefaultSpeedStep = 2;        // the middle step (3.5 m/s standard) - the speed the old tool walked at
+        public const double EaseSeconds = 0.12;       // moves speed up and slow down over about a third of a second
         public const double FlyFactor = 2.0;
         public const double RunFactor = 3.0;          // Shift held
         public const double GravityMmPerSec2 = 9810.0;
@@ -80,7 +78,7 @@ namespace HeronTools.Services.ModelWalk
         public const double NearBoxRecentreMm = 5000.0;
 
         // --- Look ---
-        public const double MouseDegPerPixel = 0.15;
+        public const double MouseDegPerPixel = 0.15;  // at 100 % sensitivity
         public const double PitchClampDeg = 85.0;
 
         // --- Frame pacing ---
@@ -91,10 +89,7 @@ namespace HeronTools.Services.ModelWalk
         public const double WorldRefreshSec = 4.0;    // pick up VG / filter / level changes
         public const int RayBudgetPerFrame = 24;      // more than this in one frame and the move is refused, not guessed
 
-        public static double EyeHeightFt => EyeHeightMm * FtPerMm;
-        public static double LowEyeHeightFt => LowEyeHeightMm * FtPerMm;
         public static double BodyRadiusFt => BodyRadiusMm * FtPerMm;
-        public static double StepUpFt => StepUpMm * FtPerMm;
         public static double GravityFtPerSec2 => GravityMmPerSec2 * FtPerMm;
         public static double MaxFallFtPerSec => MaxFallMmPerSec * FtPerMm;
         public static double DoorReachFt => DoorReachMm * FtPerMm;
@@ -108,17 +103,6 @@ namespace HeronTools.Services.ModelWalk
 
         public static double MmToFt(double mm) => mm * FtPerMm;
         public static double FtToMm(double ft) => ft * Constants.FEET_TO_MM;
-
-        public static int SpeedStepCount => SpeedStepsMmPerSec.Length;
-
-        public static int ClampSpeedStep(int step)
-        {
-            if (step < 0) return 0;
-            if (step >= SpeedStepsMmPerSec.Length) return SpeedStepsMmPerSec.Length - 1;
-            return step;
-        }
-
-        public static double WalkSpeedFtPerSec(int step) => SpeedStepsMmPerSec[ClampSpeedStep(step)] * FtPerMm;
     }
 
     /// <summary>Written by the HUD (keys, mouse); read - and for one-shot actions cleared - by the engine.</summary>
@@ -155,6 +139,7 @@ namespace HeronTools.Services.ModelWalk
         public bool ClearSnagsQueued;
         public bool PlayViewpointsQueued;
         public bool ResyncViewQueued;      // re-fit the picture to the window (aim and picture in step)
+        public bool SettingsChangedQueued; // eye height or step-up changed: find the floor again
 
         /// <summary>True while any held key asks for movement.</summary>
         public bool AnyMoveHeld => MoveForward || MoveBack || StrafeLeft || StrafeRight || UpKey || DownKey;
@@ -163,7 +148,7 @@ namespace HeronTools.Services.ModelWalk
         public bool AnyQueued =>
             DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued ||
             GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || ShowHiddenQueued ||
-            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued;
+            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued;
     }
 
     /// <summary>What the engine tells the HUD after each frame.</summary>
@@ -242,8 +227,9 @@ namespace HeronTools.Services.ModelWalk
     internal sealed class WalkSession
     {
         public WalkSession(Document doc, ElementId walkViewId, ElementId startViewId, XYZ startPosition,
-                           double startYawDeg, double startPitchDeg, WalkKeyBindings keys)
+                           double startYawDeg, double startPitchDeg, WalkKeyBindings keys, WalkSettings settings)
         {
+            Settings = settings;
             Document = doc;
             WalkViewId = walkViewId;
             StartViewId = startViewId;
@@ -285,9 +271,12 @@ namespace HeronTools.Services.ModelWalk
         /// <summary>This walk's keys - one instance shared by the HUD, the Key Settings window and the engine's messages.</summary>
         public WalkKeyBindings Keys { get; }
 
+        /// <summary>The modeller's settings. Replaced as a whole when Settings is saved (the HUD's thread, the same as Revit's).</summary>
+        public WalkSettings Settings { get; set; }
+
         public List<WalkViewpoint> Viewpoints { get; } = new List<WalkViewpoint>();
         public int ViewpointsVersion;
 
-        public double EyeHeightFt => LowEye && Mode == WalkMoveMode.Walk ? WalkTuning.LowEyeHeightFt : WalkTuning.EyeHeightFt;
+        public double EyeHeightFt => LowEye && Mode == WalkMoveMode.Walk ? Settings.LowEyeHeightFt : Settings.EyeHeightFt;
     }
 }

@@ -10,7 +10,8 @@
 //
 // The only model change the command makes is the walk view itself ("Heron Model Walk", made once and reused,
 // one Undo step). Camera moves during the walk make no Undo entries. Snag colours are Undo steps of their own and
-// are given back at the end. An old "AJ Game View" from AJ-Tools is left alone - never reused or renamed.
+// are given back at the end (or kept, when the modeller's setting asks - then Clear snag colours, a Save or a Sync
+// gives them back). An old "AJ Game View" from AJ-Tools is left alone - never reused or renamed.
 
 using System;
 using System.Linq;
@@ -65,7 +66,9 @@ namespace HeronTools.Commands.ModelWalk
             try
             {
                 SnagColourMemory.Watch(uiapp);
-                GiveBackLeftovers(doc);
+                WalkSettings settings = WalkSettings.Load();
+                if (!settings.KeepSnagColours)
+                    GiveBackLeftovers(doc);   // kept colours stay until Clear snag colours, a save or a sync
 
                 string viewName = WalkViewName(doc);
                 View3D walkView = FindWalkView(doc, viewName);
@@ -82,7 +85,7 @@ namespace HeronTools.Commands.ModelWalk
                 }
                 else
                 {
-                    StartFromView(uidoc, startView, out eye, out yaw, out pitch);
+                    StartFromView(uidoc, startView, settings.EyeHeightFt, out eye, out yaw, out pitch);
                     if (doc.IsReadOnly)
                     {
                         DialogHelper.ShowError(ToolTitle, "This model is read-only, so Model Walk cannot make its walk view. Open an editable copy.");
@@ -120,7 +123,7 @@ namespace HeronTools.Commands.ModelWalk
                     }
                 }
 
-                var session = new WalkSession(doc, walkView.Id, startView.Id, eye, yaw, pitch, WalkKeyBindings.Load());
+                var session = new WalkSession(doc, walkView.Id, startView.Id, eye, yaw, pitch, WalkKeyBindings.Load(), settings);
                 var engine = new WalkEngine(session);
                 ExternalEvent frameEvent = ExternalEvent.Create(engine);
                 FillFirstRectangle(uidoc, session);
@@ -249,7 +252,7 @@ namespace HeronTools.Commands.ModelWalk
         }
 
         /// <summary>Where the walk starts when the walk view is new: from the 3D view the modeller is in.</summary>
-        private static void StartFromView(UIDocument uidoc, View3D view, out XYZ eye, out double yaw, out double pitch)
+        private static void StartFromView(UIDocument uidoc, View3D view, double eyeHeightFt, out XYZ eye, out double yaw, out double pitch)
         {
             if (view.IsPerspective)
             {
@@ -260,7 +263,7 @@ namespace HeronTools.Commands.ModelWalk
             }
 
             // An orthographic 3D view: start at the middle of what is on screen, at eye height, looking the same way.
-            eye = new XYZ(0, 0, WalkTuning.EyeHeightFt);
+            eye = new XYZ(0, 0, eyeHeightFt);
             foreach (UIView uiView in uidoc.GetOpenUIViews())
             {
                 if (uiView.ViewId != view.Id)
@@ -271,7 +274,7 @@ namespace HeronTools.Commands.ModelWalk
                     if (corners != null && corners.Count >= 2)
                     {
                         XYZ middle = (corners[0] + corners[1]) / 2.0;
-                        eye = new XYZ(middle.X, middle.Y, middle.Z + WalkTuning.EyeHeightFt);
+                        eye = new XYZ(middle.X, middle.Y, middle.Z + eyeHeightFt);
                     }
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException) { /* keep the model origin */ }

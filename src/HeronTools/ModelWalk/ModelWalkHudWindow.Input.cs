@@ -69,8 +69,10 @@ namespace HeronTools.UI.ModelWalk
             }
 
             WalkInput input = _session.Input;
-            input.YawDeg -= dx * WalkTuning.MouseDegPerPixel;
-            input.PitchDeg -= dy * WalkTuning.MouseDegPerPixel;
+            WalkSettings settings = _session.Settings;
+            double perPixel = settings.MouseDegPerPixel;
+            input.YawDeg -= dx * perPixel;
+            input.PitchDeg -= dy * perPixel * (settings.InvertLook ? -1.0 : 1.0);
             input.PitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, input.PitchDeg));
             _lookDirty = true;
 
@@ -133,9 +135,10 @@ namespace HeronTools.UI.ModelWalk
         private void StepSpeed(int by)
         {
             WalkInput input = _session.Input;
-            input.SpeedStep = WalkTuning.ClampSpeedStep(input.SpeedStep + by);
-            _session.Hud.Toast(string.Format("Speed {0}/{1} - {2:0.0} m/s walking", input.SpeedStep + 1, WalkTuning.SpeedStepCount,
-                WalkTuning.SpeedStepsMmPerSec[input.SpeedStep] / 1000.0));
+            WalkSettings settings = _session.Settings;
+            input.SpeedStep = settings.ClampSpeedStep(input.SpeedStep + by);
+            _session.Hud.Toast(string.Format("Speed {0}/{1} - {2:0.0} m/s walking", input.SpeedStep + 1, settings.SpeedStepCount,
+                settings.SpeedsMetresPerSec[input.SpeedStep]));
         }
 
         private string ModeHelp(WalkPointerMode mode)
@@ -174,6 +177,11 @@ namespace HeronTools.UI.ModelWalk
                     e.Handled = true;
                 }
                 else if (key == Key.S)
+                {
+                    OpenSettings();
+                    e.Handled = true;
+                }
+                else if (key == Key.K)
                 {
                     OpenKeySettings();
                     e.Handled = true;
@@ -267,6 +275,18 @@ namespace HeronTools.UI.ModelWalk
         }
 
         private void AutoHideHelp() => _helpVisible = false;
+
+        /// <summary>Settings - only while paused. Save applies them to this walk at once; Cancel changes nothing.</summary>
+        private void OpenSettings()
+        {
+            var window = new ModelWalkSettingsWindow(_session.Settings) { Owner = this };
+            if (window.ShowDialog() != true || window.Result == null)
+                return;
+            _session.Settings = window.Result;
+            _session.Input.SettingsChangedQueued = true;   // the engine finds the floor again at the new eye height
+            HelpText.Text = BuildHelpText();
+            _session.Hud.Toast(window.SaveProblem ?? "Settings saved", window.SaveProblem == null ? WalkToastKind.Done : WalkToastKind.Refused);
+        }
 
         /// <summary>Key Settings - only while paused. Cancel (or closing it) puts the old keys back.</summary>
         private void OpenKeySettings()

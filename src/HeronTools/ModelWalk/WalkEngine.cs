@@ -148,6 +148,12 @@ namespace HeronTools.Services.ModelWalk
             WalkHudState hud = _session.Hud;
 
             HandleModeToggles(input, hud);
+            if (input.SettingsChangedQueued)
+            {
+                input.SettingsChangedQueued = false;
+                input.SpeedStep = _session.Settings.ClampSpeedStep(input.SpeedStep);
+                _forceFloorCheck = true;   // a new eye height or step-up: stand on the floor again at the new height
+            }
 
             double pitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, input.PitchDeg));
             Look(input.YawDeg, pitchDeg, out XYZ forward, out XYZ flatForward, out XYZ right, out XYZ up);
@@ -166,7 +172,7 @@ namespace HeronTools.Services.ModelWalk
                 double strafeAxis = (input.StrafeRight ? 1 : 0) - (input.StrafeLeft ? 1 : 0);
                 double verticalAxis = (input.UpKey ? 1 : 0) - (input.DownKey ? 1 : 0);
                 bool flying = _session.Mode != WalkMoveMode.Walk;
-                double speed = WalkTuning.WalkSpeedFtPerSec(input.SpeedStep)
+                double speed = _session.Settings.WalkSpeedFtPerSec(input.SpeedStep)
                                * (flying ? WalkTuning.FlyFactor : 1.0)
                                * (input.Run ? WalkTuning.RunFactor : 1.0);
 
@@ -313,8 +319,8 @@ namespace HeronTools.Services.ModelWalk
                     _session.LowEye = !_session.LowEye;
                     _forceFloorCheck = true;
                     hud.Toast(_session.LowEye
-                        ? "Low eye on - " + WalkTuning.LowEyeHeightMm.ToString("N0") + " mm"
-                        : "Eye back to " + WalkTuning.EyeHeightMm.ToString("N0") + " mm");
+                        ? "Low eye on - " + _session.Settings.LowEyeHeightMm.ToString("N0") + " mm"
+                        : "Eye back to " + _session.Settings.EyeHeightMm.ToString("N0") + " mm");
                 }
             }
         }
@@ -357,7 +363,7 @@ namespace HeronTools.Services.ModelWalk
             }
             if (input.Run) mode += " - running";
 
-            hud.StatusLine = "Facing " + facing + " (project)  -  " + mode + "  -  Speed " + (input.SpeedStep + 1) + "/" + WalkTuning.SpeedStepCount;
+            hud.StatusLine = "Facing " + facing + " (project)  -  " + mode + "  -  Speed " + (input.SpeedStep + 1) + "/" + _session.Settings.SpeedStepCount;
         }
 
         private void UpdateViewRectangle(UIDocument uidoc, WalkHudState hud, WalkInput input)
@@ -413,12 +419,23 @@ namespace HeronTools.Services.ModelWalk
                 View3D view = doc.GetElement(_session.WalkViewId) as View3D;
                 if (view != null)
                 {
-                    try
+                    if (_session.Settings.KeepSnagColours)
                     {
-                        string colours = SnagColourMemory.GiveBack(doc, view, "Model Walk: give back snag colours");
-                        if (colours != null) notes.Add(colours);
+                        // The modeller's setting: the red stays for the meeting. The way back stays too - X in a walk,
+                        // or any Save / Sync with Central gives every element its own colours back.
+                        if (SnagColourMemory.Find(doc, view)?.Count > 0)
+                            notes.Add("Snag colours kept, as your setting asks. Clear snag colours (" + _session.Keys.Label(WalkKeyBindings.ClearSnags) +
+                                      " in a walk) gives them back, and so does the next Save or Sync with Central.");
                     }
-                    catch (Exception ex) { notes.Add("The snag colours could not be given back (" + ex.Message + "). They are given back before the next save."); }
+                    else
+                    {
+                        try
+                        {
+                            string colours = SnagColourMemory.GiveBack(doc, view, "Model Walk: give back snag colours");
+                            if (colours != null) notes.Add(colours);
+                        }
+                        catch (Exception ex) { notes.Add("The snag colours could not be given back (" + ex.Message + "). They are given back before the next save."); }
+                    }
 
                     try
                     {
@@ -464,7 +481,9 @@ namespace HeronTools.Services.ModelWalk
             if (report != null) notes.Add(report);
             if (_session.Document.IsValidObject && _session.Document.GetElement(_session.WalkViewId) is View view &&
                 SnagColourMemory.Find(_session.Document, view)?.Count > 0)
-                notes.Add("Revit was busy, so the snag colours are still on. They are given back before the next save, or when Model Walk starts again.");
+                notes.Add(_session.Settings.KeepSnagColours
+                    ? "Snag colours kept, as your setting asks. They are given back before the next save, or with Clear snag colours in a walk."
+                    : "Revit was busy, so the snag colours are still on. They are given back before the next save, or when Model Walk starts again.");
             if (_hiddenByWalk.Count > 0)
                 notes.Add("What this walk hid is still hidden for now. Use Revit's Reset Temporary Hide/Isolate to show it.");
             return notes.Count > 0 ? string.Join("\n", notes) : null;

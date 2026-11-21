@@ -248,7 +248,7 @@ namespace HeronTools.Services.ModelWalk
 
             XYZ delta = target.Eye - position;
             double distance = delta.GetLength();
-            double step = WalkTuning.WalkSpeedFtPerSec(WalkTuning.DefaultSpeedStep) * 2.0 * dt;
+            double step = _session.Settings.WalkSpeedFtPerSec(WalkTuning.DefaultSpeedStep) * 2.0 * dt;
             if (distance <= step || distance < 1e-6)
             {
                 _playDwellLeft = 1.6;

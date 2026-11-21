@@ -51,7 +51,7 @@ namespace HeronTools.Services.ModelWalk
             double reach = length + WalkTuning.BodyRadiusFt;
             double eyeFt = _session.EyeHeightFt;
             // Shin ray just ABOVE the step height (the old 300 mm ray blocked 300-350 mm stairs it should let you walk).
-            double shin = Math.Max(0.0, eyeFt - WalkTuning.StepUpFt - WalkTuning.MmToFt(50));
+            double shin = Math.Max(0.0, eyeFt - _session.Settings.StepUpFt - WalkTuning.MmToFt(50));
             double[] drops = { 0.0, eyeFt * 0.25, eyeFt * 0.5, shin };
             foreach (double drop in drops)
             {
@@ -107,9 +107,9 @@ namespace HeronTools.Services.ModelWalk
             if (_session.Grounded)
             {
                 double gap = ground.DistanceFt - eye;
-                if (Math.Abs(gap) <= WalkTuning.StepUpFt)
+                if (Math.Abs(gap) <= _session.Settings.StepUpFt)
                     return new XYZ(position.X, position.Y, position.Z - gap);   // stairs, ramps, thresholds
-                if (gap > WalkTuning.StepUpFt)
+                if (gap > _session.Settings.StepUpFt)
                 {
                     _session.Grounded = false;                                 // walked off an edge: start dropping
                     _session.VerticalSpeedFtPerSec = 0;

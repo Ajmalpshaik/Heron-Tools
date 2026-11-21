@@ -182,7 +182,7 @@
                            FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock x:Name="PauseLine2" Foreground="{StaticResource TextSecondary}" FontSize="11.5" HorizontalAlignment="Center"
                            Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center"
-                           Text="Revit is free to use - change Visibility/Graphics, filters, anything. S = key settings, Esc = end the walk."/>
+                           Text="Revit is free to use - change Visibility/Graphics, filters, anything. S = settings, K = keys, Esc = end the walk."/>
             </StackPanel>
         </Border>
     </Grid>

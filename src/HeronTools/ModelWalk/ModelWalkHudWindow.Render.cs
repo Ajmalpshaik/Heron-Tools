@@ -166,7 +166,7 @@ namespace HeronTools.UI.ModelWalk
                 "Walk\t" + k(WalkKeyBindings.MoveForward) + " " + k(WalkKeyBindings.StrafeLeft) + " " + k(WalkKeyBindings.MoveBack) + " " +
                     k(WalkKeyBindings.StrafeRight) + " or the arrows  -  look with the mouse  -  run: hold " + k(WalkKeyBindings.Run),
                 "Speed\t" + k(WalkKeyBindings.SpeedUp) + " / " + k(WalkKeyBindings.SpeedDown) + " or the mouse wheel (5 steps)",
-                "Eye\t" + k(WalkKeyBindings.DownOrLowEye) + " low eye on / off (" + WalkTuning.LowEyeHeightMm.ToString("N0") + " mm), for ceiling voids",
+                "Eye\t" + k(WalkKeyBindings.DownOrLowEye) + " low eye on / off (" + _session.Settings.LowEyeHeightMm.ToString("N0") + " mm), for ceiling voids",
                 "Fly\t" + k(WalkKeyBindings.Fly) + " on / off  -  " + k(WalkKeyBindings.Up) + " up, " + k(WalkKeyBindings.DownOrLowEye) + " down",
                 "Pass-through\t" + k(WalkKeyBindings.PassThrough) + " on / off - nothing blocks you",
                 "Door\t" + k(WalkKeyBindings.Door) + " when the door hint shows",
@@ -177,7 +177,7 @@ namespace HeronTools.UI.ModelWalk
                 "Viewpoints\t" + k(WalkKeyBindings.SaveViewpoint) + " saves  -  1..9 goes back  -  " + k(WalkKeyBindings.PlayViewpoints) + " plays them",
                 "Snapshot\t" + k(WalkKeyBindings.Snapshot) + " saves a picture of the view (no HUD)",
                 "Back to start\t" + k(WalkKeyBindings.BackToStart),
-                "Pause\tEsc or " + k(WalkKeyBindings.Pause) + " - Revit is free to use  -  paused: S = keys, Esc = end",
+                "Pause\tEsc or " + k(WalkKeyBindings.Pause) + " - Revit is free to use  -  paused: S = settings, K = keys, Esc = end",
                 "Help\t" + k(WalkKeyBindings.Help) + "  -  clean screen " + k(WalkKeyBindings.CleanScreen)
             });
         }
