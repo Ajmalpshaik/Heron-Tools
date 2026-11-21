@@ -166,7 +166,7 @@ namespace HeronTools.Services.QuickClash
                     if (common != null && common.Volume > Tiny)
                     {
                         intersects = true;
-                        depth = Math.Max(depth, SmallestSide(common));
+                        depth = Math.Max(depth, OverlapDepth(common));
                     }
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
@@ -179,9 +179,13 @@ namespace HeronTools.Services.QuickClash
             {
                 if (s.HardOn && depth > toleranceFeet)
                     return Make(ClashKind.Hard, depth * MmPerFoot, a, b);
-                if (!s.HardOn && s.ClearanceOn)
-                    return Make(ClashKind.Clearance, 0, a, b);   // overlapping is closer than any distance
-                return null;                                     // overlap within the tolerance: ignored
+                // Overlapping is closer than any clearance distance, so with Clearance on it is a clearance clash
+                // at 0 mm - also when Hard is on and the overlap is within the Hard tolerance (a pipe 5 mm into
+                // a beam must not pass while a pipe 30 mm away is listed). With only Hard on, an overlap within
+                // the tolerance is ignored, as the modeller asked.
+                if (s.ClearanceOn)
+                    return Make(ClashKind.Clearance, 0, a, b);
+                return null;
             }
 
             if (s.ClearanceOn)
@@ -225,7 +229,80 @@ namespace HeronTools.Services.QuickClash
             };
         }
 
-        /// <summary>Overlap depth: the smallest side of the shared solid's box.</summary>
+        /// <summary>
+        /// Overlap depth: the thinnest width of the shared solid, measured across the solid itself - not along the
+        /// model's X, Y and Z. In plain words: lay the overlap between two parallel plates, turn the plates to every
+        /// direction the overlap's own faces point in (and to X, Y, Z), and keep the smallest gap between the plates.
+        /// For a box this is its thinnest side; for two pipes crossing with a 2 mm overlap it is about 2 mm, also
+        /// when the pipes run at 45 degrees in plan (the old "smallest side of the X/Y/Z box" read about 28 mm there).
+        /// The answer is never larger than the old one, because X, Y and Z are among the directions tried.
+        /// </summary>
+        private static double OverlapDepth(Solid common)
+        {
+            double boxDepth = SmallestSide(common);
+            var points = new List<XYZ>();
+            var directions = new List<XYZ> { XYZ.BasisX, XYZ.BasisY, XYZ.BasisZ };
+            try
+            {
+                foreach (Face face in common.Faces)
+                {
+                    Mesh mesh = face.Triangulate();
+                    if (mesh == null)
+                        continue;
+                    points.AddRange(mesh.Vertices);
+                    if (face is PlanarFace planar)
+                    {
+                        AddDirection(directions, planar.FaceNormal);
+                        continue;
+                    }
+                    // A curved face (round pipe, round duct): each small triangle of it points its own way.
+                    for (int i = 0; i < mesh.NumTriangles; i++)
+                    {
+                        MeshTriangle t = mesh.get_Triangle(i);
+                        XYZ normal = (t.get_Vertex(1) - t.get_Vertex(0)).CrossProduct(t.get_Vertex(2) - t.get_Vertex(0));
+                        AddDirection(directions, normal);
+                    }
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                return boxDepth;   // Revit could not mesh the overlap: keep the X/Y/Z box measure
+            }
+            if (points.Count < 4)
+                return boxDepth;
+
+            double best = boxDepth;
+            foreach (XYZ n in directions)
+            {
+                double lo = double.MaxValue, hi = double.MinValue;
+                foreach (XYZ p in points)
+                {
+                    double d = p.DotProduct(n);
+                    if (d < lo) lo = d;
+                    if (d > hi) hi = d;
+                }
+                best = Math.Min(best, hi - lo);
+            }
+            return best;
+        }
+
+        /// <summary>Adds a unit direction unless it (or its reverse) is already in the list - keeps the work small.</summary>
+        private static void AddDirection(List<XYZ> directions, XYZ v)
+        {
+            double length = v.GetLength();
+            if (length < Tiny || directions.Count >= MaxDepthDirections)
+                return;
+            XYZ n = v / length;
+            foreach (XYZ d in directions)
+                if (Math.Abs(d.DotProduct(n)) > 0.9998)   // within about 1 degree
+                    return;
+            directions.Add(n);
+        }
+
+        /// <summary>Directions tried per overlap; plenty for a pipe, duct or beam, and keeps a big run quick.</summary>
+        private const int MaxDepthDirections = 256;
+
+        /// <summary>The smallest side of the shared solid's X/Y/Z box (the fallback depth).</summary>
         private static double SmallestSide(Solid common)
         {
             BoundingBoxXYZ box = common.GetBoundingBox();
