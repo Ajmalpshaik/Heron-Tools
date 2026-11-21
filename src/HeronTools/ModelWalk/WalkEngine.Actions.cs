@@ -1,0 +1,474 @@
+// Heron-Agent:  none
+// Heron-Step:   1
+// Heron-Status: DRAFT
+// Heron-Since:  1.2.0
+// Heron-Layer:  revit
+// See docs/metadata-standard.md
+
+// Model Walk - what the keys and clicks do: go to point, viewpoints and Play viewpoints, doors, and the click in
+// Select / Snag / Hide. Each click that changes the model is its own named transaction (one Undo step), and its
+// Commit() is checked - a change Revit refuses is reported as refused, never as done.
+// Linked elements: Select and Hide refuse them (host elements only); Snag records them in the report without a
+// colour (an element inside a link cannot be coloured on its own).
+
+using System;
+using System.Collections.Generic;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using HeronTools.Utils;
+
+namespace HeronTools.Services.ModelWalk
+{
+    internal sealed partial class WalkEngine
+    {
+        // Hide: the ids THIS walk hid, and whether the view's Temporary Hide/Isolate is ours. A Temporary
+        // Hide/Isolate the modeller had on is never ended by Model Walk.
+        private readonly List<ElementId> _hiddenByWalk = new List<ElementId>();
+        private bool _tempModeIsOurs;
+
+        // Play viewpoints
+        private int _playIndex = -1;
+        private double _playDwellLeft;
+
+        private OverrideGraphicSettings _snagOverride;
+
+        private XYZ HandleActions(UIDocument uidoc, Document doc, View3D view, WalkInput input, WalkHudState hud,
+                                  XYZ position, XYZ forward, XYZ flatForward)
+        {
+            WalkKeyBindings keys = _session.Keys;
+
+            // Revit's own "Reset Temporary Hide/Isolate" raises no event: notice it here.
+            if (_tempModeIsOurs && !view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))
+            {
+                _tempModeIsOurs = false;
+                _hiddenByWalk.Clear();
+                _collision.Refresh();
+            }
+            hud.HiddenCount = _hiddenByWalk.Count;
+
+            if (input.GoToPointQueued)
+            {
+                input.GoToPointQueued = false;
+                position = GoToPoint(position, forward, hud);
+            }
+
+            if (input.DoorQueued)
+            {
+                input.DoorQueued = false;
+                position = ThroughDoor(position, forward, flatForward, hud);
+            }
+
+            if (input.SaveViewpointQueued)
+            {
+                input.SaveViewpointQueued = false;
+                int number = _session.Viewpoints.Count + 1;
+                _session.Viewpoints.Add(new WalkViewpoint
+                {
+                    Number = number,
+                    Name = "Viewpoint " + number + " - " + hud.LocationLine,
+                    Eye = position,
+                    YawDeg = input.YawDeg,
+                    PitchDeg = input.PitchDeg
+                });
+                _session.ViewpointsVersion++;
+                hud.Toast(number <= 9
+                    ? "Viewpoint " + number + " saved - press " + number + " to come back"
+                    : "Viewpoint " + number + " saved - Play viewpoints (" + keys.Label(WalkKeyBindings.PlayViewpoints) + ") visits it",
+                    WalkToastKind.Done);
+            }
+
+            if (input.JumpViewpoint > 0)
+            {
+                int number = input.JumpViewpoint;
+                input.JumpViewpoint = 0;
+                if (number <= _session.Viewpoints.Count)
+                {
+                    WalkViewpoint vp = _session.Viewpoints[number - 1];
+                    position = vp.Eye;
+                    LookAt(hud, vp.YawDeg, vp.PitchDeg);
+                    _session.VerticalSpeedFtPerSec = 0;
+                    _session.Grounded = false;
+                    _forceFloorCheck = true;
+                    hud.Toast(vp.Name);
+                }
+                else
+                {
+                    hud.Toast("No viewpoint " + number + " yet - press " + keys.Label(WalkKeyBindings.SaveViewpoint) + " to save one");
+                }
+            }
+
+            if (input.ClickQueued)
+            {
+                input.ClickQueued = false;
+                switch (input.Pointer)
+                {
+                    case WalkPointerMode.Select: ClickSelect(uidoc, position, forward, hud); break;
+                    case WalkPointerMode.Snag: ClickSnag(doc, view, position, forward, hud); break;
+                    case WalkPointerMode.Hide: ClickHide(doc, view, position, forward, hud); break;
+                }
+            }
+
+            if (input.ShowHiddenQueued)
+            {
+                input.ShowHiddenQueued = false;
+                if (_hiddenByWalk.Count == 0)
+                {
+                    hud.Toast("This walk has not hidden anything");
+                }
+                else
+                {
+                    int n = _hiddenByWalk.Count;
+                    string problem = EndOwnTemporaryHide(doc, view);
+                    if (problem == null)
+                        hud.Toast((n == 1 ? "1 element" : n + " elements") + " shown again", WalkToastKind.Done);
+                    else
+                        hud.Toast(problem, WalkToastKind.Refused);
+                }
+            }
+
+            if (input.ClearSnagsQueued)
+            {
+                input.ClearSnagsQueued = false;
+                string line = SnagColourMemory.GiveBack(doc, view, "Model Walk: clear snag colours");
+                hud.Toast(line ?? "No snag colours to clear", line != null && line.EndsWith("back.", StringComparison.Ordinal) ? WalkToastKind.Done : WalkToastKind.Info);
+            }
+
+            hud.SnagCount = _report.Count;
+            return position;
+        }
+
+        private void LookAt(WalkHudState hud, double yawDeg, double pitchDeg)
+        {
+            hud.LookOverrideYawDeg = yawDeg;
+            hud.LookOverridePitchDeg = pitchDeg;
+            hud.LookOverridePending = true;
+        }
+
+        // ------------------------------------------------------------------ go to point, door
+
+        private XYZ GoToPoint(XYZ position, XYZ forward, WalkHudState hud)
+        {
+            WalkRayHit target = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+            if (target == null)
+            {
+                hud.Toast("Aim at a floor or a surface first, then release " + _session.Keys.Label(WalkKeyBindings.GoToPoint), WalkToastKind.Refused);
+                return position;
+            }
+
+            XYZ landing = target.Point - (forward * (WalkTuning.BodyRadiusFt * 2.0));
+            if (_session.Mode == WalkMoveMode.Walk)
+                landing = new XYZ(landing.X, landing.Y, Math.Max(landing.Z, target.Point.Z) + WalkTuning.MmToFt(100));
+
+            if (_session.Mode == WalkMoveMode.PassThrough)
+            {
+                hud.Toast("Moved " + WalkTuning.FtToMm(target.DistanceFt).ToString("N0") + " mm", WalkToastKind.Done);
+                return landing;
+            }
+
+            string problem = LandingProblem(landing, out XYZ standing);
+            if (problem != null)
+            {
+                hud.Toast("Not moved: " + problem, WalkToastKind.Refused);
+                return position;
+            }
+            _session.VerticalSpeedFtPerSec = 0;
+            _session.Grounded = _session.Mode == WalkMoveMode.Walk;
+            _forceFloorCheck = true;
+            hud.Toast("Moved " + WalkTuning.FtToMm(target.DistanceFt).ToString("N0") + " mm", WalkToastKind.Done);
+            return standing;
+        }
+
+        private XYZ ThroughDoor(XYZ position, XYZ forward, XYZ flatForward, WalkHudState hud)
+        {
+            if (_session.Mode == WalkMoveMode.PassThrough)
+                return position;   // nothing blocks in Pass-through - just walk
+            WalkRayHit door = _collision.CastNear(position, forward, WalkTuning.DoorReachFt);
+            if (door == null || !door.IsDoor)
+            {
+                hud.Toast("Look at a door within " + (WalkTuning.DoorReachMm / 1000.0).ToString("0.0") + " m, then press " +
+                          _session.Keys.Label(WalkKeyBindings.Door));
+                return position;
+            }
+
+            XYZ through = flatForward.GetLength() > 1e-9 ? flatForward : forward;
+            XYZ landing = position + (through.Normalize() * (door.DistanceFt + WalkTuning.DoorPassExtraFt));
+            string problem = LandingProblem(landing, out XYZ standing);
+            if (problem != null)
+            {
+                hud.Toast("Not through the door: " + problem + " on the other side", WalkToastKind.Refused);
+                return position;
+            }
+            _forceFloorCheck = true;
+            return standing;
+        }
+
+        // ------------------------------------------------------------------ play viewpoints
+
+        private XYZ HandlePlayViewpoints(WalkInput input, WalkHudState hud, XYZ position, double dt)
+        {
+            if (input.PlayViewpointsQueued)
+            {
+                input.PlayViewpointsQueued = false;
+                if (hud.PlayingViewpoints)
+                {
+                    StopPlaying(hud, "Stopped");
+                }
+                else if (_session.Viewpoints.Count == 0)
+                {
+                    hud.Toast("Save viewpoints with " + _session.Keys.Label(WalkKeyBindings.SaveViewpoint) + " first, then " +
+                              _session.Keys.Label(WalkKeyBindings.PlayViewpoints) + " plays them");
+                }
+                else
+                {
+                    _playIndex = 0;
+                    _playDwellLeft = 0;
+                    hud.PlayingViewpoints = true;
+                    hud.Toast("Playing viewpoints - any move key stops");
+                }
+            }
+
+            if (!hud.PlayingViewpoints)
+                return position;
+
+            if (input.AnyMoveHeld)
+            {
+                StopPlaying(hud, "Stopped");
+                return position;
+            }
+
+            WalkViewpoint target = _session.Viewpoints[_playIndex];
+            if (_playDwellLeft > 0)
+            {
+                _playDwellLeft -= dt;
+                LookAt(hud, target.YawDeg, target.PitchDeg);
+                if (_playDwellLeft <= 0 && ++_playIndex >= _session.Viewpoints.Count)
+                    StopPlaying(hud, "All viewpoints played");
+                return position;
+            }
+
+            XYZ delta = target.Eye - position;
+            double distance = delta.GetLength();
+            double step = WalkTuning.WalkSpeedFtPerSec(WalkTuning.DefaultSpeedStep) * 2.0 * dt;
+            if (distance <= step || distance < 1e-6)
+            {
+                _playDwellLeft = 1.6;
+                hud.Toast(target.Name);
+                return target.Eye;
+            }
+
+            XYZ direction = delta.Normalize();
+            double yaw = Math.Atan2(direction.Y, direction.X) * 180.0 / Math.PI;
+            double pitch = Math.Asin(Math.Max(-1.0, Math.Min(1.0, direction.Z))) * 180.0 / Math.PI;
+            LookAt(hud, yaw, Math.Max(-60.0, Math.Min(60.0, pitch)));
+            return position + (direction * step);
+        }
+
+        private void StopPlaying(WalkHudState hud, string message)
+        {
+            hud.PlayingViewpoints = false;
+            _playIndex = -1;
+            _forceFloorCheck = true;
+            hud.Toast(message);
+        }
+
+        // ------------------------------------------------------------------ clicks
+
+        private WalkRayHit ClickTarget(XYZ position, XYZ forward, WalkHudState hud)
+        {
+            WalkRayHit hit = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+            if (hit?.Element == null)
+            {
+                hud.Toast("Nothing under the crosshair", WalkToastKind.Refused);
+                return null;
+            }
+            return hit;
+        }
+
+        private void ClickSelect(UIDocument uidoc, XYZ position, XYZ forward, WalkHudState hud)
+        {
+            WalkRayHit hit = ClickTarget(position, forward, hud);
+            if (hit == null)
+                return;
+            if (hit.FromLink)
+            {
+                hud.Toast("That element is in a linked model - Select works on this model's elements only", WalkToastKind.Refused);
+                return;
+            }
+
+            // No transaction: the selection is not a model change. It stays after the walk, ready to edit.
+            var ids = new List<ElementId>(uidoc.Selection.GetElementIds());
+            ElementId id = hit.Element.Id;
+            string what = WalkCollision.DescribeLine1(hit);
+            if (ids.Remove(id))
+            {
+                uidoc.Selection.SetElementIds(ids);
+                hud.Toast("Taken out of the selection: " + what + "  (" + ids.Count + " selected)");
+            }
+            else
+            {
+                ids.Add(id);
+                uidoc.Selection.SetElementIds(ids);
+                hud.Toast("Selected: " + what + "  (" + ids.Count + " selected - kept after the walk)", WalkToastKind.Done);
+            }
+        }
+
+        private void ClickSnag(Document doc, View3D view, XYZ position, XYZ forward, WalkHudState hud)
+        {
+            WalkRayHit hit = ClickTarget(position, forward, hud);
+            if (hit == null)
+                return;
+
+            string what = WalkCollision.DescribeLine1(hit);
+            string where = WalkCollision.DescribeLine2(hit);
+            SnagColourMemory memory = SnagColourMemory.Find(doc, view);
+            if (!hit.FromLink && memory != null && memory.IsColoured(hit.Element.Id))
+            {
+                hud.Toast("Already a snag: " + what);
+                return;
+            }
+
+            WalkSnag snag = _report.Add(what, where, hit.Element.UniqueId, hit.Point, position);
+
+            string whyNot = null;
+            if (hit.FromLink)
+                whyNot = "a linked element cannot be coloured on its own";
+            else if (doc.IsReadOnly)
+                whyNot = "the model is read-only";
+            else if (doc.IsWorkshared && WorksharingUtils.GetCheckoutStatus(doc, view.Id) == CheckoutStatus.OwnedByOtherUser)
+                whyNot = "the walk view is being edited by someone else";
+            else
+                whyNot = ColourSnag(doc, view, hit.Element.Id, snag.Number);
+
+            snag.Coloured = whyNot == null;
+            snag.NotColouredWhy = whyNot;
+            hud.SnagCount = _report.Count;
+            hud.Toast(whyNot == null
+                ? "Snag " + snag.Number + " recorded: " + what
+                : "Snag " + snag.Number + " recorded (not coloured: " + whyNot + "): " + what,
+                WalkToastKind.Done);
+        }
+
+        /// <summary>Colours one element as one named Undo step. Returns null, or why it was not coloured.</summary>
+        private string ColourSnag(Document doc, View3D view, ElementId id, int number)
+        {
+            if (_snagOverride == null)
+                _snagOverride = SnagColourMemory.SnagOverride(doc);
+            SnagColourMemory memory = SnagColourMemory.FindOrCreate(doc, view);
+
+            using (var t = new Transaction(doc, "Model Walk: snag " + number))
+            {
+                try
+                {
+                    t.Start();
+                    memory.Colour(view, id, _snagOverride);
+                    if (t.Commit() == TransactionStatus.Committed)
+                        return null;
+                    memory.Forget(id);
+                    return "Revit did not keep the colour";
+                }
+                catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+                {
+                    if (t.HasStarted() && !t.HasEnded())
+                        t.RollBack();
+                    memory.Forget(id);
+                    return "Revit refused the colour (" + ex.Message + ")";
+                }
+            }
+        }
+
+        private void ClickHide(Document doc, View3D view, XYZ position, XYZ forward, WalkHudState hud)
+        {
+            WalkRayHit hit = ClickTarget(position, forward, hud);
+            if (hit == null)
+                return;
+            if (hit.FromLink)
+            {
+                hud.Toast("That element is in a linked model - hide its category in Visibility/Graphics instead", WalkToastKind.Refused);
+                return;
+            }
+            if (!_tempModeIsOurs && view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))
+            {
+                hud.Toast("This view has your own Temporary Hide/Isolate on, so Hide is off - it would mix with yours. " +
+                          "Reset it (the glasses on the view control bar) to use Hide.", WalkToastKind.Refused);
+                return;
+            }
+
+            ElementId id = hit.Element.Id;
+            string problem = RunTemporary(doc, "Model Walk: hide", () => view.HideElementsTemporary(new List<ElementId> { id }));
+            if (problem != null)
+            {
+                hud.Toast("Not hidden: " + problem, WalkToastKind.Refused);
+                return;
+            }
+            _tempModeIsOurs = true;
+            _hiddenByWalk.Add(id);
+            hud.HiddenCount = _hiddenByWalk.Count;
+            _collision.Refresh();
+            hud.Toast("Hidden for now: " + WalkCollision.DescribeLine1(hit) + "   (" + _session.Keys.Label(WalkKeyBindings.ShowHidden) +
+                      " shows what this walk hid)", WalkToastKind.Done);
+        }
+
+        /// <summary>Shows again what this walk hid; the modeller's own Temporary Hide/Isolate is never ended. Returns null or a reason.</summary>
+        private string EndOwnTemporaryHide(Document doc, View3D view)
+        {
+            if (!_tempModeIsOurs)
+            {
+                _hiddenByWalk.Clear();
+                return null;
+            }
+            string problem = RunTemporary(doc, "Model Walk: show hidden",
+                () => view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate));
+            if (problem != null)
+                return "Not shown again: " + problem;
+            _tempModeIsOurs = false;
+            _hiddenByWalk.Clear();
+            _collision.Refresh();
+            return null;
+        }
+
+        private string ShowHiddenAtEnd(Document doc, View3D view)
+        {
+            if (_hiddenByWalk.Count == 0 || !_tempModeIsOurs)
+                return null;
+            int n = _hiddenByWalk.Count;
+            string problem = EndOwnTemporaryHide(doc, view);
+            return problem ?? ((n == 1 ? "1 element" : n + " elements") + " this walk hid " + (n == 1 ? "is" : "are") + " shown again.");
+        }
+
+        /// <summary>
+        /// Temporary Hide/Isolate is not saved in the model, so Revit may take it without a transaction; when it asks
+        /// for one, it gets one named transaction, and its Commit() is checked. Returns null, or a plain reason.
+        /// NEEDS REAL REVIT: which of the two Revit 2020-2027 want.
+        /// </summary>
+        private static string RunTemporary(Document doc, string undoName, Action change)
+        {
+            try
+            {
+                change();
+                return null;
+            }
+            catch (Autodesk.Revit.Exceptions.ModificationOutsideTransactionException)
+            {
+                using (var t = new Transaction(doc, undoName))
+                {
+                    try
+                    {
+                        t.Start();
+                        change();
+                        return t.Commit() == TransactionStatus.Committed ? null : "Revit did not keep the change";
+                    }
+                    catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+                    {
+                        if (t.HasStarted() && !t.HasEnded())
+                            t.RollBack();
+                        return "Revit refused (" + ex.Message + ")";
+                    }
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+            {
+                return "Revit refused (" + ex.Message + ")";
+            }
+        }
+    }
+}
