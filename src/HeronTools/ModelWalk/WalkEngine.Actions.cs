@@ -41,8 +41,9 @@ namespace HeronTools.Services.ModelWalk
         {
             WalkKeyBindings keys = _session.Keys;
 
-            // Revit's own "Reset Temporary Hide/Isolate" raises no event: notice it here.
-            if (_tempModeIsOurs && !view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))
+            // Revit's own "Reset Temporary Hide/Isolate" raises no event: notice it here - also a reset followed by a
+            // Temporary Hide of the modeller's own during a pause (OurTemporaryHideStillOn).
+            if (_tempModeIsOurs && !OurTemporaryHideStillOn(view))
             {
                 _tempModeIsOurs = false;
                 _hiddenByWalk.Clear();
@@ -672,9 +673,42 @@ namespace HeronTools.Services.ModelWalk
                       " shows what this walk hid)", WalkToastKind.Done);
         }
 
+        /// <summary>
+        /// True while the view's Temporary Hide/Isolate is still the one this walk made: the mode is on and every element
+        /// this walk hid is still hidden. If the modeller reset it during a pause and hid things of their own, one of
+        /// ours shows again - then the mode is theirs, and Show hidden must not end it. (An isolate of their own that
+        /// happens to hide all of ours cannot be told apart: Revit has no list of what a Temporary Hide holds.)
+        /// </summary>
+        private bool OurTemporaryHideStillOn(View3D view)
+        {
+            if (!view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))
+                return false;
+            Document doc = view.Document;
+            int looked = 0;
+            foreach (ElementId id in _hiddenByWalk)
+            {
+                if (doc.GetElement(id) == null)
+                    continue;   // deleted since: says nothing either way
+                try
+                {
+                    if (view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, id))
+                        return false;
+                }
+                catch (Autodesk.Revit.Exceptions.ApplicationException)
+                {
+                    return false;   // cannot tell: treat it as the modeller's, so it is never ended without asking
+                }
+                if (++looked >= 50)
+                    break;          // a few are enough, and keep the frame cheap
+            }
+            return true;
+        }
+
         /// <summary>Shows again what this walk hid; the modeller's own Temporary Hide/Isolate is never ended. Returns null or a reason.</summary>
         private string EndOwnTemporaryHide(Document doc, View3D view)
         {
+            if (_tempModeIsOurs && !OurTemporaryHideStillOn(view))
+                _tempModeIsOurs = false;   // ended from the ribbon after a pause: the per-frame check never ran
             if (!_tempModeIsOurs)
             {
                 _hiddenByWalk.Clear();
@@ -694,6 +728,12 @@ namespace HeronTools.Services.ModelWalk
         {
             if (_hiddenByWalk.Count == 0 || !_tempModeIsOurs)
                 return null;
+            if (!OurTemporaryHideStillOn(view))
+            {
+                _tempModeIsOurs = false;
+                _hiddenByWalk.Clear();
+                return "The Temporary Hide/Isolate in the walk view is yours now (it was reset during a pause), so it was left on.";
+            }
             int n = _hiddenByWalk.Count;
             string problem = EndOwnTemporaryHide(doc, view);
             return problem ?? ((n == 1 ? "1 element" : n + " elements") + " this walk hid " + (n == 1 ? "is" : "are") + " shown again.");

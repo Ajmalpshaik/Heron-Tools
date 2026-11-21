@@ -51,8 +51,19 @@ Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow
 |---|---|---|
 | **Inspect** (standard) | Nothing - the bottom line always shows what is under the crosshair: category, family : type, size, ID, level, system, link, and the distance | No |
 | **Select** | Adds the element to Revit's selection (click again takes it out). It stays selected after the walk, ready to edit | No |
-| **Snag** | Records a snag (below) and colours the element red in the walk view | Yes - one Undo step per snag; colours given back |
-| **Hide** | Hides the element for now (Temporary Hide). U shows again only what this walk hid | No (temporary). If your Revit year asks for a transaction for it, it is one Undo step "Model Walk: hide" / "show hidden" |
+| **Snag** | Records a snag (below) and colours the element red in the walk view | Yes - one Undo step per snag; the red stays after the walk until J, Save or Sync gives the own colours back |
+| **Hide** | Hides the element for now (Temporary Hide). U ends the walk view's Temporary Hide/Isolate - see the note below | No (temporary). If your Revit year asks for a transaction for it, it is one Undo step "Model Walk: hide" / "show hidden" |
+
+**Hide and Show hidden - what Revit allows.** Revit has no "unhide one element": U ends the whole Temporary
+Hide/Isolate of the walk view. So:
+
+- Hide is refused while a Temporary Hide/Isolate of your own is already on in the walk view (reset it with the glasses
+  on the view control bar first).
+- If you pause and add your own temporary hide **on top of** what the walk hid, U (and the end of the walk) shows that
+  too.
+- If you pause, **reset** the walk's Temporary Hide and then hide things of your own, Model Walk notices (an element
+  it hid is visible again) and leaves your hide alone. An isolate of your own that happens to hide everything the walk
+  hid cannot be told apart, and U would end it.
 
 Linked elements: Select and Hide refuse them (they cannot be picked alone). Snag records them, without a colour.
 
