@@ -184,6 +184,8 @@ namespace HeronTools.UI.ModelWalk
 
             if (_ending)
             {
+                // A held key repeats: the Esc that paused must not also close the end card.
+                if (e.IsRepeat) { e.Handled = true; return; }
                 if (!_waitingForEngine && (key == Key.Escape || key == Key.Enter))
                     Close();
                 e.Handled = true;
@@ -192,6 +194,9 @@ namespace HeronTools.UI.ModelWalk
 
             if (_paused)
             {
+                // A held Esc pauses, then repeats: without this the same key press would also end the walk
+                // (and a held S / K / Enter would open or resume again and again).
+                if (e.IsRepeat) { e.Handled = true; return; }
                 if (key == Key.Enter)
                 {
                     EnterPlay();
