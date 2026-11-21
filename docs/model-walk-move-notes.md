@@ -363,3 +363,40 @@ from AJ-Tools.
 | 18 Kept red, snag again | | | | |
 | 19 Snags.csv on a ";" Windows region opens in columns (issue #41) | | | | |
 | 20 View Crop margin and annotation offset look the same as before (issue #40) | | | | |
+| 21 Big model speed (GM-A05) | | | | |
+| 22 Levels with survey elevation (GM-A04) | | | | |
+| 23 Revit dialogs stay on top (GM-A08) | | | | |
+| 24 Screen scaling and two monitors (GM-A14) | | | | |
+| 25 Workshared, two users (GM-A18) | | | | |
+| 26 Locked view and reopen (GM-A11) | | | | |
+| 27 Shared coordinates (GM-A22) | | | | |
+| 28 Snapshot is clean (GM-A30) | | | | |
+| 29 J clears only snag colours | | | | |
+
+## Extra Revit checks (steps 21-29, from the audit)
+
+The audit fixes below are in the code but can only be proven in Revit. Do them after steps 1-20. Write PASS / FAIL
+next to each, with the Revit year.
+
+21. **Big model speed (GM-A05).** Open the largest federated model you have (MEP + links). Start Model Walk, press F12,
+    walk for one minute. Expect the frame time to stay under about 100 ms and Revit to stay usable. Write down the
+    average ms and the rays count shown.
+22. **Levels with survey elevation (GM-A04).** In a project where the levels' Elevation Base is Survey Point, or the
+    project base point is moved, walk onto a floor. Expect the location line to name the right level.
+23. **Revit dialogs stay on top (GM-A08).** During a walk, press Esc, then open Visibility/Graphics (VV). Expect the
+    dialog to show above the walk and to be clickable. Close it; carry on walking - the walk still covers the view.
+24. **Screen scaling and two monitors (GM-A14).** Set Windows display scaling to 150 %, then 200 %. Pause the walk:
+    the pause menu is the right size and sharp. Move Revit to a second monitor and repeat.
+25. **Workshared, two users (GM-A18).** On a central model, two people start Model Walk. Expect one walk view each
+    ("Heron Model Walk - <user>"). If one tries to snag in a view the other owns, the snag is recorded but not
+    coloured, with a plain message.
+26. **Locked view and reopen (GM-A11).** Lock the walk view (Save Orientation and Lock View), start Model Walk.
+    Expect a plain message, no error box. Unlock, walk somewhere, end, close and reopen the model, start again:
+    note where the camera starts.
+27. **Shared coordinates (GM-A22).** Snag a duct end. Place a Spot Coordinate on the same point. Expect E / N / Z in
+    `Snags.csv` to match the spot coordinate (mm).
+28. **Snapshot is clean (GM-A30).** Take a snag and a Snapshot (K). Open both pictures: no HUD text, crosshair or
+    menu in them.
+29. **J clears only snag colours.** Give a pipe your own colour override first. Snag two other elements, then
+    change one of them by hand in Override Graphics in View. Press J. Expect: the one you changed keeps your change,
+    the other snag gets its own colours back, and the pipe you coloured first is untouched.
