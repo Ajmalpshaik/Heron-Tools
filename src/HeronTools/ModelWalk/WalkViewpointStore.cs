@@ -49,7 +49,17 @@ namespace HeronTools.Services.ModelWalk
             if (string.IsNullOrWhiteSpace(key))
                 key = "unsaved:" + doc.Title;
 
-            string name = WalkReport.SafeName(Path.GetFileNameWithoutExtension(doc.Title ?? "Model")) + " " + Hash(key.Trim().ToLowerInvariant()) + ".txt";
+            // The readable part comes from the same key as the hash (the central's name, for a workshared model), not
+            // from the title: every local copy of one central has its own title, and must still find the same file.
+            string readable = null;
+            if (!key.StartsWith("unsaved:", StringComparison.Ordinal))
+            {
+                try { readable = Path.GetFileNameWithoutExtension(key.Trim()); }
+                catch (ArgumentException) { readable = null; }   // a path Windows cannot split: the hash alone is enough
+            }
+            if (string.IsNullOrWhiteSpace(readable))
+                readable = Path.GetFileNameWithoutExtension(doc.Title ?? "Model");
+            string name = WalkReport.SafeName(readable) + " " + Hash(key.Trim().ToLowerInvariant()) + ".txt";
             return AppDataConfigStore.GetPath(Path.Combine(Folder, name));
         }
 
