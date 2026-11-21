@@ -109,8 +109,47 @@ namespace HeronTools.Services.QuickClash
         internal static void Forget(Document doc, View view)
         {
             string key = ViewKey(doc, view);
+            if (_runJournal != null && ByView.TryGetValue(key, out ClashColourMemory forgotten))
+                _runJournal.Add(() =>
+                {
+                    ByView[key] = forgotten;
+                    forgotten.RestoreDiskCopy();
+                });
             ByView.Remove(key);
             DeleteDiskCopy(key);
+        }
+
+        // ------------------------------------------------------------------ a Run that is rolled back
+
+        // What a Run changed in the memories, to be undone if Revit rolls the Run back. Null outside a Run.
+        private static List<Action> _runJournal;
+
+        /// <summary>A Run starts: note every memory change from here, so a rolled-back Run can undo them.</summary>
+        internal static void BeginRun() => _runJournal = new List<Action>();
+
+        /// <summary>The Run was kept: its memory changes stay.</summary>
+        internal static void EndRun() => _runJournal = null;
+
+        /// <summary>
+        /// The Run was rolled back, so the view is as it was: the memories (colours, put-back mark, forgotten views,
+        /// disk copies) go back to how they were too - otherwise Reset view would look for the wrong colours.
+        /// </summary>
+        internal static void RollBackRun()
+        {
+            List<Action> journal = _runJournal;
+            _runJournal = null;
+            if (journal == null) return;
+            for (int i = journal.Count - 1; i >= 0; i--)
+                journal[i]();
+        }
+
+        // The disk copy matches the memory: kept while its colours are on, gone once put back or never coloured.
+        private void RestoreDiskCopy()
+        {
+            if (_hasColours && !IsPutBack && HasOriginals)
+                SaveToDisk();
+            else
+                DeleteDiskCopy(_key);
         }
 
         private static void DeleteDiskCopy(string key)
@@ -175,6 +214,20 @@ namespace HeronTools.Services.QuickClash
         /// <summary>The colours a Run has just put on. The view is coloured again: not put back.</summary>
         internal void SetColours(ClashColour a, ClashColour b, ClashColour rest, int restTransparency, ElementId solidFill)
         {
+            if (_runJournal != null)
+            {
+                ClashColour oldA = ColourA, oldB = ColourB, oldRest = ColourRest;
+                bool oldHas = _hasColours, oldPutBack = IsPutBack;
+                int oldTransparency = RestTransparency;
+                long oldFill = _solidFillId;
+                _runJournal.Add(() =>
+                {
+                    ColourA = oldA; ColourB = oldB; ColourRest = oldRest;
+                    _hasColours = oldHas; IsPutBack = oldPutBack;
+                    RestTransparency = oldTransparency; _solidFillId = oldFill;
+                    RestoreDiskCopy();
+                });
+            }
             ColourA = a; ColourB = b; ColourRest = rest;
             _hasColours = true;
             RestTransparency = Clamp(restTransparency);

@@ -285,23 +285,24 @@ namespace HeronTools.Services.QuickClash
             using (var group = new TransactionGroup(_doc, RunName))
             {
                 group.Start();
+                ClashColourMemory.BeginRun();
                 try
                 {
                     keep = RunCore(app, s);
                 }
                 finally
                 {
-                    if (group.GetStatus() == TransactionStatus.Started)
+                    if (group.GetStatus() == TransactionStatus.Started && !keep)
                     {
-                        if (keep)
-                        {
+                        group.RollBack();     // the view is as it was before Run, isolate included
+                        before.Restore(this);
+                        ClashColourMemory.RollBackRun();   // and the view's memory with it (colours, disk copy)
+                    }
+                    else
+                    {
+                        if (group.GetStatus() == TransactionStatus.Started)
                             group.Assimilate();   // what committed inside stays; an empty group leaves no Undo step
-                        }
-                        else
-                        {
-                            group.RollBack();     // the view is as it was before Run, isolate included
-                            before.Restore(this);
-                        }
+                        ClashColourMemory.EndRun();
                     }
                 }
             }
