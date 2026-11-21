@@ -56,33 +56,57 @@ namespace HeronTools.Services.ResetGraphics
 
     internal static class ResetGraphicsService
     {
+        // Read once per Revit session by reflection, so a setting a newer Revit adds is compared too.
         private static readonly PropertyInfo[] Settings = typeof(OverrideGraphicSettings)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
             .ToArray();
 
-        /// <summary>True when the overrides differ from Revit's empty override in any setting.</summary>
-        internal static bool HasOverrides(OverrideGraphicSettings settings)
+        /// <summary>
+        /// Compares overrides against Revit's empty override. Build one per count (not per element): it reads the
+        /// empty override's settings once, so a count over thousands of elements does not make a new
+        /// OverrideGraphicSettings and re-read it for each one.
+        /// </summary>
+        internal sealed class OverrideCheck
         {
-            if (settings == null)
-                return false;
-            var empty = new OverrideGraphicSettings();
-            foreach (PropertyInfo setting in Settings)
+            // Kept alive with the values read from it, so a Color it handed out stays readable.
+            private readonly OverrideGraphicSettings _emptySettings = new OverrideGraphicSettings();
+            private readonly object[] _empty = new object[Settings.Length];
+            private readonly bool[] _readable = new bool[Settings.Length];
+
+            internal OverrideCheck()
             {
-                object a, b;
-                try
+                for (int i = 0; i < Settings.Length; i++)
                 {
-                    a = setting.GetValue(settings);
-                    b = setting.GetValue(empty);
+                    try
+                    {
+                        _empty[i] = Settings[i].GetValue(_emptySettings);
+                        _readable[i] = true;
+                    }
+                    catch (Exception)
+                    {
+                        _readable[i] = false;   // a setting this Revit cannot read on an empty override
+                    }
                 }
-                catch (Exception)
-                {
-                    continue;   // a setting this Revit cannot read on an empty override
-                }
-                if (!Same(a, b))
-                    return true;
             }
-            return false;
+
+            /// <summary>True when the overrides differ from Revit's empty override in any setting.</summary>
+            internal bool HasOverrides(OverrideGraphicSettings settings)
+            {
+                if (settings == null)
+                    return false;
+                for (int i = 0; i < Settings.Length; i++)
+                {
+                    if (!_readable[i])
+                        continue;
+                    object value;
+                    try { value = Settings[i].GetValue(settings); }
+                    catch (Exception) { continue; }
+                    if (!Same(value, _empty[i]))
+                        return true;
+                }
+                return false;
+            }
         }
 
         private static bool Same(object a, object b)
@@ -105,11 +129,15 @@ namespace HeronTools.Services.ResetGraphics
         /// The elements of <paramref name="candidates"/> (or, when null, every element shown in the view) that
         /// carry overrides, and - for <see cref="ResetWhat.Categories"/>/<see cref="ResetWhat.Both"/> - the
         /// overridden categories and subcategories. Elements in <paramref name="keepApart"/> are left out.
+        /// Pass one <paramref name="check"/> for every view of a count; null makes a fresh one.
         /// </summary>
         internal static ViewResetPlan Plan(Document doc, View view, ResetWhat what,
-                                           ICollection<ElementId> candidates, ISet<long> keepApart)
+                                           ICollection<ElementId> candidates, ISet<long> keepApart,
+                                           OverrideCheck check = null)
         {
             var plan = new ViewResetPlan { View = view };
+            if (check == null)
+                check = new OverrideCheck();
 
             if (what != ResetWhat.Categories)
             {
@@ -121,7 +149,7 @@ namespace HeronTools.Services.ResetGraphics
                     OverrideGraphicSettings current;
                     try { current = view.GetElementOverrides(id); }
                     catch (Exception) { continue; }
-                    if (!HasOverrides(current))
+                    if (!check.HasOverrides(current))
                         continue;
                     if (keepApart != null && keepApart.Contains(id.LongValue()))
                     {
@@ -142,9 +170,9 @@ namespace HeronTools.Services.ResetGraphics
                 {
                     foreach (Category category in doc.Settings.Categories)
                     {
-                        AddIfOverridden(view, category, plan.Categories);
+                        AddIfOverridden(view, category, plan.Categories, check);
                         foreach (Category sub in category.SubCategories)
-                            AddIfOverridden(view, sub, plan.Categories);
+                            AddIfOverridden(view, sub, plan.Categories, check);
                     }
                 }
             }
@@ -152,13 +180,13 @@ namespace HeronTools.Services.ResetGraphics
             return plan;
         }
 
-        private static void AddIfOverridden(View view, Category category, List<ElementId> into)
+        private static void AddIfOverridden(View view, Category category, List<ElementId> into, OverrideCheck check)
         {
             try
             {
                 if (category == null || !view.IsCategoryOverridable(category.Id))
                     return;
-                if (HasOverrides(view.GetCategoryOverrides(category.Id)))
+                if (check.HasOverrides(view.GetCategoryOverrides(category.Id)))
                     into.Add(category.Id);
             }
             catch (Exception)
