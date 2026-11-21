@@ -11,6 +11,7 @@
   with a Preview of the real wheel. Left card: every tool, with a search box.
   Right card: the wheel itself, drawn in code exactly like the real one, and the drop target for tools.
   Footer: honest status on the left, ONE Accent action (Save) on the right.
+  The body scrolls on a small screen, so the footer and everything above it stay reachable.
   Heron brand design (UI/HeronStyles.xaml) - same patterns as Filter Pro and Colorize.
   Every x:Name and event used by QuickMenuSettingsWindow.xaml.cs is kept.
 -->
@@ -75,7 +76,17 @@
         </Border>
 
         <!-- ============ BODY ============ -->
-        <Grid Grid.Row="1" Margin="24,20,24,16">
+        <!-- Scrolls on a small or scaled screen (ScreenFit makes the window shorter than its 780 minimum
+             there), so nothing in the middle is cut off. The body fills the visible height as before, and
+             never gets shorter than the 600 it needs - below that the scrollbar takes over. Its height
+             follows the visible area, so the tool list still scrolls on its own and is not stretched to
+             every tool. -->
+        <ScrollViewer x:Name="BodyScroll" Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Focusable="False">
+        <Border Padding="24,20,24,16" MinHeight="600"
+                Height="{Binding ViewportHeight, ElementName=BodyScroll}">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -269,6 +280,8 @@
                 </Grid>
             </Border>
         </Grid>
+        </Border>
+        </ScrollViewer>
 
         <!-- ============ FOOTER ============ -->
         <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
