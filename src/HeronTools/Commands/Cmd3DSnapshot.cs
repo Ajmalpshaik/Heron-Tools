@@ -122,7 +122,7 @@ namespace HeronTools.Commands
 
                 // The selection was meant for us but nothing in it can be used: say why, instead of quietly
                 // asking for a window.
-                if (read.TagsWithoutLocalRoom > 0 || read.UnusableSpatials > 0 || read.MarksNotSections > 0 || read.EmptyZones > 0)
+                if (read.TagsWithoutLocalRoom > 0 || read.UnusableSpatials > 0 || read.MarksNotSections > 0 || read.MarksSharedName > 0 || read.EmptyZones > 0)
                 {
                     problem = WhyNothingUsable(read);
                     return null;
@@ -163,6 +163,10 @@ namespace HeronTools.Commands
                 reasons.Add("- " + Plural(read.MarksNotSections, "mark is", "marks are") +
                             " not a section or a single elevation (a callout, or an elevation marker with several arrows - " +
                             "select the arrow of the elevation you want).");
+            if (read.MarksSharedName > 0)
+                reasons.Add("- " + Plural(read.MarksSharedName, "mark has", "marks have") +
+                            " a name that two or more sections or elevations share, so 3D Snapshot cannot tell which view " +
+                            "it is. Nothing was changed. Give the views different names, or open the section and run it there.");
 
             return "Nothing you selected can be shown:\n\n" + string.Join("\n", reasons) +
                    "\n\nSelect a placed room, space, zone, their tag or one section mark - or press Esc to clear the selection " +

@@ -59,11 +59,13 @@ namespace HeronTools.Services.WorksetViews
                 return Result.Cancelled;
             }
 
-            HashSet<string> existingViewNames = CollectExistingViewNames(doc);
+            HashSet<string> existingViewNames = CollectExisting3DViewNames(doc);
 
             int createdCount = 0;
             int skippedCount = 0;
             int failedCount = 0;
+            // One line per workset that failed or whose name Revit refused, with Revit's first reason.
+            var failures = new List<string>();
             var badNames = new List<string>();
             var templatesCleared = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -84,15 +86,18 @@ namespace HeronTools.Services.WorksetViews
                     {
                         view3D = View3D.CreateIsometric(doc, threeDTypeId);
 
-                        // A workset name may hold characters a view name may not (":" "\" ...).
+                        // Revit decides whether the name is allowed: a workset name may hold characters a view
+                        // name may not (":" "\" ...), or another view may already hold it. The API notes do not
+                        // say which views share one name list, so we only pre-check other 3D views and let the
+                        // Name setter refuse the rest - and say so, with Revit's reason.
                         try
                         {
                             view3D.Name = targetWorkset.Name;
                         }
-                        catch (Autodesk.Revit.Exceptions.ArgumentException)
+                        catch (Autodesk.Revit.Exceptions.ArgumentException ex)
                         {
                             DeleteCreatedView(doc, view3D);
-                            badNames.Add(targetWorkset.Name);
+                            badNames.Add(targetWorkset.Name + " - " + FirstLine(ex.Message));
                             continue;
                         }
 
@@ -111,10 +116,11 @@ namespace HeronTools.Services.WorksetViews
                         existingViewNames.Add(targetWorkset.Name);
                         createdCount++;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         DeleteCreatedView(doc, view3D);
                         failedCount++;
+                        failures.Add(targetWorkset.Name + " - " + FirstLine(ex.Message));
                     }
                 }
 
@@ -130,7 +136,7 @@ namespace HeronTools.Services.WorksetViews
                 }
             }
 
-            string summary = BuildSummary(createdCount, skippedCount, failedCount, badNames, templatesCleared);
+            string summary = BuildSummary(createdCount, skippedCount, failedCount, failures, badNames, templatesCleared);
             if (createdCount == 0)
             {
                 // Nothing changed: our own message is the whole story, so no second Revit failure box.
@@ -165,12 +171,16 @@ namespace HeronTools.Services.WorksetViews
             return type != null ? type.Id : ElementId.InvalidElementId;
         }
 
-        private static HashSet<string> CollectExistingViewNames(Document doc)
+        /// <summary>
+        /// Names of the 3D views already in the model (templates left out). A floor plan, sheet or template
+        /// called like a workset must not stop its 3D view; a true clash is refused by the Name setter instead.
+        /// </summary>
+        private static HashSet<string> CollectExisting3DViewNames(Document doc)
         {
             return new FilteredElementCollector(doc)
-                .OfClass(typeof(View))
-                .Cast<View>()
-                .Where(v => v != null && !string.IsNullOrWhiteSpace(v.Name))
+                .OfClass(typeof(View3D))
+                .Cast<View3D>()
+                .Where(v => v != null && !v.IsTemplate && !string.IsNullOrWhiteSpace(v.Name))
                 .Select(v => v.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
@@ -202,16 +212,28 @@ namespace HeronTools.Services.WorksetViews
             doc.Delete(view3D.Id);
         }
 
-        private static string BuildSummary(int createdCount, int skippedCount, int failedCount,
+        /// <summary>Revit's reason, first line only, so one bad workset does not fill the box.</summary>
+        private static string FirstLine(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return "Revit gave no reason.";
+            string trimmed = message.Trim();
+            int end = trimmed.IndexOfAny(new[] { '\r', '\n' });
+            return end < 0 ? trimmed : trimmed.Substring(0, end);
+        }
+
+        private static string BuildSummary(int createdCount, int skippedCount, int failedCount, IList<string> failures,
                                            IList<string> badNames, ICollection<string> templatesCleared)
         {
             string text =
                 $"Created: {createdCount}\n" +
-                $"Skipped (a view with that name already exists): {skippedCount}\n" +
+                $"Skipped (a 3D view with that name already exists): {skippedCount}\n" +
                 $"Failed: {failedCount}";
+            if (failures.Count > 0)
+                text += "\n  " + string.Join("\n  ", failures);
             if (badNames.Count > 0)
             {
-                text += $"\nNot made - the workset name is not allowed as a view name: {badNames.Count}\n  " +
+                text += $"\nNot made - Revit refused the workset name as a view name: {badNames.Count}\n  " +
                         string.Join("\n  ", badNames);
             }
             if (templatesCleared.Count > 0)
