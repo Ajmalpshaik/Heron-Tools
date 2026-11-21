@@ -38,6 +38,8 @@ namespace HeronTools.Services.FilterPro
     ///   created or changed; a rule Revit would refuse is reported as skipped, nothing is made.
     /// - Names are checked against EVERY filter, selection filters included, and with NamingUtils.
     /// - An existing filter is changed in the order Revit needs: ClearRules, SetCategories, SetElementFilter.
+    /// - A same-named filter that tests another parameter, or covers other categories, is left as it is and
+    ///   listed as skipped - with "Update existing filters" on too (it may be used in other views).
     /// - "Family and Type" only offers Equals (the only rule it can honestly build).
     /// - Decimal values use the real spread of the values that show the same text, not a 1e-6 guess.
     /// </remarks>
@@ -142,22 +144,26 @@ namespace HeronTools.Services.FilterPro
                 ElementFilter elementFilter = new ElementParameterFilter(rules);
                 ParameterFilterElement filter = existing;
 
-                // A same-named filter that tests a different parameter (e.g. "Ducts_Has value" made earlier for
-                // another parameter) must not be reused silently; it is only rewritten when the toggle is on.
-                if (filter != null && !selection.OverrideExisting && !TestsSameParameter(filter, selection.Parameter))
+                // A same-named filter that tests a different parameter (e.g. "Ducts_Yes" made for Insulated, now
+                // asked for Has Lining) is never used or rewritten - with "Update existing filters" on as well.
+                // Names clash easily ("Include the parameter name" off, "Air Terminals +3"), and a rewrite would
+                // change that filter in every view and template that uses it, with no word said.
+                if (filter != null && !TestsSameParameter(filter, selection.Parameter))
                 {
-                    skipped?.Add($"A filter named '{filterName}' already exists but tests a different parameter, so it was not used. " +
-                                 "Change the prefix or suffix, or turn on Update existing filters to rewrite it.");
+                    skipped?.Add($"A filter named '{filterName}' already exists but tests a different parameter, so it was left as it is " +
+                                 "(it may be used in other views). Change the prefix or suffix to make a new filter.");
                     continue;
                 }
 
                 // Same name and parameter but other categories (the name can match while the category list
-                // differs, e.g. with "Include the category name" off): reusing it would leave the extra
-                // categories uncoloured with no word said.
-                if (filter != null && !selection.OverrideExisting && !CoversSameCategories(filter, categorySet))
+                // differs, e.g. with "Include the category name" off, or two sets both named "Ducts +3"). It is
+                // left as it is with the toggle on too: rewriting its categories would stop colouring the
+                // dropped categories in every view and template that uses it.
+                if (filter != null && !CoversSameCategories(filter, categorySet))
                 {
-                    skipped?.Add($"A filter named '{filterName}' already exists for other categories, so it was not used. " +
-                                 "Change the prefix or suffix, or turn on Update existing filters to rewrite it.");
+                    skipped?.Add($"A filter named '{filterName}' already exists for other categories, so it was left as it is " +
+                                 "(it may be used in other views). Change the prefix or suffix to make a new filter, " +
+                                 "or change its categories in Revit's Filters dialog.");
                     continue;
                 }
 
@@ -533,8 +539,8 @@ namespace HeronTools.Services.FilterPro
         }
 
         /// <summary>
-        /// True if the filter's rules test the selected parameter (for "Family and Type": the family and type name
-        /// parameters). A filter Revit cannot describe is treated as not matching.
+        /// True if the filter is set to exactly the wanted categories. A filter Revit cannot describe is treated
+        /// as not matching.
         /// </summary>
         private static bool CoversSameCategories(ParameterFilterElement filter, HashSet<ElementId> wanted)
         {
@@ -556,6 +562,10 @@ namespace HeronTools.Services.FilterPro
             }
         }
 
+        /// <summary>
+        /// True if the filter's rules test the selected parameter (for "Family and Type": the family and type name
+        /// parameters). A filter Revit cannot describe is treated as not matching.
+        /// </summary>
         private static bool TestsSameParameter(ParameterFilterElement filter, FilterParameterItem parameter)
         {
             if (parameter == null)
