@@ -177,7 +177,7 @@
                                         <CheckBox x:Name="HardCheck" Content="Hard" Style="{StaticResource ModernCheckBox}" VerticalAlignment="Center"
                                                   Click="OnClashTypeClicked"/>
                                     </DockPanel>
-                                    <TextBlock Style="{StaticResource HelpText}" Margin="26,4,0,0" Text="The two elements overlap. Overlaps smaller than the tolerance are ignored."/>
+                                    <TextBlock Style="{StaticResource HelpText}" Margin="26,4,0,0" Text="The two elements overlap. Overlaps smaller than the tolerance are ignored, or listed as Clearance 0 mm when Clearance is on."/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
                                     <DockPanel>
