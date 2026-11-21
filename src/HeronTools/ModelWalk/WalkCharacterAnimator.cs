@@ -238,7 +238,7 @@ namespace HeronTools.Services.ModelWalk
                     for (int k = 0; k < 4; k++)
                     {
                         double w = part.Weights[(v * 4) + k];
-                        if (w <= 0.0)
+                        if (!(w > 0.0))   // also skips a NaN weight from a damaged file
                             continue;
                         int ji = part.Joints[(v * 4) + k];
                         if (ji < 0 || ji >= _joint.Length)
