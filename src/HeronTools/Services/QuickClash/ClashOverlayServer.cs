@@ -46,20 +46,31 @@ namespace HeronTools.Services.QuickClash
 
         // ------------------------------------------------------------------ switching on and off (Revit thread)
 
-        /// <summary>Shows <paramref name="solids"/> (this model's coordinates) in one view, in one colour.</summary>
+        /// <summary>
+        /// Shows <paramref name="solids"/> (this model's coordinates) in one view, in one colour. Asking again for the
+        /// same solids, view and colour does nothing: the shapes already drawn are kept, not triangulated again.
+        /// </summary>
         internal void Show(Document doc, View view, IEnumerable<Solid> solids, ClashColour colour)
         {
+            var next = new List<Solid>(solids);
+            long viewId = view.Id.LongValue();
+            bool on;
             lock (_lock)
             {
+                if (_solids.Count > 0 && SameSolids(_solids, next) && viewId == _viewId &&
+                    _document != null && _document.Equals(doc) && colour.SameAs(_colour))
+                    return;     // nothing changed: already drawn
+
+                DisposeBuffers();
                 _solids.Clear();
-                _solids.AddRange(solids);
-                _buffers = null;
+                _solids.AddRange(next);
                 _document = doc;
-                _viewId = view.Id.LongValue();
+                _viewId = viewId;
                 _colour = colour;
                 _outline = OutlineOf(_solids);
+                on = _solids.Count > 0;
             }
-            Register(_solids.Count > 0);
+            Register(on);
         }
 
         /// <summary>Removes the overlay everywhere.</summary>
@@ -67,12 +78,30 @@ namespace HeronTools.Services.QuickClash
         {
             lock (_lock)
             {
+                DisposeBuffers();
                 _solids.Clear();
-                _buffers = null;
                 _document = null;
                 _viewId = long.MinValue;
             }
             Register(false);
+        }
+
+        /// <summary>The same solid objects in the same order - the overlay would draw exactly the same shapes.</summary>
+        private static bool SameSolids(List<Solid> a, List<Solid> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (!ReferenceEquals(a[i], b[i])) return false;
+            return true;
+        }
+
+        /// <summary>Frees the graphics memory of the shapes drawn so far. Called with the lock held.</summary>
+        private void DisposeBuffers()
+        {
+            if (_buffers == null) return;
+            foreach (Buffer b in _buffers)
+                b.Dispose();
+            _buffers = null;
         }
 
         internal bool IsShowing
@@ -134,17 +163,20 @@ namespace HeronTools.Services.QuickClash
         {
             try
             {
-                List<Buffer> buffers;
+                // Drawn with the lock held, so Show or Hide can never free a buffer while it is being drawn.
                 lock (_lock)
                 {
                     if (_buffers == null)
+                    {
+                        // Empty first: if Revit refuses the shapes, the next frame does not triangulate them all again.
+                        _buffers = new List<Buffer>();
                         _buffers = Build(_solids, _colour);
-                    buffers = _buffers;
-                }
-                foreach (Buffer b in buffers)
-                {
-                    DrawContext.FlushBuffer(b.Vertices, b.VertexCount, b.Indices, b.IndexCount,
-                        b.Format, b.Effect, PrimitiveType.TriangleList, 0, b.TriangleCount);
+                    }
+                    foreach (Buffer b in _buffers)
+                    {
+                        DrawContext.FlushBuffer(b.Vertices, b.VertexCount, b.Indices, b.IndexCount,
+                            b.Format, b.Effect, PrimitiveType.TriangleList, 0, b.TriangleCount);
+                    }
                 }
             }
             catch (Exception)
@@ -165,6 +197,15 @@ namespace HeronTools.Services.QuickClash
             public int VertexCount;
             public int IndexCount;
             public int TriangleCount;
+
+            /// <summary>All four are IDisposable in Revit 2020-2027: their graphics memory is freed here, not left to the GC.</summary>
+            public void Dispose()
+            {
+                Vertices?.Dispose();
+                Indices?.Dispose();
+                Format?.Dispose();
+                Effect?.Dispose();
+            }
         }
 
         private static List<Buffer> Build(List<Solid> solids, ClashColour colour)
@@ -199,6 +240,22 @@ namespace HeronTools.Services.QuickClash
             }
 
             var buffers = new List<Buffer>();
+            bool built = false;
+            try
+            {
+                AddBuffers(points, buffers);
+                built = true;
+            }
+            finally
+            {
+                if (!built)
+                    foreach (Buffer b in buffers) b.Dispose();   // a half-built set is freed, never leaked
+            }
+            return buffers;
+        }
+
+        private static void AddBuffers(List<VertexPositionNormalColored> points, List<Buffer> buffers)
+        {
             for (int start = 0; start < points.Count; start += MaxVerticesPerBuffer)
             {
                 int count = Math.Min(MaxVerticesPerBuffer, points.Count - start);
@@ -207,33 +264,28 @@ namespace HeronTools.Services.QuickClash
                 count = triangles * 3;
 
                 int vertexFloats = VertexPositionNormalColored.GetSizeInFloats() * count;
-                var vb = new VertexBuffer(vertexFloats);
-                vb.Map(vertexFloats);
-                VertexStreamPositionNormalColored vs = vb.GetVertexStreamPositionNormalColored();
+                int indexShorts = IndexTriangle.GetSizeInShortInts() * triangles;
+                // Listed before anything is made, so a failure part-way still frees what was made.
+                var buffer = new Buffer { VertexCount = count, IndexCount = indexShorts, TriangleCount = triangles };
+                buffers.Add(buffer);
+
+                buffer.Vertices = new VertexBuffer(vertexFloats);
+                buffer.Vertices.Map(vertexFloats);
+                VertexStreamPositionNormalColored vs = buffer.Vertices.GetVertexStreamPositionNormalColored();
                 for (int i = 0; i < count; i++)
                     vs.AddVertex(points[start + i]);
-                vb.Unmap();
+                buffer.Vertices.Unmap();
 
-                int indexShorts = IndexTriangle.GetSizeInShortInts() * triangles;
-                var ib = new IndexBuffer(indexShorts);
-                ib.Map(indexShorts);
-                IndexStreamTriangle ist = ib.GetIndexStreamTriangle();
+                buffer.Indices = new IndexBuffer(indexShorts);
+                buffer.Indices.Map(indexShorts);
+                IndexStreamTriangle ist = buffer.Indices.GetIndexStreamTriangle();
                 for (int i = 0; i < triangles; i++)
                     ist.AddTriangle(new IndexTriangle(i * 3, i * 3 + 1, i * 3 + 2));
-                ib.Unmap();
+                buffer.Indices.Unmap();
 
-                buffers.Add(new Buffer
-                {
-                    Vertices = vb,
-                    Indices = ib,
-                    Format = new VertexFormat(VertexFormatBits.PositionNormalColored),
-                    Effect = new EffectInstance(VertexFormatBits.PositionNormalColored),
-                    VertexCount = count,
-                    IndexCount = indexShorts,
-                    TriangleCount = triangles
-                });
+                buffer.Format = new VertexFormat(VertexFormatBits.PositionNormalColored);
+                buffer.Effect = new EffectInstance(VertexFormatBits.PositionNormalColored);
             }
-            return buffers;
         }
 
         /// <summary>The face's outward normal near a point, or null if Revit cannot give one there.</summary>
