@@ -88,10 +88,10 @@
                         </Grid>
                         <CheckBox x:Name="InvertLookBox" Content="Invert look - mouse forward looks down" Style="{StaticResource ModernCheckBox}"
                                   Margin="0,12,0,0" ToolTip="Moving the mouse forward tilts the view down, as in some flight viewers"/>
-                        <CheckBox x:Name="ThirdPersonBox" Content="Third-person view (show a figure)" Style="{StaticResource ModernCheckBox}"
-                                  Margin="0,10,0,0" ToolTip="Start the walk with the camera behind you and a simple figure where you stand"/>
+                        <CheckBox x:Name="ThirdPersonBox" Content="Third-person view (show a character)" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,10,0,0" ToolTip="Start the walk with the camera behind you and a site worker where you stand"/>
                         <TextBlock x:Name="ThirdPersonNote" Style="{StaticResource HelpText}" Margin="0,4,0,0"
-                                   Text="Off (standard): you see through your own eyes. On: the camera is 3 m behind you and a little to the right, and a simple figure stands where you are - drawn on screen only, nothing is added to the model. Clicks, Measure and the readout still work on what is under the crosshair; the third-person key switches during the walk."/>
+                                   Text="Off (standard): you see through your own eyes. On: the camera is 3 m behind you and a little to the right, and a site worker in a hard hat stands where you are - he stands, walks and runs with you - drawn on screen only, nothing is added to the model. Clicks, Measure and the readout still work on what is under the crosshair; the third-person key switches during the walk."/>
                     </StackPanel>
                 </Border>
 

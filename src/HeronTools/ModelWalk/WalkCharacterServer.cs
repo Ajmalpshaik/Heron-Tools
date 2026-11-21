@@ -5,20 +5,28 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Model Walk - the third-person figure: a simple blocky person (head, body, arms, legs, feet) drawn INSIDE the walk
-// view with Revit's own "draw your own 3D graphics" service (DirectContext3D), so walls, ducts and slabs hide it when
-// it walks behind them. Arms and legs swing while walking or running. Nothing is added to the model: no element, no
-// transaction, no Undo entry - screen graphics only, in the walk view only.
+// Model Walk - the third-person character: a site worker in a yellow hard hat, 1850 mm tall, drawn INSIDE the walk view
+// with Revit's own "draw your own 3D graphics" service (DirectContext3D), so walls, ducts and slabs hide it when it walks
+// behind them. It stands when you stop, walks when you move and runs with Shift (WalkCharacterAnimator). Nothing is added
+// to the model: no element, no transaction, no Undo entry - screen graphics only, in the walk view only.
 //
-// Ported from AJ-Tools Game Mode v1.60.0 (GameCharacterServer.cs, commit a5eb30b), read only, never changed. Heron
-// changes: brand colours only; the server is switched on only while a walk runs in third person and switched off on
-// every end path; the walk view is matched by ElementId AND its document (ids repeat across models); no gun words.
+// The character is read once per Revit session from HeronTools.dll (WalkCharacterModel). There is no fallback figure:
+// if it cannot be read, third person still works (the camera behind you), nothing is drawn, and the walk says so once.
+//
+// Ported from AJ-Tools Game Mode v1.61.0 (GameCharacterServer.cs v1.1.0, commit ab98e2e), read only, never changed.
+// Heron changes: no blocky fallback figure; the server is switched on only while a walk runs in third person and
+// switched off on every end path; the walk view is matched by ElementId AND its document (ids repeat across models);
+// Revit's buffers are kept between redraws and rebuilt only when the pose changed or Revit invalidated them.
 //
 // The Revit API rule this follows (ExternalService.RemoveServer, checked in the 2020 to 2027 API notes, identical):
 // a server that has drawn in a model that is still open CANNOT be removed until that model closes. So "switch off"
-// means: the figure is hidden (CanExecute says no), the server is taken off the active list, and it is removed as
+// means: the character is hidden (CanExecute says no), the server is taken off the active list, and it is removed as
 // soon as Revit allows - at the end of the walk, when a model closes, or when Revit closes. A switched-off server
 // draws nothing anywhere. Every member used here exists with the same signature in Revit 2020 to 2027.
+//
+// Colours: the character's own plain colours from its file (shirt, safety vest, trousers, yellow hard hat), with its
+// black skin and white eyes swapped for a skin tone and dark eyes. These are model-view graphics like Colorize's
+// palette, not window colours: CONTRIBUTING rule 6 and HeronStyles.xaml govern window colours.
 
 using System;
 using System.Collections.Generic;
@@ -29,13 +37,13 @@ using Autodesk.Revit.UI;
 
 namespace HeronTools.Services.ModelWalk
 {
-    /// <summary>Where the figure stands this frame and how its limbs are swung. Written by the engine, read by the server.</summary>
-    internal sealed class WalkFigurePose
+    /// <summary>Where the character stands this frame and which way it faces. Written by the engine, read by the server.</summary>
+    internal sealed class WalkCharacterPose
     {
         /// <summary>True only while a walk runs in third person (and no snag picture is being taken).</summary>
         public bool Visible;
 
-        /// <summary>The walk view and its model - the figure is drawn there and nowhere else.</summary>
+        /// <summary>The walk view and its model - the character is drawn there and nowhere else.</summary>
         public Document Document;
         public ElementId ViewId;
 
@@ -44,55 +52,127 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>Facing direction, radians from +X towards +Y (the walk's yaw).</summary>
         public double YawRad;
-
-        /// <summary>Leg swing (radians, + = left leg forward). Arms swing the other way.</summary>
-        public double SwingRad;
-
-        /// <summary>Knee bend for each leg (radians, 0 = straight).</summary>
-        public double KneeLeftRad;
-        public double KneeRightRad;
     }
 
-    /// <summary>Draws the third-person figure in the walk view (Revit-native 3D graphics, no model change).</summary>
-    internal sealed class WalkFigureServer : IDirectContext3DServer
+    /// <summary>Draws the third-person character in the walk view (Revit-native 3D graphics, no model change).</summary>
+    internal sealed class WalkCharacterServer : IDirectContext3DServer
     {
         private static readonly Guid ServerGuid = new Guid("125599D2-21BD-439F-B3C5-6F354D653035");
-        private static WalkFigureServer _instance;
+        private static WalkCharacterServer _instance;
         private static ExternalEvent _switchOffEvent;
         private static bool _watching;
         private static bool _switchOffPending;
 
         /// <summary>The pose the next redraw uses (engine writes, server reads - both on Revit's thread).</summary>
-        internal static readonly WalkFigurePose Pose = new WalkFigurePose();
+        internal static readonly WalkCharacterPose Pose = new WalkCharacterPose();
 
-        /// <summary>True from the frame the figure is switched on until it is switched off again.</summary>
+        /// <summary>True from the frame the character is switched on until it is switched off again.</summary>
         internal static bool InUse { get; private set; }
 
-        // Colour groups - one vertex buffer and one effect each. Heron brand palette only (UI/HeronStyles.xaml),
-        // used here as model-view colours like the snag red: no colour outside the palette.
-        private const int GroupSkin = 0;      // head, neck, hands
-        private const int GroupShirt = 1;     // body and arms
-        private const int GroupTrousers = 2;  // pelvis and legs
-        private const int GroupDark = 3;      // shoes and the face stripe that shows which way it faces
-        private const int GroupCount = 4;
+        /// <summary>Height of the character, to the top of the hard hat.</summary>
+        internal const double CharacterHeightMm = 1850.0;
 
-        private static readonly Color[] GroupColors =
+        // The character (null = not read yet, or it could not be read). Read once per Revit session.
+        private static WalkCharacterAnimator _animator;
+        private static bool _loadTried;
+
+        /// <summary>Why there is no character (null while it is fine). Plain words, for the walk's message.</summary>
+        internal static string CharacterProblem { get; private set; }
+
+        // Changes every walk frame the pose moved on; a redraw rebuilds the vertex buffers only when it changed.
+        private static int _poseVersion;
+
+        // Revit's buffers, kept between redraws (one set per colour part). Revit can invalidate them at any time, so each
+        // is tested with IsValid() before use and made again if needed (the API notes ask for exactly that).
+        private static PartBuffers[] _buffers;
+        private static VertexFormat _format;
+
+        private sealed class PartBuffers
         {
-            new Color(0xF7, 0xF5, 0xF2), // Mist
-            new Color(0xFD, 0x64, 0x1A), // Accent (Heron orange) - easy to find in any model
-            new Color(0x1B, 0x1B, 0x1F), // Surface
-            new Color(0x0F, 0x0F, 0x10)  // Ink
+            public VertexBuffer Vertices;
+            public int VerticesVersion = int.MinValue;
+            public IndexBuffer Indices;
+            public EffectInstance Effect;
+            public Color Colour;
+        }
+
+        // The file's skin is black and its eyes white (by material name): swapped so the face reads as a face.
+        private static readonly Dictionary<string, Color> ColourSwaps = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Skin", new Color(224, 182, 142) },
+            { "Face", new Color(38, 30, 26) }
         };
 
-        private WalkFigureServer()
+        private WalkCharacterServer()
         {
         }
+
+        // ------------------------------------------------------------------ the character (Revit's thread, plain .NET)
+
+        /// <summary>
+        /// Reads the character the first time it is needed (about 40 ms, once per Revit session). True when there is one to
+        /// draw; false with <see cref="CharacterProblem"/> saying why. Never throws.
+        /// </summary>
+        internal static bool EnsureCharacter()
+        {
+            if (_loadTried)
+                return _animator != null;
+            _loadTried = true;
+            try
+            {
+                WalkCharacterModel model = WalkCharacterModel.TryLoad(out string problem);
+                if (model != null)
+                {
+                    _animator = new WalkCharacterAnimator(model, WalkTuning.MmToFt(CharacterHeightMm));
+                    _buffers = new PartBuffers[model.Parts.Length];
+                    for (int p = 0; p < _buffers.Length; p++)
+                        _buffers[p] = new PartBuffers { Colour = PartColour(model.Materials[model.Parts[p].Material]) };
+                }
+                CharacterProblem = model != null ? null : problem;
+            }
+            catch (Exception ex)
+            {
+                // Broad on purpose: a bad character file only means "no character" - never a broken walk.
+                _animator = null;
+                CharacterProblem = "the character could not be set up (" + ex.Message + ")";
+            }
+            return _animator != null;
+        }
+
+        /// <summary>
+        /// Moves the character's animation on by one walk frame (stand / walk / run to match the player's horizontal speed).
+        /// Returns true while the pose keeps changing by itself (walking, running, blending), so the engine keeps frames
+        /// and redraws coming; false once it stands. Never throws - a failure only loses the character.
+        /// </summary>
+        internal static bool Advance(double dt, double speedFtPerSec, bool running)
+        {
+            WalkCharacterAnimator animator = _animator;
+            if (animator == null)
+                return false;
+            try
+            {
+                animator.Advance(dt, speedFtPerSec, running);
+                _poseVersion++;
+                return animator.IsMoving;
+            }
+            catch (Exception ex)
+            {
+                // Broad on purpose: a maths fault in the animation must not end the walk; the camera keeps working.
+                _animator = null;
+                CharacterProblem = "the character's animation failed (" + ex.Message + ")";
+                Pose.Visible = false;
+                return false;
+            }
+        }
+
+        /// <summary>True when a character was read and can be drawn.</summary>
+        internal static bool HasCharacter => _animator != null;
 
         // ------------------------------------------------------------------ switch on / off (Revit's thread only)
 
         /// <summary>
         /// Once per Revit session, at the start of a walk (a Revit command - a valid API context): makes the event that
-        /// switches the figure off from the overlay's own end paths, and watches models closing.
+        /// switches the character off from the overlay's own end paths, and watches models closing.
         /// </summary>
         internal static void Prepare(UIApplication uiApp)
         {
@@ -101,7 +181,7 @@ namespace HeronTools.Services.ModelWalk
             if (_watching || uiApp == null)
                 return;
             _watching = true;
-            // A model closing while its walk shows the figure: hide it first (the walk ends on its next frame).
+            // A model closing while its walk shows the character: hide it first (the walk ends on its next frame).
             uiApp.Application.DocumentClosing += (s, e) =>
             {
                 if (Pose.Document != null && Pose.Document.Equals(e.Document))
@@ -116,7 +196,7 @@ namespace HeronTools.Services.ModelWalk
         }
 
         /// <summary>
-        /// Switches the figure on (a walk frame - Revit's thread). Registers the server the first time and puts it on the
+        /// Switches the character on (a walk frame - Revit's thread). Registers the server the first time and puts it on the
         /// active list. Returns false when Revit refuses; the walk then stays in first person. Never throws.
         /// </summary>
         internal static bool SwitchOn()
@@ -127,7 +207,7 @@ namespace HeronTools.Services.ModelWalk
                 if (service == null)
                     return false;
                 if (_instance == null)
-                    _instance = new WalkFigureServer();
+                    _instance = new WalkCharacterServer();
                 if (!service.IsRegisteredServerId(ServerGuid))
                     service.AddServer(_instance);
 
@@ -143,14 +223,14 @@ namespace HeronTools.Services.ModelWalk
             }
             catch (Exception)
             {
-                // Broad on purpose: a refusal of Revit's graphics service only means no figure - never a broken walk.
+                // Broad on purpose: a refusal of Revit's graphics service only means no character - never a broken walk.
                 Pose.Visible = false;
                 return false;
             }
         }
 
         /// <summary>
-        /// Switches the figure off on Revit's thread (the end of a walk, a model closing, Revit closing): hidden at once,
+        /// Switches the character off on Revit's thread (the end of a walk, a model closing, Revit closing): hidden at once,
         /// taken off the active list, and removed if Revit allows it now. Never throws.
         /// </summary>
         internal static void SwitchOff()
@@ -179,7 +259,7 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>
         /// From the overlay's own end paths (overlay closed, Revit busy, an overlay fault) - outside Revit's API: the
-        /// figure is hidden at once (plain .NET), and the full switch-off runs on Revit's thread at its next idle moment.
+        /// character is hidden at once (plain .NET), and the full switch-off runs on Revit's thread at its next idle moment.
         /// </summary>
         internal static void SwitchOffSoon()
         {
@@ -219,7 +299,7 @@ namespace HeronTools.Services.ModelWalk
         private static MultiServerService Service() =>
             ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService) as MultiServerService;
 
-        /// <summary>Runs the switch-off on Revit's thread, unless a new walk has switched the figure on again meanwhile.</summary>
+        /// <summary>Runs the switch-off on Revit's thread, unless a new walk has switched the character on again meanwhile.</summary>
         private sealed class SwitchOffHandler : IExternalEventHandler
         {
             public void Execute(UIApplication app)
@@ -231,7 +311,7 @@ namespace HeronTools.Services.ModelWalk
                 catch (Autodesk.Revit.Exceptions.ApplicationException) { /* the next redraw clears it anyway */ }
             }
 
-            public string GetName() => "Heron Tools - Model Walk figure off";
+            public string GetName() => "Heron Tools - Model Walk character off";
         }
 
         // ------------------------------------------------------------------ IExternalServer
@@ -240,11 +320,11 @@ namespace HeronTools.Services.ModelWalk
 
         public ExternalServiceId GetServiceId() => ExternalServices.BuiltInExternalServices.DirectContext3DService;
 
-        public string GetName() => "Heron Tools - Model Walk figure";
+        public string GetName() => "Heron Tools - Model Walk character";
 
         public string GetVendorId() => "HeronTools";
 
-        public string GetDescription() => "Draws the third-person figure in Model Walk's walk view. Nothing is added to the model.";
+        public string GetDescription() => "Draws the third-person character in Model Walk's walk view. Nothing is added to the model.";
 
         // ------------------------------------------------------------------ IDirectContext3DServer
 
@@ -260,7 +340,7 @@ namespace HeronTools.Services.ModelWalk
         {
             try
             {
-                return Pose.Visible && dBView != null && Pose.ViewId != null && Pose.Document != null &&
+                return Pose.Visible && _animator != null && dBView != null && Pose.ViewId != null && Pose.Document != null &&
                        dBView.Id == Pose.ViewId && dBView.Document.Equals(Pose.Document);
             }
             catch (Exception)
@@ -283,167 +363,134 @@ namespace HeronTools.Services.ModelWalk
         {
             try
             {
-                if (!Pose.Visible || !DrawContext.IsAvailable())
+                WalkCharacterAnimator animator = _animator;
+                if (!Pose.Visible || animator == null || _buffers == null || !DrawContext.IsAvailable())
                     return;
 
-                var groups = new List<Box>[GroupCount];
-                for (int i = 0; i < GroupCount; i++)
-                    groups[i] = new List<Box>();
-                BuildBody(groups);
+                if (_format == null || !_format.IsValid())
+                {
+                    _format?.Dispose();
+                    _format = new VertexFormat(VertexFormatBits.PositionNormal);
+                }
 
-                for (int g = 0; g < GroupCount; g++)
-                    if (groups[g].Count > 0)
-                        FlushGroup(groups[g], GroupColors[g]);
+                WalkCharacterModel model = animator.Model;
+                for (int p = 0; p < model.Parts.Length; p++)
+                {
+                    WalkCharacterModel.Part part = model.Parts[p];
+                    int vertexCount = part.VertexCount;
+                    int triangleCount = part.Indices.Length / 3;
+                    if (vertexCount == 0 || triangleCount == 0 || vertexCount > 65535)
+                        continue;   // index buffers are 16-bit: a part this big cannot be drawn (the shipped file's biggest is 2,592)
+
+                    PartBuffers b = _buffers[p];
+                    // A replaced buffer is disposed at once (all four types are IDisposable in 2020-2027), so a walk
+                    // does not leave one graphics buffer per frame for the garbage collector.
+                    if (b.Effect == null || !b.Effect.IsValid())
+                    {
+                        b.Effect?.Dispose();
+                        b.Effect = MakeEffect(b.Colour);
+                    }
+                    if (b.Indices == null || !b.Indices.IsValid())
+                    {
+                        b.Indices?.Dispose();
+                        b.Indices = MakeIndices(part, triangleCount);
+                    }
+                    if (b.Vertices == null || !b.Vertices.IsValid() || b.VerticesVersion != _poseVersion)
+                    {
+                        b.Vertices?.Dispose();
+                        b.Vertices = null;
+                        b.Vertices = MakeVertices(animator, p, vertexCount);
+                        b.VerticesVersion = _poseVersion;
+                    }
+
+                    DrawContext.FlushBuffer(b.Vertices, vertexCount, b.Indices, triangleCount * IndexTriangle.GetSizeInShortInts(),
+                                            _format, b.Effect, PrimitiveType.TriangleList, 0, triangleCount);
+                }
             }
             catch (Exception)
             {
-                // Broad on purpose: a failed draw only loses the figure for one redraw - never Revit's own redraw.
+                // Broad on purpose: a failed draw only loses the character for one redraw - never Revit's own redraw.
             }
         }
 
-        // ------------------------------------------------------------------ the body
-
-        /// <summary>One box: a frame (rotation and origin), and its centre and half sizes in that frame, in feet.</summary>
-        private struct Box
-        {
-            public Transform Frame;
-            public XYZ Center;
-            public XYZ Half;
-        }
-
-        private static XYZ P(double xMm, double yMm, double zMm) =>
-            new XYZ(WalkTuning.MmToFt(xMm), WalkTuning.MmToFt(yMm), WalkTuning.MmToFt(zMm));
+        // ------------------------------------------------------------------ Revit buffers
 
         /// <summary>
-        /// The figure in its own frame: X = facing, Y = left, Z = up, origin on the floor between the feet; 1810 mm tall.
-        /// Limbs hang from their joint, so a turn about the joint's Y axis swings them (+ = the hanging end goes back).
+        /// The posed part in Revit's terms: the file's axes (Y up, facing +Z, +X = its left) become the walk's (Z up, facing
+        /// the yaw, +Y = its left) - a cyclic swap, so the triangles keep their winding - scaled to 1850 mm, soles on the floor.
         /// </summary>
-        private static void BuildBody(List<Box>[] groups)
+        private static VertexBuffer MakeVertices(WalkCharacterAnimator animator, int part, int vertexCount)
         {
-            Transform body = Transform.CreateTranslation(Pose.Feet ?? XYZ.Zero)
-                .Multiply(Transform.CreateRotation(XYZ.BasisZ, Pose.YawRad));
+            float[] pos = animator.Positions[part];
+            float[] nor = animator.Normals[part];
+            XYZ feet = Pose.Feet ?? XYZ.Zero;
+            double cos = Math.Cos(Pose.YawRad);
+            double sin = Math.Sin(Pose.YawRad);
+            double scale = animator.UnitsToFeet;
+            double floor = animator.FloorOffsetUnits;
 
-            Add(groups[GroupTrousers], body, P(0, 0, 960), P(100, 170, 80));   // pelvis 880..1040
-            Add(groups[GroupShirt], body, P(0, 0, 1290), P(110, 190, 250));     // body 1040..1540
-            Add(groups[GroupSkin], body, P(0, 0, 1575), P(50, 50, 35));         // neck
-            Add(groups[GroupSkin], body, P(0, 0, 1690), P(110, 100, 120));      // head 1570..1810
-            Add(groups[GroupDark], body, P(108, 0, 1715), P(12, 80, 25));       // face stripe: shows which way it faces
-
-            double swing = Pose.SwingRad;
-            AddLeg(groups, body, 100.0, -swing, Pose.KneeLeftRad);   // forward swing = a negative turn about Y
-            AddLeg(groups, body, -100.0, swing, Pose.KneeRightRad);
-
-            double armSwing = swing * 0.8;                           // arms the other way, a bit less
-            AddArm(groups, body, 250.0, armSwing);
-            AddArm(groups, body, -250.0, -armSwing);
-        }
-
-        private static void AddLeg(List<Box>[] groups, Transform body, double sideMm, double hipRad, double kneeRad)
-        {
-            Transform thigh = body.Multiply(Transform.CreateTranslation(P(0, sideMm, 960)))
-                                  .Multiply(Transform.CreateRotation(XYZ.BasisY, hipRad));
-            Add(groups[GroupTrousers], thigh, P(0, 0, -225), P(70, 70, 225));
-
-            Transform shin = thigh.Multiply(Transform.CreateTranslation(P(0, 0, -450)))
-                                  .Multiply(Transform.CreateRotation(XYZ.BasisY, kneeRad));
-            Add(groups[GroupTrousers], shin, P(0, 0, -215), P(60, 60, 215));
-
-            Transform ankle = shin.Multiply(Transform.CreateTranslation(P(0, 0, -430)));
-            Add(groups[GroupDark], ankle, P(50, 0, -40), P(120, 60, 40));
-        }
-
-        private static void AddArm(List<Box>[] groups, Transform body, double sideMm, double shoulderRad)
-        {
-            Transform upper = body.Multiply(Transform.CreateTranslation(P(0, sideMm, 1480)))
-                                  .Multiply(Transform.CreateRotation(XYZ.BasisY, shoulderRad));
-            Add(groups[GroupShirt], upper, P(0, 0, -150), P(55, 55, 150));
-
-            // The elbow bends the forearm forward, more as the arm swings back.
-            double elbowRad = -(0.25 + Math.Max(0.0, shoulderRad) * 0.6);
-            Transform fore = upper.Multiply(Transform.CreateTranslation(P(0, 0, -300)))
-                                  .Multiply(Transform.CreateRotation(XYZ.BasisY, elbowRad));
-            Add(groups[GroupShirt], fore, P(0, 0, -140), P(50, 50, 140));
-
-            Transform wrist = fore.Multiply(Transform.CreateTranslation(P(0, 0, -280)));
-            Add(groups[GroupSkin], wrist, P(0, 0, -50), P(45, 40, 50));
-        }
-
-        private static void Add(List<Box> list, Transform frame, XYZ center, XYZ half) =>
-            list.Add(new Box { Frame = frame, Center = center, Half = half });
-
-        // ------------------------------------------------------------------ drawing
-
-        // Each face: its 4 corners as (+/-) sign triples, counter-clockwise seen from outside, and its outward normal.
-        private static readonly int[][] FaceCorners =
-        {
-            new[] {  1, -1, -1,   1,  1, -1,   1,  1,  1,   1, -1,  1 }, // +X
-            new[] { -1,  1, -1,  -1, -1, -1,  -1, -1,  1,  -1,  1,  1 }, // -X
-            new[] {  1,  1, -1,  -1,  1, -1,  -1,  1,  1,   1,  1,  1 }, // +Y
-            new[] { -1, -1, -1,   1, -1, -1,   1, -1,  1,  -1, -1,  1 }, // -Y
-            new[] { -1, -1,  1,   1, -1,  1,   1,  1,  1,  -1,  1,  1 }, // +Z
-            new[] { -1,  1, -1,   1,  1, -1,   1, -1, -1,  -1, -1, -1 }  // -Z
-        };
-
-        private static readonly XYZ[] FaceNormals =
-        {
-            XYZ.BasisX, -XYZ.BasisX, XYZ.BasisY, -XYZ.BasisY, XYZ.BasisZ, -XYZ.BasisZ
-        };
-
-        /// <summary>
-        /// One colour's boxes as one shaded triangle list. Buffers are made fresh on every draw: the figure is about 17
-        /// boxes (about 400 corners), so this is cheap, and nothing is kept that Revit could invalidate between redraws.
-        /// </summary>
-        private static void FlushGroup(List<Box> boxes, Color color)
-        {
-            int vertexCount = boxes.Count * 24;
-            int triangleCount = boxes.Count * 12;
-
-            var format = new VertexFormat(VertexFormatBits.PositionNormal);
-            var effect = new EffectInstance(VertexFormatBits.PositionNormal);
-            effect.SetColor(color);
-            effect.SetDiffuseColor(color);
-            effect.SetAmbientColor(Scale(color, 0.55));
-            effect.SetEmissiveColor(Scale(color, 0.15));
-            effect.SetSpecularColor(Scale(color, 0.12));
-
-            int vertexFloats = vertexCount * VertexPositionNormal.GetSizeInFloats();
-            var vertexBuffer = new VertexBuffer(vertexFloats);
-            vertexBuffer.Map(vertexFloats);
-            VertexStreamPositionNormal vertices = vertexBuffer.GetVertexStreamPositionNormal();
-
-            int indexShorts = triangleCount * IndexTriangle.GetSizeInShortInts();
-            var indexBuffer = new IndexBuffer(indexShorts);
-            indexBuffer.Map(indexShorts);
-            IndexStreamTriangle triangles = indexBuffer.GetIndexStreamTriangle();
-
-            int baseIndex = 0;
-            foreach (Box box in boxes)
+            int floats = vertexCount * VertexPositionNormal.GetSizeInFloats();
+            var buffer = new VertexBuffer(floats);
+            buffer.Map(floats);
+            VertexStreamPositionNormal stream = buffer.GetVertexStreamPositionNormal();
+            for (int v = 0; v < vertexCount; v++)
             {
-                for (int face = 0; face < 6; face++)
-                {
-                    int[] c = FaceCorners[face];
-                    XYZ normal = box.Frame.OfVector(FaceNormals[face]);
-                    for (int corner = 0; corner < 4; corner++)
-                    {
-                        var local = new XYZ(box.Center.X + (c[corner * 3] * box.Half.X),
-                                            box.Center.Y + (c[(corner * 3) + 1] * box.Half.Y),
-                                            box.Center.Z + (c[(corner * 3) + 2] * box.Half.Z));
-                        vertices.AddVertex(new VertexPositionNormal(box.Frame.OfPoint(local), normal));
-                    }
-                    triangles.AddTriangle(new IndexTriangle(baseIndex, baseIndex + 1, baseIndex + 2));
-                    triangles.AddTriangle(new IndexTriangle(baseIndex, baseIndex + 2, baseIndex + 3));
-                    baseIndex += 4;
-                }
+                int o = v * 3;
+                double fx = pos[o + 2] * scale;              // forward = file Z
+                double fy = pos[o] * scale;                  // left    = file X
+                double fz = (pos[o + 1] - floor) * scale;    // up      = file Y
+                double nx = nor[o + 2], ny = nor[o], nz = nor[o + 1];
+                var point = new XYZ(feet.X + (fx * cos) - (fy * sin), feet.Y + (fx * sin) + (fy * cos), feet.Z + fz);
+                var normal = new XYZ((nx * cos) - (ny * sin), (nx * sin) + (ny * cos), nz);
+                stream.AddVertex(new VertexPositionNormal(point, normal));
             }
-
-            vertexBuffer.Unmap();
-            indexBuffer.Unmap();
-
-            DrawContext.FlushBuffer(vertexBuffer, vertexCount, indexBuffer, indexShorts, format, effect,
-                                    PrimitiveType.TriangleList, 0, triangleCount);
+            buffer.Unmap();
+            return buffer;
         }
 
-        /// <summary>A darker step of the same palette colour (for shading only - never a new hue).</summary>
+        /// <summary>The part's triangles - the same every frame, so made once and kept while Revit says it is valid.</summary>
+        private static IndexBuffer MakeIndices(WalkCharacterModel.Part part, int triangleCount)
+        {
+            int shorts = triangleCount * IndexTriangle.GetSizeInShortInts();
+            var buffer = new IndexBuffer(shorts);
+            buffer.Map(shorts);
+            IndexStreamTriangle stream = buffer.GetIndexStreamTriangle();
+            int[] idx = part.Indices;
+            for (int t = 0; t < triangleCount; t++)
+                stream.AddTriangle(new IndexTriangle(idx[t * 3], idx[(t * 3) + 1], idx[(t * 3) + 2]));
+            buffer.Unmap();
+            return buffer;
+        }
+
+        private static EffectInstance MakeEffect(Color colour)
+        {
+            var effect = new EffectInstance(VertexFormatBits.PositionNormal);
+            effect.SetColor(colour);
+            effect.SetDiffuseColor(colour);
+            effect.SetAmbientColor(Scale(colour, 0.55));
+            effect.SetEmissiveColor(Scale(colour, 0.15));
+            effect.SetSpecularColor(Scale(colour, 0.12));
+            return effect;
+        }
+
+        /// <summary>One material's colour: a swap from ColourSwaps, else the file's own colour.</summary>
+        private static Color PartColour(WalkCharacterModel.Material material)
+        {
+            if (material.Name != null && ColourSwaps.TryGetValue(material.Name, out Color swap))
+                return swap;
+            double[] c = material.BaseColorLinear;
+            return new Color(ToScreen(c[0]), ToScreen(c[1]), ToScreen(c[2]));
+        }
+
+        /// <summary>glTF colours are linear light; Revit wants screen (sRGB) values 0-255, or everything looks too dark.</summary>
+        private static byte ToScreen(double linear)
+        {
+            linear = Math.Max(0.0, Math.Min(1.0, linear));
+            double s = linear <= 0.0031308 ? linear * 12.92 : (1.055 * Math.Pow(linear, 1.0 / 2.4)) - 0.055;
+            return (byte)Math.Round(Math.Max(0.0, Math.Min(1.0, s)) * 255.0);
+        }
+
+        /// <summary>A darker step of the same colour (for shading only).</summary>
         private static Color Scale(Color c, double factor) =>
             new Color((byte)Math.Min(255, c.Red * factor), (byte)Math.Min(255, c.Green * factor), (byte)Math.Min(255, c.Blue * factor));
     }

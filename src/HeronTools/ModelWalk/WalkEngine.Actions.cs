@@ -594,11 +594,11 @@ namespace HeronTools.Services.ModelWalk
 
             snag.Coloured = whyNot == null;
             snag.NotColouredWhy = whyNot;
-            // The snag's picture is of the model: the third-person figure is hidden until it is taken.
-            bool figureWasShown = WalkFigureServer.Pose.Visible;
-            WalkFigureServer.Pose.Visible = false;
-            if (snag.Coloured || figureWasShown)
-                uidoc.RefreshActiveView();   // so the snag's picture shows it red, without the figure
+            // The snag's picture is of the model: the third-person character is hidden until it is taken.
+            bool characterWasShown = WalkCharacterServer.Pose.Visible;
+            WalkCharacterServer.Pose.Visible = false;
+            if (snag.Coloured || characterWasShown)
+                uidoc.RefreshActiveView();   // so the snag's picture shows it red, without the character
 
             string problem = _session.Report.Save();
             hud.SnagCount = _session.Report.Count;

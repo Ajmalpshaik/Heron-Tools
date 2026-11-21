@@ -105,7 +105,7 @@ namespace HeronTools.UI.ModelWalk
             if (snag == null)
                 return;
             string fileName = "Snag " + number.ToString("000") + ".png";
-            _session.Hud.SnagPictureBusy = true;   // the third-person figure stays out of the picture
+            _session.Hud.SnagPictureBusy = true;   // the third-person character stays out of the picture
             CapturePicture(fileName,
                 saved =>
                 {

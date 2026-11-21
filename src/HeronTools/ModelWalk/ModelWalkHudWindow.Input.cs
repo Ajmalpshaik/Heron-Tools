@@ -325,7 +325,7 @@ namespace HeronTools.UI.ModelWalk
 
         private void AutoHideHelp() => _helpVisible = false;
 
-        /// <summary>First / third person. The engine moves the camera and shows or hides the figure on the next frame.</summary>
+        /// <summary>First / third person. The engine moves the camera and shows or hides the character on the next frame.</summary>
         private void ToggleThirdPerson()
         {
             WalkInput input = _session.Input;

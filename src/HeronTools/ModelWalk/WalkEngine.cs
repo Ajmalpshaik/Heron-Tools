@@ -250,8 +250,8 @@ namespace HeronTools.Services.ModelWalk
             hud.Hovering = _session.Mode == WalkMoveMode.Walk && _hovering;
             _session.Position = position;
 
-            // --- Third person: the camera behind the player, and the figure's pose (WalkEngine.ThirdPerson.cs) ---
-            XYZ eye = UpdateThirdPerson(doc, view, input, hud, position, forward, right, dt, out bool figureRedraw, out bool figureAnimating);
+            // --- Third person: the camera behind the player, and the character's place and animation (WalkEngine.ThirdPerson.cs) ---
+            XYZ eye = UpdateThirdPerson(doc, view, input, hud, position, forward, right, dt, out bool characterRedraw, out bool characterAnimating);
 
             // --- Camera: no transaction, no Undo entry. Sent only when it changed. ---
             if (_lastEye == null || !_lastEye.IsAlmostEqualTo(eye) ||
@@ -272,9 +272,9 @@ namespace HeronTools.Services.ModelWalk
                 _lastPitch = pitchDeg;
                 uidoc.RefreshActiveView();
             }
-            else if (figureRedraw)
+            else if (characterRedraw)
             {
-                uidoc.RefreshActiveView();   // the figure appeared, went, or its limbs are easing to rest: no camera move
+                uidoc.RefreshActiveView();   // the character appeared, went, or walks / blends on the spot: no camera move
             }
 
             // --- Readout under the crosshair: the full view, ten times a second at most ---
@@ -307,7 +307,7 @@ namespace HeronTools.Services.ModelWalk
             UpdateStatus(doc, hud, input, position);
             UpdateViewRectangle(uidoc, hud, input);
 
-            hud.NeedsFrames = playing || input.GoToPointAimHold || _velocity.GetLength() > 0 || figureAnimating ||
+            hud.NeedsFrames = playing || input.GoToPointAimHold || _velocity.GetLength() > 0 || characterAnimating ||
                               (_session.Mode == WalkMoveMode.Walk && !_session.Grounded && !hud.Hovering);
         }
 
@@ -465,10 +465,10 @@ namespace HeronTools.Services.ModelWalk
             var notes = new List<string>();
             Document doc = _session.Document;
 
-            // The third-person figure goes first, whatever else fails: hidden, off the active list, removed if Revit allows.
-            bool figureWasShown = WalkFigureServer.Pose.Visible;
-            WalkFigureServer.SwitchOff();
-            if (figureWasShown && doc.IsValidObject)
+            // The third-person character goes first, whatever else fails: hidden, off the active list, removed if Revit allows.
+            bool characterWasShown = WalkCharacterServer.Pose.Visible;
+            WalkCharacterServer.SwitchOff();
+            if (characterWasShown && doc.IsValidObject)
             {
                 try { app?.ActiveUIDocument?.RefreshActiveView(); }
                 catch (Autodesk.Revit.Exceptions.ApplicationException) { /* the next redraw clears it */ }
@@ -549,8 +549,8 @@ namespace HeronTools.Services.ModelWalk
                 return null;
             _ended = true;
             _session.Running = false;
-            // No Revit API here: the figure is hidden at once and switched off on Revit's thread at its next idle moment.
-            WalkFigureServer.SwitchOffSoon();
+            // No Revit API here: the character is hidden at once and switched off on Revit's thread at its next idle moment.
+            WalkCharacterServer.SwitchOffSoon();
             var notes = new List<string>();
             string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);

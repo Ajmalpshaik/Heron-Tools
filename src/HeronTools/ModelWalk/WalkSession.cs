@@ -99,10 +99,10 @@ namespace HeronTools.Services.ModelWalk
         // Third person (from AJ-Tools Game Mode v1.60.0): the camera behind and right of the player's head.
         public const double ThirdPersonBackMm = 3000.0;     // camera distance behind the player
         public const double ThirdPersonPivotMm = 1900.0;    // the point the camera swings round, above the feet
-        public const double ThirdPersonShoulderMm = 500.0;  // camera shifted right, so the crosshair is not on the figure
+        public const double ThirdPersonShoulderMm = 500.0;  // camera shifted right, so the crosshair is not on the character
         public const double ThirdPersonWallGapMm = 250.0;   // gap kept to a wall behind the player
         public const double ThirdPersonMinBackMm = 300.0;   // the closest the camera comes
-        public const double FigureStrideMm = 900.0;         // one step of the figure's walk
+        public const double CharacterJumpMm = 1800.0;       // a move longer than this in one frame is a jump, not a step
 
         public static double BodyRadiusFt => BodyRadiusMm * FtPerMm;
         public static double GravityFtPerSec2 => GravityMmPerSec2 * FtPerMm;
@@ -121,7 +121,7 @@ namespace HeronTools.Services.ModelWalk
         public static double ThirdPersonShoulderFt => ThirdPersonShoulderMm * FtPerMm;
         public static double ThirdPersonWallGapFt => ThirdPersonWallGapMm * FtPerMm;
         public static double ThirdPersonMinBackFt => ThirdPersonMinBackMm * FtPerMm;
-        public static double FigureStrideFt => FigureStrideMm * FtPerMm;
+        public static double CharacterJumpFt => CharacterJumpMm * FtPerMm;
 
         public static double MmToFt(double mm) => mm * FtPerMm;
         public static double FtToMm(double ft) => ft * Constants.FEET_TO_MM;
@@ -145,7 +145,7 @@ namespace HeronTools.Services.ModelWalk
 
         public WalkPointerMode Pointer = WalkPointerMode.Inspect;
 
-        // Third person: the camera behind the player and a figure drawn where the player stands. Owned by the HUD
+        // Third person: the camera behind the player and a character drawn where the player stands. Owned by the HUD
         // (its key, the setting), read by the engine every frame.
         public bool ThirdPerson;
         public int SpeedStep = WalkTuning.DefaultSpeedStep;
@@ -210,7 +210,7 @@ namespace HeronTools.Services.ModelWalk
         // Engine to HUD: a snag was just recorded - take its picture (HUD hidden), then ask for its comment.
         public int SnagAwaitingPicture;
 
-        // HUD to engine: a snag's picture is being taken right now - the third-person figure stays out of it.
+        // HUD to engine: a snag's picture is being taken right now - the third-person character stays out of it.
         public bool SnagPictureBusy;
 
         // Engine to HUD: a viewpoint was just saved - ask for its name.
