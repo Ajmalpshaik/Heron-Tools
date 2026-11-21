@@ -106,11 +106,7 @@ namespace HeronTools.Services.FilterPro
         /// </summary>
         private static List<ElementId> GetLiveFilters(Document doc, View view)
         {
-#if REVIT2021_OR_GREATER
-            IEnumerable<ElementId> ids = view.GetOrderedFilters();
-#else
-            IEnumerable<ElementId> ids = view.GetFilters();
-#endif
+            IEnumerable<ElementId> ids = ViewFilterCompat.GetFilters(view);
             return (ids ?? new List<ElementId>())
                 .Where(id => id != null &&
                              id != ElementId.InvalidElementId &&
@@ -130,10 +126,10 @@ namespace HeronTools.Services.FilterPro
 
         private static List<ElementId> BuildBaseline(Document doc, View view, List<ElementId> liveClean)
         {
-#if REVIT2021_OR_GREATER
-            // Revit reports the real order (GetLiveFilters), so it wins over anything remembered.
-            return new List<ElementId>(liveClean);
-#else
+            // Revit 2021+ reports the real order (GetLiveFilters), so it wins over anything remembered.
+            if (ViewFilterCompat.ReportsFilterOrder)
+                return new List<ElementId>(liveClean);
+
             if (_lastKnownOrderByView.TryGetValue(OrderKey(doc, view), out var snapshot) && snapshot != null)
             {
                 var snapIds = new HashSet<long>(liveClean.Select(x => x.LongValue()));
@@ -151,7 +147,6 @@ namespace HeronTools.Services.FilterPro
             }
 
             return new List<ElementId>(liveClean);
-#endif
         }
 
         /// <summary>
@@ -249,10 +244,11 @@ namespace HeronTools.Services.FilterPro
         private static Dictionary<ElementId, bool> CaptureFilterEnabledStates(View view, List<ElementId> liveClean)
         {
             var enabledMap = new Dictionary<ElementId, bool>(new ElementIdIntegerComparer());
-#if REVIT2021_OR_GREATER
             foreach (var id in liveClean)
-                enabledMap[id] = view.GetIsFilterEnabled(id);
-#endif
+            {
+                if (ViewFilterCompat.TryGetIsFilterEnabled(view, id, out bool enabled))
+                    enabledMap[id] = enabled;
+            }
             return enabledMap;
         }
 
@@ -262,13 +258,8 @@ namespace HeronTools.Services.FilterPro
         /// </summary>
         private static void RestoreFilterEnabledStates(View view, Dictionary<ElementId, bool> enabledMap)
         {
-#if REVIT2021_OR_GREATER
             foreach (var entry in enabledMap)
-            {
-                if (view.IsFilterApplied(entry.Key) && view.GetIsFilterEnabled(entry.Key) != entry.Value)
-                    view.SetIsFilterEnabled(entry.Key, entry.Value);
-            }
-#endif
+                ViewFilterCompat.RestoreIsFilterEnabled(view, entry.Key, entry.Value);
         }
 
         private static void RemoveAllFilters(View view, List<ElementId> liveClean)

@@ -65,10 +65,21 @@ namespace HeronTools.UI
 
             if (links != null)
             {
-                foreach (var link in links.Where(l => l != null && l.GetLinkDocument() != null))
+                List<RevitLinkInstance> loaded = links.Where(l => l != null && l.GetLinkDocument() != null).ToList();
+
+                // A link placed more than once gives the same model name for every copy: those copies also
+                // carry their instance name, so the modeller can tell which one a row (and a zoom) is.
+                var nameCount = loaded
+                    .GroupBy(l => GetCleanLinkName(l, l.GetLinkDocument()), StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+
+                foreach (var link in loaded)
                 {
                     Document linkDoc = link.GetLinkDocument();
-                    _linkItems.Add(new LinkDisplayItem(GetCleanLinkName(link, linkDoc), link, linkDoc, isHost: false));
+                    string name = GetCleanLinkName(link, linkDoc);
+                    if (nameCount[name] > 1)
+                        name = name + " (" + GetLinkInstanceLabel(link) + ")";
+                    _linkItems.Add(new LinkDisplayItem(name, link, linkDoc, isHost: false));
                 }
             }
 
@@ -170,15 +181,13 @@ namespace HeronTools.UI
                 ElementIdBox.SelectAll();
                 return;
             }
-#if !REVIT2024_OR_GREATER
-            if (parsedId > int.MaxValue)
+            if (!ElementIdHelper.FitsElementId(parsedId))
             {
                 ErrorText.Text = "That number is too large to be an Element ID in this Revit version.";
                 ElementIdBox.Focus();
                 ElementIdBox.SelectAll();
                 return;
             }
-#endif
 
             List<LinkDisplayItem> modelsToSearch;
             bool searchAll = SearchAllCheck?.IsChecked == true;
@@ -445,6 +454,22 @@ namespace HeronTools.UI
             }
 
             return name;
+        }
+
+        /// <summary>
+        /// The part of a placed link's instance name that tells its copies apart (Revit names an instance
+        /// "File.rvt : 2 : location ..."; the file part is dropped as the row already shows it). Falls back
+        /// to the full instance name, then to the instance's Element ID.
+        /// </summary>
+        private static string GetLinkInstanceLabel(RevitLinkInstance link)
+        {
+            string instanceName = link.Name ?? string.Empty;
+
+            int colonIndex = instanceName.IndexOf(':');
+            string label = colonIndex > -1 ? instanceName.Substring(colonIndex + 1).Trim() : instanceName.Trim();
+            if (string.IsNullOrWhiteSpace(label))
+                label = instanceName.Trim();
+            return string.IsNullOrWhiteSpace(label) ? "ID " + ElementIdHelper.ToReportString(link.Id) : label;
         }
 
         private void ClearMessages()
