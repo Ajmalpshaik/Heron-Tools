@@ -86,6 +86,9 @@ by today's windows; they are kept for the next tools moved in, and use brand col
     <SolidColorBrush x:Key="BorderSoft" Color="#24F7F5F2"/>       <!-- Mist 14 % -->
     <SolidColorBrush x:Key="BorderStrong" Color="#47F7F5F2"/>     <!-- Mist 28 % -->
     <SolidColorBrush x:Key="OverlayBackground" Color="#CC0F0F10"/> <!-- Ink 80 % -->
+    <!-- Ink at 1/255: looks like nothing, but a see-through window still gets every click and key over it
+         (Model Walk's overlay catches the mouse over the Revit view this way). -->
+    <SolidColorBrush x:Key="InputCatcher" Color="#010F0F10"/>
 
     <!-- Quick Menu wheel shades (see the header). Only the wheel and its Settings preview use these. -->
     <SolidColorBrush x:Key="WheelSlotFill" Color="#F21B1B1F"/>            <!-- Surface 95 % -->

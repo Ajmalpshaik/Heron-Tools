@@ -1,0 +1,255 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.2.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Model Walk HUD: a see-through window laid exactly over the Revit walk view. It catches the mouse and keys for
+  the walk and draws a small, quiet HUD at the edges - the model is the star.
+  Heron brand only (UI/HeronStyles.xaml): Mist text on see-through Ink plates, so it reads on any model colour.
+  ONE orange thing on screen: the active mode chip.
+  Not Topmost: the window is owned by Revit's main window, so it stays above Revit but never above other apps or
+  Revit's own dialogs (the old tool's Topmost overlay could sit over a Revit warning and eat its clicks).
+-->
+<Window x:Class="HeronTools.UI.ModelWalk.ModelWalkHudWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Model Walk - Heron Tools"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
+        Focusable="True"
+        ShowActivated="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        FontFamily="{DynamicResource BrandFont}"
+        Width="1000"
+        Height="700">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/HeronTools;component/UI/HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- A see-through Ink plate behind every text block. -->
+            <Style x:Key="HudPlate" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource OverlayBackground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="10"/>
+                <Setter Property="Padding" Value="12,8"/>
+                <Setter Property="IsHitTestVisible" Value="False"/>
+            </Style>
+            <Style x:Key="HudMain" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+            <Style x:Key="HudSecond" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                <Setter Property="FontSize" Value="11.5"/>
+                <Setter Property="Margin" Value="0,3,0,0"/>
+            </Style>
+            <Style x:Key="HudHint" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                <Setter Property="FontSize" Value="11"/>
+            </Style>
+            <!-- Crosshair arm: Mist with a 1 px Ink edge, so it shows on white walls and dark ducts alike. -->
+            <Style x:Key="CrossArm" TargetType="Rectangle">
+                <Setter Property="Fill" Value="{StaticResource TextPrimary}"/>
+                <Setter Property="Stroke" Value="{StaticResource OverlayBackground}"/>
+                <Setter Property="StrokeThickness" Value="1"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <!-- Ink at 1/255 (InputCatcher): looks like nothing, but the whole Revit view area still gets every click and key. -->
+    <Grid x:Name="RootGrid" Background="{StaticResource InputCatcher}">
+
+        <!-- ==================== WALK LAYER ==================== -->
+        <Grid x:Name="PlayLayer">
+
+            <!-- Crosshair -->
+            <Grid x:Name="Crosshair" Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  IsHitTestVisible="False">
+                <Rectangle Width="3" Height="12" VerticalAlignment="Top" HorizontalAlignment="Center" Style="{StaticResource CrossArm}"/>
+                <Rectangle Width="3" Height="12" VerticalAlignment="Bottom" HorizontalAlignment="Center" Style="{StaticResource CrossArm}"/>
+                <Rectangle Width="12" Height="3" HorizontalAlignment="Left" VerticalAlignment="Center" Style="{StaticResource CrossArm}"/>
+                <Rectangle Width="12" Height="3" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource CrossArm}"/>
+                <Ellipse Width="4" Height="4" Fill="{StaticResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Go to point: a ring at the crosshair while the key is held, and the distance above it -->
+            <Ellipse x:Name="GoToRing" Width="64" Height="64" StrokeThickness="2.5" Stroke="{StaticResource TextPrimary}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False"/>
+            <Border x:Name="GoToCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Margin="0,0,0,130" Visibility="Collapsed">
+                <TextBlock x:Name="GoToText" Style="{StaticResource HudMain}"/>
+            </Border>
+
+            <!-- ======= clean-screen part: everything below hides with the Clean screen key ======= -->
+            <Grid x:Name="HudChrome">
+
+                <!-- Location, top-left -->
+                <Border Style="{StaticResource HudPlate}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,12,0,0">
+                    <StackPanel>
+                        <TextBlock x:Name="LocationText" Style="{StaticResource HudMain}" FontSize="14" Text="Model Walk"/>
+                        <TextBlock x:Name="StatusText" Style="{StaticResource HudSecond}"/>
+                        <TextBlock x:Name="ClearHeightText" Style="{StaticResource HudSecond}" Visibility="Collapsed"/>
+                        <TextBlock x:Name="FrameText" Style="{StaticResource HudHint}" Margin="0,3,0,0" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Mode chips, top-right: the active one is the only orange on screen -->
+                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,14,0" IsHitTestVisible="False">
+                    <Border Style="{StaticResource HudPlate}" Padding="6">
+                        <StackPanel x:Name="ModeChips" Orientation="Horizontal"/>
+                    </Border>
+                    <TextBlock x:Name="ModeHint" Style="{StaticResource HudHint}" HorizontalAlignment="Right" Margin="0,4,4,0"
+                               Text="Right-click or Tab to change"/>
+                </StackPanel>
+
+                <!-- Viewpoints, left -->
+                <Border x:Name="ViewpointCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                        Margin="14,0,0,96" Visibility="Collapsed" MaxWidth="340">
+                    <StackPanel>
+                        <TextBlock Text="Viewpoints - press the number to go" Style="{StaticResource HudHint}"/>
+                        <StackPanel x:Name="ViewpointList" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Help card, left middle (H) - text built in code so it names the keys actually bound -->
+                <Border x:Name="HelpCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        Margin="14,0,0,0" Padding="16,12">
+                    <StackPanel>
+                        <TextBlock Text="Model Walk" Style="{StaticResource HudMain}" FontSize="14"/>
+                        <TextBlock x:Name="HelpText" Style="{StaticResource HudSecond}" Margin="0,8,0,0" LineHeight="19"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Measure: text only - no line is drawn over the model -->
+                <Border x:Name="MeasureCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                        Margin="0,0,0,92" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock x:Name="MeasureLine1" Style="{StaticResource HudMain}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="MeasureLine2" Style="{StaticResource HudSecond}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Door hint -->
+                <Border x:Name="HintCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                        Margin="0,0,0,156" Visibility="Collapsed">
+                    <TextBlock x:Name="HintText" Style="{StaticResource HudMain}"/>
+                </Border>
+
+                <!-- Inspect readout, bottom-centre -->
+                <Border x:Name="ReadoutCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                        Margin="0,0,0,24" MaxWidth="760" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock x:Name="ReadoutLine1" Style="{StaticResource HudMain}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="ReadoutLine2" Style="{StaticResource HudSecond}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <TextBlock x:Name="DistanceText" Grid.Column="1" Foreground="{StaticResource TextPrimary}" FontSize="20"
+                                   FontWeight="Bold" VerticalAlignment="Center" Margin="22,0,0,0"/>
+                    </Grid>
+                </Border>
+
+                <!-- Snag count and key hints, bottom-right -->
+                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,24" IsHitTestVisible="False">
+                    <Border x:Name="SnagCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Right" Visibility="Collapsed">
+                        <TextBlock x:Name="SnagText" Foreground="{StaticResource AccentWarning}" FontSize="13" FontWeight="SemiBold"/>
+                    </Border>
+                    <TextBlock x:Name="KeyHints" Style="{StaticResource HudHint}" HorizontalAlignment="Right" Margin="0,6,2,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Comment / name box: a snag's comment or a viewpoint's name, typed on the spot. Enter saves, Esc skips. -->
+            <Border x:Name="EntryCard" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderStrong}"
+                    BorderThickness="1" CornerRadius="12" Padding="16,12" Width="480" HorizontalAlignment="Center"
+                    VerticalAlignment="Center" Margin="0,220,0,0" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="EntryTitle" Foreground="{StaticResource TextPrimary}" FontSize="13" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBox x:Name="EntryBox" Style="{StaticResource ModernTextBox}" Margin="0,8,0,0" MaxLength="500"/>
+                    <TextBlock x:Name="EntryHint" Style="{StaticResource HudHint}" Margin="0,6,0,0" Text="Enter saves  -  Esc skips"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Short messages, top-centre (always shown, also on a clean screen) -->
+            <Border x:Name="ToastCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,14,0,0" MaxWidth="760" Visibility="Collapsed">
+                <TextBlock x:Name="ToastText" Foreground="{StaticResource TextPrimary}" FontSize="12.5" TextWrapping="Wrap"/>
+            </Border>
+        </Grid>
+
+        <!-- ==================== PAUSED menu / ENDED message ==================== -->
+        <!-- While paused the overlay shrinks to this card at the top of the view, so Revit is free to use. The one
+             orange thing here is "Carry on walking" (the walk layer, with its orange mode chip, is hidden). -->
+        <Border x:Name="PauseLayer" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderStrong}"
+                BorderThickness="1" CornerRadius="12" Visibility="Collapsed">
+            <StackPanel x:Name="PausePanel" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,14">
+                <TextBlock x:Name="PauseTitle" Text="Paused" Foreground="{StaticResource TextPrimary}" FontSize="15"
+                           FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="PauseLine1" Foreground="{StaticResource TextPrimary}" MaxWidth="540"
+                           FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
+                <TextBlock x:Name="PauseLine2" Foreground="{StaticResource TextSecondary}" FontSize="11.5" HorizontalAlignment="Center"
+                           Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="540"/>
+
+                <StackPanel x:Name="PauseMenu" Visibility="Collapsed" Margin="0,12,0,0" Width="540">
+                    <Button x:Name="ResumeButton" Content="Carry on walking" Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Center" MinWidth="220" Click="OnResumeClick"
+                            ToolTip="Back to the walk (Enter)"/>
+                    <WrapPanel HorizontalAlignment="Center" Margin="0,10,0,0">
+                        <Button Content="Settings" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnSettingsClick"
+                                ToolTip="Mouse, speeds, eye height, step-up, snag colours (S)"/>
+                        <Button Content="Keys" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnKeysClick"
+                                ToolTip="Give any action another key (K)"/>
+                        <Button x:Name="ClearSnagsButton" Content="Clear snag colours" Style="{StaticResource CompactSecondaryButton}"
+                                Margin="3" Click="OnClearSnagsClick" ToolTip="Give every snagged element its own colours back (one Undo step)"/>
+                        <Button Content="Open report folder" Style="{StaticResource CompactSecondaryButton}" Margin="3"
+                                Click="OnOpenFolderClick" ToolTip="The snag report, the snag pictures and the snapshots of this walk"/>
+                        <Button Content="End walk" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnEndClick"
+                                ToolTip="End Model Walk and go back to your view (Esc)"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="PauseStatus" Style="{StaticResource HudHint}" Foreground="{StaticResource TextSecondary}"
+                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Visibility="Collapsed"/>
+
+                    <!-- Snags: click one to go back to it -->
+                    <StackPanel x:Name="SnagSection" Margin="0,14,0,0" Visibility="Collapsed">
+                        <TextBlock Text="Snags - click one to go back to it and select the element" Style="{StaticResource HudHint}"
+                                   Foreground="{StaticResource TextSecondary}" Margin="2,0,0,4"/>
+                        <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="SnagMenuList"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Viewpoints: go, save as a Revit 3D view, delete -->
+                    <StackPanel x:Name="ViewpointSection" Margin="0,14,0,0" Visibility="Collapsed">
+                        <DockPanel Margin="2,0,0,4">
+                            <Button x:Name="PlayViewpointsButton" DockPanel.Dock="Right" Content="Play viewpoints"
+                                    Style="{StaticResource CompactSecondaryButton}" Click="OnPlayViewpointsClick"
+                                    ToolTip="Move smoothly through every viewpoint; any move key stops"/>
+                            <TextBlock Text="Viewpoints - kept for this model" Style="{StaticResource HudHint}"
+                                       Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="ViewpointMenuList"/>
+                        </ScrollViewer>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

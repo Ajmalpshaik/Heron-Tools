@@ -15,9 +15,10 @@ namespace HeronTools.Utils
     internal static class Constants
     {
         /// <summary>
-        /// Conversion factor from millimeters to feet (Revit internal units).
+        /// Conversion factor from millimeters to feet (Revit internal units): exactly 1 / 304.8, so mm -> feet -> mm
+        /// gives back the same number (issue #40; it used to be the rounded 0.00328084).
         /// </summary>
-        public const double MM_TO_FEET = 0.00328084;
+        public const double MM_TO_FEET = 1.0 / FEET_TO_MM;
 
         /// <summary>
         /// Conversion factor from feet (Revit internal units) to millimeters.

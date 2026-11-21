@@ -62,6 +62,31 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - **Code rules** (#37): version-specific code moved into Helpers; a Yes/No question is never asked twice; Find by
   Element ID tells copies of the same link apart.
 
+### Added
+- **Model Walk** (Coordination panel, 3D views): walk the live model in first person - W A S D and the mouse, five
+  speeds, eased starts and stops, Fly, Pass-through, doors (E), Go to point, a low eye for ceiling voids, Measure (M:
+  two points, distance in mm with horizontal and vertical parts) and Snapshot. The location line shows the level and
+  the room. Right-click or Tab picks the mode: **Inspect** (what is under the crosshair, its ID, level, system, link,
+  and how far), **Select** (adds to Revit's selection, kept after the walk), **Snag** (a picture, your comment typed on
+  the spot and a red colour; written to `Snags.csv` in a folder next to the model - 64-bit and unique IDs, room,
+  shared coordinates, camera, picture), **Hide** (Temporary Hide; Show hidden brings back only what the walk hid).
+  Snag colours stay after the walk (a setting; on as standard); every element's own colours are remembered and given
+  back by Clear snag colours (J) and always before Save and Sync with Central. Esc pauses and Revit is free to use; the pause menu lists the snags (click one to go back and
+  select it) and the **viewpoints** - named, kept per model, played, or saved as a real Revit 3D view. **Settings**:
+  mouse sensitivity, invert look, the five speeds, eye height, step-up height, keep snag colours. A second click on
+  the button ends the walk and takes you back to your view. Rebuilt from AJ-Tools' Game Mode with every audit finding
+  fixed - see [docs/model-walk-move-notes.md](docs/model-walk-move-notes.md) and the user guide
+  [docs/model-walk-guide.md](docs/model-walk-guide.md). Not yet tested in Revit.
+
+### Fixed
+- **Model Walk** `Snags.csv` opens in columns on Windows set to a ";" list separator (most decimal-comma countries):
+  the file now uses the Windows list separator (#41).
+- `Constants.MM_TO_FEET` is exactly 1 / 304.8 (was 0.00328084); View Crop values move by less than 0.001 mm (#40).
+- Quick Clash, 3D Snapshot and Model Walk use the shared `Constants` mm / feet values instead of their own copies of
+  304.8 (same numbers; one source).
+- `ElementIdHelper` no longer cuts a 64-bit element id (Revit 2024+) to 32 bits; the two selection filters that used
+  it compare the full value.
+
 ## [1.1.0] - 2026-11-16
 
 ### Added
