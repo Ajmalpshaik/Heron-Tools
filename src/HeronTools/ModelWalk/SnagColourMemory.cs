@@ -70,8 +70,22 @@ namespace HeronTools.Services.ModelWalk
             uiApp.Application.DocumentSaving += (s, e) => GiveBackBeforeWriting(e.Document, "saving");
             uiApp.Application.DocumentSavingAs += (s, e) => GiveBackBeforeWriting(e.Document, "saving");
             uiApp.Application.DocumentSynchronizingWithCentral += (s, e) => GiveBackBeforeWriting(e.Document, "Sync with Central");
-            uiApp.Application.DocumentClosing += (s, e) => All.RemoveAll(m => m.Document.Equals(e.Document));
+            // Forget a model's colours only once it has really closed: a close can still be cancelled after
+            // DocumentClosing (the save question, another add-in), and the model then stays open with the red on -
+            // its way back must stay too. DocumentClosed has no Document, so the pair is matched by DocumentId.
+            uiApp.Application.DocumentClosing += (s, e) =>
+                Closing[e.DocumentId] = All.FindAll(m => m.Document.Equals(e.Document));
+            uiApp.Application.DocumentClosed += (s, e) =>
+            {
+                if (!Closing.TryGetValue(e.DocumentId, out List<SnagColourMemory> closing))
+                    return;
+                Closing.Remove(e.DocumentId);
+                if (e.Status == Autodesk.Revit.DB.Events.RevitAPIEventStatus.Succeeded)
+                    All.RemoveAll(closing.Contains);
+            };
         }
+
+        private static readonly Dictionary<int, List<SnagColourMemory>> Closing = new Dictionary<int, List<SnagColourMemory>>();
 
         // ------------------------------------------------------------------ the snag colour
 
