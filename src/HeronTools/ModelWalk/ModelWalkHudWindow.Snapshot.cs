@@ -53,7 +53,7 @@ namespace HeronTools.UI.ModelWalk
         {
             if (!_haveFullRect || _snapshotBusy)
             {
-                failed?.Invoke("a picture is already being taken");
+                failed?.Invoke(_snapshotBusy ? "a picture is already being taken" : "the walk view's place on screen is not known yet");
                 return;
             }
             _snapshotBusy = true;
