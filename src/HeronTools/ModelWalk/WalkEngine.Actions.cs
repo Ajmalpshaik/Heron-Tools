@@ -602,6 +602,7 @@ namespace HeronTools.Services.ModelWalk
             if (_snagOverride == null)
                 _snagOverride = SnagColourMemory.SnagOverride(doc);
             SnagColourMemory memory = SnagColourMemory.FindOrCreate(doc, view);
+            _snagMemory = memory;
 
             using (var t = new Transaction(doc, "Model Walk: snag " + number))
             {

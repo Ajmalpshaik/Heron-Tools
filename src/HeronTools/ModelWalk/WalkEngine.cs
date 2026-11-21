@@ -55,6 +55,10 @@ namespace HeronTools.Services.ModelWalk
         // Levels for the location line, by project elevation (internal Z, whatever the level type's Elevation Base).
         private List<KeyValuePair<double, string>> _levels;
 
+        // The walk view's snag colour memory, found on Revit's thread, so EndWithoutRevit (called from the overlay,
+        // outside Revit's API) can tell whether colours are still on without calling Revit's API.
+        private SnagColourMemory _snagMemory;
+
         public WalkEngine(WalkSession session)
         {
             _session = session;
@@ -133,6 +137,7 @@ namespace HeronTools.Services.ModelWalk
                 _collision = new WalkCollision(doc, view);
                 _lastWorldRefresh = _clock.Elapsed.TotalSeconds;
                 _collision.BeginFrame();
+                _snagMemory = SnagColourMemory.Find(doc, view);   // colours kept from an earlier walk
             }
 
             double now = _clock.Elapsed.TotalSeconds;
@@ -505,7 +510,7 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>
         /// For the HUD when the walk ends without Revit's thread (the overlay closed, Revit busy): writes the report
-        /// only. Snag colours stay in memory and are given back before the next save or walk. Returns the note, or null.
+        /// only, and calls no Revit API. Snag colours stay in memory and are given back before the next save or walk. Returns the note, or null.
         /// </summary>
         internal string EndWithoutRevit()
         {
@@ -516,8 +521,9 @@ namespace HeronTools.Services.ModelWalk
             var notes = new List<string>();
             string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);
-            if (_session.Document.IsValidObject && _session.Document.GetElement(_session.WalkViewId) is View view &&
-                SnagColourMemory.Find(_session.Document, view)?.Count > 0)
+            // No Revit API here: this runs on the overlay's own events (it closed, Revit was busy, an overlay fault).
+            // The memory's count is plain .NET, and drops to 0 when a save, a sync or Clear gave the colours back.
+            if (_snagMemory != null && _snagMemory.Count > 0)
                 notes.Add(_session.Settings.KeepSnagColours
                     ? "Snag colours kept, as your setting asks. They are given back before the next save, or with Clear snag colours in a walk."
                     : "Revit was busy, so the snag colours are still on. They are given back before the next save, or when Model Walk starts again.");
