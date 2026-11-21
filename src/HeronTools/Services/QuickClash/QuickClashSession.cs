@@ -52,6 +52,23 @@ namespace HeronTools.Services.QuickClash
         private Dictionary<long, List<Solid>> _linkedSolidsById = new Dictionary<long, List<Solid>>();
         private ClashColour _overlayColour;
 
+        /// <summary>
+        /// The link the overlay's shapes came from, and where it was at Run. The shapes were moved into this model's
+        /// coordinates then, so once the link is moved, unloaded or reloaded they are in the wrong place: dropped.
+        /// </summary>
+        private long _overlayLinkId = -1;
+        private Transform _overlayLinkTransform;
+        private Document _overlayLinkDoc;
+
+        /// <summary>
+        /// Selection B's link elements of the last full Refresh, for a quick refresh when a 3D view is activated again.
+        /// Forgotten on any change to this model, and never used by Run (which always collects afresh).
+        /// </summary>
+        private List<Element> _cachedLinkElements;
+        private long _cachedLinkViewId = -1;
+        private long _cachedLinkInstanceId = -1;
+        private Document _cachedLinkDoc;
+
         /// <summary>The Temporary Hide/Isolate on the results view is Quick Clash's own (Isolate), not the modeller's.</summary>
         private bool _isolatedByUs;
 
@@ -191,7 +208,12 @@ namespace HeronTools.Services.QuickClash
         // ------------------------------------------------------------------ lists
 
         /// <summary>Fills both category lists and the Selection B drop-down for the active view.</summary>
-        internal void Refresh(UIApplication app, QuickClashSettings ticks)
+        internal void Refresh(UIApplication app, QuickClashSettings ticks) => Refresh(app, ticks, reuseLinkList: false);
+
+        /// <param name="reuseLinkList">
+        /// True only for a 3D view being activated: a link already collected for that view is not walked again.
+        /// </param>
+        private void Refresh(UIApplication app, QuickClashSettings ticks, bool reuseLinkList)
         {
             if (_window == null) return;
             if (!TryActive3DView(app, out View3D view, out string why))
@@ -212,12 +234,41 @@ namespace HeronTools.Services.QuickClash
 
             List<Element> elementsB = chosen.IsThisModel
                 ? host
-                : ClashElementCollector.LinkElementsShown(_doc, view, (RevitLinkInstance)_doc.GetElement(ElementIdHelper.FromLong(chosen.LinkInstanceId)));
+                : LinkElementsForLists(view, (RevitLinkInstance)_doc.GetElement(ElementIdHelper.FromLong(chosen.LinkInstanceId)), reuseLinkList);
             List<ClashCategoryItem> rowsB = ClashElementCollector.CategoryRows(elementsB, s.CategoriesB);
 
             int selected = app.ActiveUIDocument.Selection.GetElementIds().Count;
             _window.ShowLists(view.Name, rowsA, sources, chosen, rowsB, selected, chosen.IsThisModel || LinkElementsInView.IsExact);
             UpdateColouredState();
+        }
+
+        /// <summary>
+        /// Selection B's link elements for the lists. A big link takes long to walk (on 2020-2022 the whole link
+        /// document), so on a view switch the last list for the same view and link is reused if nothing changed since.
+        /// </summary>
+        private List<Element> LinkElementsForLists(View3D view, RevitLinkInstance link, bool reuse)
+        {
+            long viewId = view.Id.LongValue();
+            long linkId = link.Id.LongValue();
+            Document linkDoc = link.GetLinkDocument();
+            if (reuse && _cachedLinkElements != null && _cachedLinkViewId == viewId && _cachedLinkInstanceId == linkId &&
+                _cachedLinkDoc != null && linkDoc != null && _cachedLinkDoc.Equals(linkDoc))
+                return _cachedLinkElements;
+
+            List<Element> elements = ClashElementCollector.LinkElementsShown(_doc, view, link);
+            _cachedLinkElements = elements;
+            _cachedLinkViewId = viewId;
+            _cachedLinkInstanceId = linkId;
+            _cachedLinkDoc = linkDoc;
+            return elements;
+        }
+
+        private void ForgetCachedLinkList()
+        {
+            _cachedLinkElements = null;
+            _cachedLinkViewId = -1;
+            _cachedLinkInstanceId = -1;
+            _cachedLinkDoc = null;
         }
 
         // ------------------------------------------------------------------ Run
@@ -421,6 +472,9 @@ namespace HeronTools.Services.QuickClash
                 .ToDictionary(i => i.Id, i => i.Solids.Select(p => p.Solid).ToList());
             _linkedSolids = _linkedSolidsById.Values.SelectMany(x => x).ToList();
             _overlayColour = s.ColourB;
+            _overlayLinkId = linkId;
+            _overlayLinkTransform = toHost;
+            _overlayLinkDoc = link?.GetLinkDocument();
             if (_linkedSolids.Count > 0)
                 ClashOverlayServer.Instance.Show(_doc, view, _linkedSolids, _overlayColour);
             else
@@ -843,6 +897,13 @@ namespace HeronTools.Services.QuickClash
         private void ShowOverlay(View view, List<Solid> solids)
         {
             _linkedSolids = solids;
+            if (solids.Count > 0 && !OverlayLinkUnchanged())
+            {
+                DropLinkOverlay();
+                _window?.SetStatus("The link was moved, unloaded or reloaded since Run, so its clash elements are no longer " +
+                                   "drawn in colour. Press Run to test again.");
+                return;
+            }
             try
             {
                 if (solids.Count > 0)
@@ -857,6 +918,29 @@ namespace HeronTools.Services.QuickClash
                 _linkedSolidsById = new Dictionary<long, List<Solid>>();
                 ClashOverlayServer.Instance.Hide();
             }
+        }
+
+        /// <summary>The link of the overlay is still loaded, the same file, and in the same place as at Run.</summary>
+        private bool OverlayLinkUnchanged()
+        {
+            if (_overlayLinkId < 0 || _overlayLinkTransform == null)
+                return false;
+            var link = _doc.GetElement(ElementIdHelper.FromLong(_overlayLinkId)) as RevitLinkInstance;
+            Document linkDoc = link?.GetLinkDocument();
+            if (linkDoc == null || (_overlayLinkDoc != null && !linkDoc.Equals(_overlayLinkDoc)))
+                return false;
+            return link.GetTotalTransform().AlmostEqual(_overlayLinkTransform);
+        }
+
+        /// <summary>Removes the overlay and forgets its shapes: they no longer match the link.</summary>
+        private void DropLinkOverlay()
+        {
+            _linkedSolids = new List<Solid>();
+            _linkedSolidsById = new Dictionary<long, List<Solid>>();
+            _overlayLinkId = -1;
+            _overlayLinkTransform = null;
+            _overlayLinkDoc = null;
+            ClashOverlayServer.Instance.Hide();
         }
 
         /// <summary>The active view is the one the clash list belongs to (zoom and isolate only make sense there).</summary>
@@ -894,8 +978,19 @@ namespace HeronTools.Services.QuickClash
         private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
         {
             if (!e.GetDocument().Equals(_doc)) return;
-            if (e.Operation == UndoOperation.TransactionUndone || e.Operation == UndoOperation.TransactionRedone)
+            ForgetCachedLinkList();   // the model changed: the next view switch collects Selection B afresh
+            if (e.Operation == UndoOperation.TransactionUndone || e.Operation == UndoOperation.TransactionRedone || TouchesOverlayLink(e))
                 Post(app => UpdateColouredState());   // the overlay is switched on the ExternalEvent, not in here
+        }
+
+        /// <summary>The link the overlay was drawn from (or its type, as in Reload / Unload) was moved, changed or deleted.</summary>
+        private bool TouchesOverlayLink(DocumentChangedEventArgs e)
+        {
+            if (_overlayLinkId < 0 || _linkedSolidsById.Count == 0) return false;
+            var keys = new HashSet<long> { _overlayLinkId };
+            if (_doc.GetElement(ElementIdHelper.FromLong(_overlayLinkId)) is RevitLinkInstance link)
+                keys.Add(link.GetTypeId().LongValue());
+            return e.GetModifiedElementIds().Concat(e.GetDeletedElementIds()).Any(id => keys.Contains(id.LongValue()));
         }
 
         /// <summary>Looks at what is really on the view, and matches the overlay and the Reset button to it.</summary>
@@ -968,6 +1063,8 @@ namespace HeronTools.Services.QuickClash
         {
             if (e.Document != null && e.Document.Equals(_doc))
                 Shutdown();   // unsaved changes are thrown away by Revit; a save was already put back above
+            else if (e.Document != null && _overlayLinkDoc != null && e.Document.Equals(_overlayLinkDoc))
+                Post(app => UpdateColouredState());   // the overlay's link is closing (unloaded): drop its shapes once it has gone
         }
 
         private void OnApplicationClosing(object sender, ApplicationClosingEventArgs e) => Shutdown();
@@ -975,7 +1072,7 @@ namespace HeronTools.Services.QuickClash
         private void OnViewActivated(object sender, ViewActivatedEventArgs e)
         {
             if (_window != null)
-                Refresh(_uiApp, null);
+                Refresh(_uiApp, null, reuseLinkList: true);   // light: a link already collected for this view is not walked again
         }
 
         // ------------------------------------------------------------------ helpers
