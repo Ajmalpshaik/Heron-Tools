@@ -184,9 +184,11 @@ namespace HeronTools.UI.ModelWalk
             if (_closedDown)
                 return;
             CloseEntry(save: true);
+            // Marked as ending BEFORE the mouse is let go: letting go raises LostMouseCapture, whose handler would
+            // otherwise run the pause code (pause menu, picture and name requests dropped) inside this end.
+            _ending = true;
             ReleaseLook();
             ClearHeldKeys();
-            _ending = true;
             _paused = true;
             _session.Paused = true;
             HidePauseMenu();
