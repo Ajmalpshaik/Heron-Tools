@@ -325,3 +325,26 @@ packages (2020, 2021). The docs were read after the code and checked against it.
 
 Add to the owner's test script: **15. Cancelled close.** With Keep snag colours on (standard), snag something, end the
 walk. Close the model, press **Cancel** at Revit's question. Save. Expect: the red goes before saving.
+
+## Second review round (2026-11-21, after the owner's answers)
+
+Owner answers: **Keep snag colours on by default** (the red stays after the walk; J, Save and Sync still give the
+elements their own colours back) and **any 3D view** - `9c7a546`. `main` merged in (`b9d7d12`, corrected spec from #43).
+
+Seven more defects found by the review session; all checked against the code; all still **NEED REAL REVIT**.
+
+| # | Problem | Fix |
+|---|---|---|
+| 1 | Holding Esc paused, then its key repeat ended the walk; a held Enter / S / K repeated too. | Key repeats ignored while paused and on the end card (`8a4b0c4`). |
+| 2 | Alt+F4 on the overlay closed it without the clean-up: what the walk hid stayed hidden, the start view was not restored. | A close request while walking ends the walk the normal way first, then the end sequence closes the overlay. Revit shutting down destroys the owned window without a close request, so it is never held up (`0b44fa6`). |
+| 3 | Key Settings: a failed save still counted as saved, so Cancel kept the unsaved keys. | Marked saved only when the save worked (`11688b8`). |
+| 4 | The viewpoint file name started with the title, which differs per local copy of a central - a second local copy found nothing. | The readable part comes from the same key as the hash (the central's name) (`ce43cf4`). |
+| 5 | An element still red from an earlier walk (kept colours) or after Ctrl+Z of a snag said "Already a snag" and got no report row. | Only a second snag of the same element in THIS walk is refused; a refused colour no longer drops an original remembered earlier (`723522c`). |
+| 6 | Save as 3D view gave the copy every remembered original, even where the modeller had recoloured the element since. | Same test as the put-back: only an element still showing the snag colour gets its original (`b569516`). |
+| 7 | The guide said U shows "only what this walk hid"; Revit can only end the whole Temporary Hide/Isolate. A reset plus a hide of the modeller's own during a pause was taken for the walk's. | Guide says plainly what U ends. A reset-then-own-hide is now noticed (an element the walk hid is visible again) and left alone; an own isolate that hides all of the walk's cannot be told apart - documented (`6606f62`). |
+
+Issues opened by the review session for later work: #40, #41, #42.
+
+Add to the owner's test script: **16. Held Esc.** Walk, hold Esc for two seconds: paused, not ended. **17. Alt+F4.**
+Hide something, Alt+F4 on the walk: the walk ends, the element shows again, back in your 3D view. **18. Kept red,
+snag again.** With colours kept from an earlier walk, snag the same element: a new report row, still red.
