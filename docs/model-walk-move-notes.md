@@ -7,7 +7,8 @@ and [game-mode-spec.md](game-mode-spec.md) (KEEP / CHANGE / DROP / ADD and the n
 AJ-Tools or Heron AI; AJ-Tools was read only, never changed.
 
 **Nothing here has run in a real Revit yet.** It builds clean for Revit 2020-2027; every behaviour below
-still **needs a real Revit test**.
+still **needs a real Revit test**. Stage 4 (polish, the spec's ADD items) is at the end of this file, with a
+step-by-step Revit test script. The user guide is [model-walk-guide.md](model-walk-guide.md).
 
 ## File map
 
@@ -30,6 +31,7 @@ still **needs a real Revit test**.
 | `GameHudWindow.Weapons.cs` | dropped (gun, pictures, flash, sound, holster) |
 | nested `GameNative` | `WalkNative.cs` |
 | `GameKeySettingsWindow.xaml` / `.xaml.cs` | `ModelWalkKeysWindow.xaml` / `.xaml.cs` |
+| - (stage 4) | `WalkSettings.cs` + `ModelWalkSettingsWindow.xaml` / `.xaml.cs` (Settings), `WalkViewpointStore.cs` (viewpoints per model), `WalkEngine.Rooms.cs` (room in the location line), `ModelWalkHudWindow.Entry.cs` (comment / name box), `ModelWalkHudWindow.Pause.cs` (pause menu) |
 | `Resources/GameMode.png`, `GameGun.png`, `GameRifle.png`, `GameSnagGun.png` | `Resources/Icons/ModelWalk16.png`, `ModelWalk32.png` (new, house style, embedded); gun pictures dropped |
 | `RibbonManager.BuildGamePanel` | `App/HeronToolsApp.cs`, Coordination panel, button "Model Walk" |
 
@@ -52,7 +54,8 @@ see-through Ink shade, `InputCatcher`, #010F0F10 - Ink at 1/255, for the overlay
 | Crouch (hold C) | Low eye (C toggles 1000 mm in Walk; C held = down in Fly) |
 | Undo names "AJ Tools - ..." | "Model Walk: walk view", "Model Walk: snag N", "Model Walk: clear snag colours", "Model Walk: give back snag colours", "Model Walk: hide" / "show hidden" (only if Revit asks for a transaction) |
 | `%AppData%\AJTools\ajgame-keys.txt` | `%AppData%\HeronTools\ModelWalkKeys.txt` (old file not read - AJ-Tools keeps its own) |
-| `Documents\AJ Game Snags`, `Pictures\AJ Game Photos` | `Documents\Heron Model Walk\<model>\` (report and snapshots together) |
+| `Documents\AJ Game Snags`, `Pictures\AJ Game Photos` | one folder per walk next to the model, `<model folder>\Model Walk - <model>\<date time>\` (Snags.csv, snag pictures, snapshots); `Documents\Heron Model Walk\<model>\<date time>\` when the model is not saved or the folder cannot be written |
+| - | `%AppData%\HeronTools\ModelWalkSettings.txt` (Settings), `%AppData%\HeronTools\ModelWalk Viewpoints\` (viewpoints per model) |
 
 ## Dropped (spec DROP list)
 
@@ -65,7 +68,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | ID | Sev | What was wrong | Now |
 |---|---|---|---|
 | GM-A01 | Critical | J wiped every override in the view | **J dropped.** "Clear my snag colours" (X) gives back only what Model Walk coloured. Reset Graphics stays the tool for a full reset. |
-| GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on X, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Owner decision below (keep marks?). |
+| GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on X, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Stage 4 added the setting "Keep snag colours after the walk" (off). |
 | GM-A03 | High | Ids cut to 32-bit; Heron's helper did the same | **Fixed.** ElementIds compared with `==`, printed with `LongValue()`, categories with `ElementIdHelper.IsCategory`. Heron's `ElementIdHelper.GetIntegerValue` now throws instead of truncating; `IntValue()` removed; its two callers (`SelectionFilters`) use full-value helpers - same results for every real id. All 8 years build. |
 | GM-A04 | High | Levels by `Level.Elevation` (follows Elevation Base) | **Fixed.** `Level.ProjectElevation` for the location line. The start point no longer comes from a plan's level (Model Walk starts from a 3D view). NEEDS REAL REVIT with a moved project base point. |
 | GM-A05 | High | ~19 full-model rays a frame, links on, every frame | **Fixed (measure in Revit).** Collision tests host elements only in a 15 m box round the eye; links only when their box is near (a box filter is checked in the link's own coordinates, per the API note, so it cannot be used on links); readout ray 10 Hz, clear height 4 Hz; no ray while standing still; no `SetOrientation` / redraw when the camera did not change; frames raised only when something can change (4 a second when idle); ray budget 24 a frame - past it a move is refused, not guessed. F12 shows frame ms, average and rays. NEEDS REAL REVIT on a big federated model. |
@@ -107,7 +110,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | GM-A41 | Low | First 3D view type, no template | Kept; now said in the tooltip. |
 | GM-A42 | Low | AJ credit lines and names | Fixed: Heron names; no credit lines (About Heron covers it). |
 | GM-A43 | Low | Windows never blocked while airborne | Gone with jumping: windows always block. |
-| GM-A44 | Low | Mouse speed fixed, no invert | **Left for stage 4** (spec ADD 34, Settings window). |
+| GM-A44 | Low | Mouse speed fixed, no invert | **Fixed in stage 4**: Settings window - mouse sensitivity (25-250 %) and invert look. |
 
 ## The 19 must-keep behaviours
 
@@ -123,27 +126,16 @@ untouched (15); linked elements refused by Select / Hide (Snag records them with
 with category, family : type, size, system, level, 64-bit ID, link (17); selection kept after the walk (18); all
 distances in mm in `WalkTuning` (19).
 
-## Spec ADD items left for stage 4
+## Owner decisions (answered before stage 4)
 
-- Snag record with a typed comment, per-snag snapshot, CSV (spec 30) - today a plain-text report.
-- Open a snag back in Revit / a saved 3D view per snag (31).
-- Room name in the location line (32).
-- Measure (33).
-- Settings window: mouse sensitivity, invert look, speed, eye height, step-up (34, GM-A44).
-- Smooth camera ease (35); field of view (36, only after a Revit test).
-- Named viewpoints kept per model and "Save as Revit 3D view" (14) - today viewpoints live for one walk, named
-  "Viewpoint N - <level>".
-- Option to keep snag colours after the walk (22).
-
-## Owner decisions needed
-
-1. **Ribbon availability.** The brief said "3D perspective view". The button is enabled in **any 3D view**
-   (perspective or not): the {3D} view is orthographic, so a model with no camera view could otherwise never start.
-   Plans are not enabled (the old tool could start from a plan).
-2. **Snag colours at the end.** Given back at the end of the walk by default (the report is the record). Keep them?
-3. **One walk view per person** in workshared models ("Heron Model Walk - <username>").
-4. **Clear snag colours key = X.** J is not reused, so an old Game Mode habit cannot clear anything by surprise.
-5. Heron's shared `Constants.MM_TO_FEET` (0.00328084) - make it exactly `1 / 304.8` for every tool?
+1. Button enabled in **any 3D view** - kept.
+2. Snag colours **given back at the end** by default; a setting "Keep snag colours after the walk" (off) - added in
+   stage 4, with Clear snag colours still giving them back.
+3. **One walk view per person** in workshared models - kept.
+4. **X** clears snag colours - kept.
+5. Heron's shared `Constants.MM_TO_FEET` (0.00328084) - **not changed** (other tools use it). Follow-up: make it
+   exactly `1 / 304.8` for every tool in its own change, with each tool re-tested. Model Walk already uses
+   `1 / Constants.FEET_TO_MM`.
 6. Removing Game Mode from AJ-Tools - only on Ajmal's typed "yes", after the Revit test.
 
 ## Results
@@ -166,3 +158,110 @@ kept, Save and Sync give colours back; Hide / U with and without the modeller's 
 closing the view all end cleanly and write the report; back to the start view; locked view message; frame timing
 (F12) on a large federated model; 100 / 150 / 200 % scaling and a second monitor; a Revit dialog appearing during
 the walk is not covered by the overlay; Key Settings save, swap, reset, Cancel; each Revit year 2020-2027.
+
+---
+
+# Stage 4: polish - the spec's ADD items (2026-11-21)
+
+Built on branch `claude/game-mode-heron`, one commit per item, each built for Revit 2020-2027 before the next.
+**Builds are not Revit tests** - everything below still NEEDS REAL REVIT.
+
+| Item | State | What it is |
+|---|---|---|
+| a. Settings window | DONE | Pause, S (or the Settings button). Mouse sensitivity (25-250 %), invert look (GM-A44), five walk speeds (m/s), eye height (1000-2000 mm), step-up height (100-450 mm), keep snag colours. Saved per user in `%AppData%\HeronTools\ModelWalkSettings.txt`; mm and m/s in the window, feet only inside (`WalkSettings.*Ft`). A damaged line keeps its standard value and is said once at start. Save applies at once and finds the floor again at the new eye height. Speeds are in m/s, not mm/s - easier to read; distances are mm as asked. |
+| b. Snag record | DONE | Snag click: the element is recorded, coloured (one Undo step), a picture taken with the HUD hidden, then a comment box (Enter saves, Esc skips, a click saves). `Snags.csv` (UTF-8 with BOM, Excel-safe quoting, a leading `= + - @` made text) and the pictures in one folder per walk next to the model, or under Documents. Columns: No., Time, Author, Comment, Category, Family : Type, Size, Element ID (64-bit), Unique ID, Level, System, Link, Room, East / North / Elevation (mm, shared; "internal" in the header if the shared coordinates could not be read), Camera, Picture, Snag colour. The CSV is rewritten after each snag, comment and picture (through a temporary file) and once more at the end; the plain-text report is gone. Snapshots (K) go in the same folder. |
+| c. Open snag | DONE | The pause menu lists the snags (newest first). A click puts the camera back where the snag was recorded (Fly again if it was recorded flying), resumes the walk and makes the element Revit's selection (replacing the selection). A linked element is said, not selected; a deleted one is said. |
+| d. Viewpoints | DONE | B saves a viewpoint and asks for a name (Esc keeps "Viewpoint N - <level - room>"). Kept per model, per user, in `%AppData%\HeronTools\ModelWalk Viewpoints\<model> <hash>.txt` (a workshared model by its central path, so every local copy finds them; an unsaved model by its title). Not in the Revit file. Pause menu: go, Save as 3D view, Delete, Play viewpoints. **Save as 3D view**: one transaction "Model Walk: save viewpoint as 3D view" - `Duplicate` of the walk view (its VG, filters, section box), a unique name "Model Walk - <name>" (characters Revit refuses replaced), the camera set and `SaveOrientation` (does not lock). Snag colours are not carried: every snagged element gets its own overrides in the copy, in the same transaction. Runs in the ExternalEvent while paused. |
+| e. Measure | DONE | M at point 1, M at point 2: distance, horizontal and vertical parts in mm, text only - no line on screen. One ray per press; the live "mm to the crosshair" uses the readout's own 10 Hz ray. A finished measure fades after 20 s. |
+| f. Room name | DONE | Location line "Level 03  -  Room 3.12 Plant Room"; the snag's Room column (where you stood). `Document.GetRoomAtPoint` 300 mm above the floor, in the walk view's phase; at most 4 times a second and only after a 300 mm move. **Linked rooms: included**, because it is cheap and read-only - only when this model has no room there, only loaded links whose box holds the point (at most 4), in the link's coordinates and its last phase (a link's phases cannot be matched to this view's), marked "(link name)". |
+| g. Eased moves | DONE | Walk / Fly / Pass-through speed up and slow down (time constant 0.12 s, by real elapsed time); look stays direct. Same rays per frame; a blocked part of a move is dropped from the speed; every jump starts from standing. Play viewpoints eases its speed and turns smoothly. |
+| h. Field of view | LEFT OUT | The API has no field-of-view property; it can only be changed through the perspective crop box. That needs Crop View on in the walk view and a transaction (an Undo step and a model change) per change, and it changes the picture that the ZoomToFit aim fix (must-keep 10) keeps under the crosshair. That cannot be shown safe without Revit, and the spec says not to promise it before a Revit test. |
+
+Finish pass: HUD - location line (level + room), facing, move mode, speed step; mode chips say what a click does;
+key hints Help, Measure, Viewpoint, Pause; the help card lists every key in plain words. Pause is now a small menu
+(the one orange thing is "Carry on walking"); clicking empty space on it no longer resumes (Enter or the button does),
+so scrolling the snag list never throws you back into the walk. Ribbon tooltip: a one-line "how to start". Key
+Settings and Settings footers match the other Heron windows (Save, then Cancel). Wording checked: no gun, shoot,
+weapon, game, respawn, teleport, ghost or laser anywhere a modeller sees.
+
+## Must-keeps after stage 4
+
+All 19 still hold. What changed around them:
+
+- (1) API only in the ExternalEvent: the new API work - Save as 3D view, Open snag's selection, rooms, Measure's ray,
+  Clear snag colours from the pause menu - all runs in `WalkEngine`. The HUD and both windows touch no Revit API.
+  A frame raised **while paused** runs only the queued pause-menu actions; it does not move the camera and does not
+  end the walk because Revit shows another view (the modeller may be using Revit) - the walk still ends on resume,
+  as before, and still ends at once if the model closes or the walk view is deleted.
+- (2) Guarded: `PausedFrame` runs inside the same try/catch; every new HUD button runs in `Guard()`.
+- (9) While the comment box is open the pointer stays parked on the centre and the view does not turn.
+- (11) Esc while typing a comment skips the comment (a second Esc pauses). Pause keeps what was typed.
+- (12) The report is still written once at the end with its message, and now also after every change.
+- (16) Open snag does not select a linked element.
+- (18) Open snag replaces the selection with the snag's element (Select mode still adds and keeps).
+- (19) New distances (eased stop, Play viewpoints, room probe) are in `WalkTuning`; the modeller's own in `WalkSettings`.
+- No new transaction outside the ExternalEvent; no int ids (ids are `ElementId` or `LongValue()`); no override lost
+  (Save as 3D view gives each snagged element its own overrides in the copy; kept colours are still given back by
+  Clear snag colours and before every Save and Sync).
+- Performance: no new rays per frame. Measure: one ray per key press. Rooms: no rays, throttled. Easing: the same
+  rays per frame, a few more frames while a move eases out.
+
+## Stage 4 results
+
+| Check | State |
+|---|---|
+| Build Revit 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each, after every item |
+| Metadata check (rules of `build/check-metadata.ps1`, run in Python - no pwsh here) | PASS - 203 files |
+| XAML: all three Model Walk windows well-formed, every resource key in the theme (XAML and code), no raw colours | PASS |
+| XAML rendered to a picture | NOT RUN - WPF needs Windows; this container is Linux |
+| Every behaviour in the test script below | NEEDS REAL REVIT |
+
+## Owner decisions after stage 4
+
+1. **Keep snag colours + Save.** With the setting on, the red still goes before every Save and Sync (so no snag
+   colour reaches the file and the way back is never lost). If you want the red saved in the model for a meeting,
+   say so - it needs the original colours stored in the model (a bigger change).
+2. **Open snag replaces the selection** with the snag's element. Add it to the selection instead?
+3. **Speeds in m/s** in Settings (distances in mm). Change to mm/s?
+
+## Still needs a real Revit test (stage 4)
+
+Snag picture shows the element red and no HUD; comment box takes typing (also non-English keyboards and IME);
+CSV opens in Excel with the right columns and accents; report folder next to a local file, a central's local copy,
+a read-only folder (falls back to Documents) and a cloud model; Open snag camera and selection; viewpoints come back
+after closing and reopening the model, and in a second local copy of the same central; Save as 3D view keeps its
+camera after reopening, has no snag red, and has the walk view's VG / section box; rooms in host and linked models,
+and with phases; eased stop near a wall (no push into it); Settings save and apply (eye height, step-up on 300-450 mm
+stairs, invert look); pause menu size at 100 / 150 / 200 % scaling; Keep snag colours on, then Save (colours given
+back).
+
+## Revit test script for the owner (about 30 minutes)
+
+Use a copy of a real project with MEP, rooms and at least one link. Revit 2024 first, then 2020 and 2027.
+
+1. **Start.** Open a 3D view, click Model Walk. Expect: the view "Heron Model Walk" opens where your view looked, the
+   help card shows on the left. Walk with W A S D, look with the mouse. Let go of W - the walk eases to a stop.
+2. **Location.** Walk into a room. Expect the top-left line "Level xx  -  Room nn Name". Walk into a room that is
+   only in a linked model - expect "(link name)" after it.
+3. **Speed and eye.** Press + and - (or the wheel): "Speed n/5". Press C: low eye. Walk up a stair.
+4. **Measure.** Press M on the floor, then M on the duct above. Expect "Measured ... mm" with a vertical part that
+   matches Revit's own measure.
+5. **Snag.** Right-click to Snag. Click a duct. Expect: it turns red, a moment later a box asks for a comment. Type
+   "Clash with tray", Enter. Snag a linked element too (recorded, not red).
+6. **Viewpoint.** Press B, type "Plant room", Enter. Walk away, press 1 - you are back.
+7. **Pause menu.** Press Esc. Expect a small menu at the top of the view: Carry on walking, Settings, Keys, Clear snag
+   colours, Open report folder, End walk, your snags and your viewpoint. Use Revit (change VG) - it works.
+8. **Open snag.** Click snag 1 in the list. Expect: the walk resumes looking at the duct, and the duct is selected.
+9. **Save as 3D view.** Esc, then Save as 3D view on "Plant room". Expect "Saved the 3D view ...". Check the Project
+   Browser: "Model Walk - Plant room" - open it later: same camera, no red duct, one Undo step.
+10. **Settings.** Esc, S. Set sensitivity 50 %, tick invert look, eye height 1600, Save. Carry on: turning is slower,
+    mouse forward looks down, the eye is lower. Set them back.
+11. **Report.** Esc, Open report folder. Expect `Snags.csv`, `Snag 001.png`, `Snag 002.png`. Open the CSV in Excel:
+    comment, IDs, room, East/North/Elevation match Spot Coordinates at the duct, picture names.
+12. **End.** Esc, End walk. Expect: back in your 3D view, the duct is its own colour again, the end message names the
+    report. The Undo list shows "Model Walk: ..." steps only for the view, the snags and the colours.
+13. **Keep colours.** Start again, Settings, tick Keep snag colours, snag something, end the walk: still red. Save the
+    model: the red goes before saving.
+14. **Viewpoints kept.** Close and reopen the model, start Model Walk, Esc: "Plant room" is still in the list.
+
+Report each step as PASS / FAIL (with what you saw) and the Revit year.
