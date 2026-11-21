@@ -295,7 +295,7 @@ packages (2020, 2021). The docs were read after the code and checked against it.
   exception, and its `Commit()` checked. No transaction is left open on any path.
 - **Camera.** `View3D.SetOrientation` is a temporary orientation "not saved in the document" (API note) - no
   transaction, no Undo entry, as the notes claim.
-- **Overrides, hide, selection.** Each element's own override is copied before the red; given back at the end, on X,
+- **Overrides, hide, selection.** Each element's own override is copied before the red; given back at the end, on J,
   and before Save / Save As / Sync; an element the modeller recoloured is left alone. Hide refuses to mix with the
   modeller's own Temporary Hide/Isolate. The selection is changed only by Select mode and Open snag, as documented.
 - **Element ids.** No `int` id anywhere in Model Walk. The `ElementIdHelper` change: `GetIntegerValue` now has no
