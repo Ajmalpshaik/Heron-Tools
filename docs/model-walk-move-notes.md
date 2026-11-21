@@ -32,6 +32,7 @@ step-by-step Revit test script. The user guide is [model-walk-guide.md](model-wa
 | nested `GameNative` | `WalkNative.cs` |
 | `GameKeySettingsWindow.xaml` / `.xaml.cs` | `ModelWalkKeysWindow.xaml` / `.xaml.cs` |
 | - (stage 4) | `WalkSettings.cs` + `ModelWalkSettingsWindow.xaml` / `.xaml.cs` (Settings), `WalkViewpointStore.cs` (viewpoints per model), `WalkEngine.Rooms.cs` (room in the location line), `ModelWalkHudWindow.Entry.cs` (comment / name box), `ModelWalkHudWindow.Pause.cs` (pause menu) |
+| `GameCharacterServer.cs`, `GameMotionEngine.ThirdPerson.cs` (AJ-Tools v1.60.0, `a5eb30b`, added after the first move) | `WalkFigureServer.cs` (the figure, DirectContext3D, switch on / off), `WalkEngine.ThirdPerson.cs` (camera and pose) - see "Third-person view" at the end |
 | `Resources/GameMode.png`, `GameGun.png`, `GameRifle.png`, `GameSnagGun.png` | `Resources/Icons/ModelWalk16.png`, `ModelWalk32.png` (new, house style, embedded); gun pictures dropped |
 | `RibbonManager.BuildGamePanel` | `App/HeronToolsApp.cs`, Coordination panel, button "Model Walk" |
 
@@ -376,6 +377,13 @@ from AJ-Tools.
 | 31 Comments in the pause menu | | | | |
 | 32 Change and remove a comment | | | | |
 | 33 Ask for a comment at each snag (on) | | | | |
+| 34 Third person on / off | | | | |
+| 35 Camera slides in at a wall | | | | |
+| 36 Clicks land on the crosshair | | | | |
+| 37 Figure gone on every end | | | | |
+| 38 Model closed while paused in third person | | | | |
+| 39 Pictures, viewpoints, Save as 3D view | | | | |
+| 40 Speed in third person (F12) | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -440,3 +448,82 @@ walking instead, that is a one-line change in `OnWalkKeyDown`.
 32. **Change and remove.** Pause, click a snag with a comment, change it, click Carry on walking: kept. Pause again,
     empty another one, Enter: "comment removed", the row says "No comment yet" again.
 33. **Old way still there.** Tick "Ask for a comment at each snag", Save. Snag: the comment box opens as before.
+
+## Third-person view
+
+Ported from AJ-Tools Game Mode v1.60.0 (`a5eb30b`: `GameCharacterServer.cs`, `GameMotionEngine.ThirdPerson.cs` and
+the diffs in the HUD, keys and session). AJ-Tools was read only, never changed.
+
+| What | How |
+|---|---|
+| Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a figure)"; Q was free) and the setting **Third-person view (show a figure)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
+| Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** ray (`CastNear`, host + near links, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm. Cast only when the pivot or direction changed; past the 24-ray budget the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
+| Figure | `WalkFigureServer` (`IDirectContext3DServer`): about 17 shaded boxes (head, neck, body, pelvis, arms, legs, feet, a face stripe), 1810 mm tall, built fresh each redraw. Arms and legs swing with the distance walked (stride 900 mm; walk 26 degrees, run 43), easing to rest when you stop; a jump is not a step. Colours from the Heron palette only, as model-view colours like the snag red: Accent (body, arms), Surface (pelvis, legs), Mist (head, hands), Ink (feet, face stripe). Ambient / emissive / specular are darker steps of the same colour (shading, not new hues). Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
+| Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera, which is the picture the modeller aimed at. |
+| Rays | Third person adds at most **1** ray a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
+| Redraws | The camera moving already redraws. With no camera move, the view is refreshed only when the figure appears or goes, or while its limbs ease to rest (frames are asked for until they do). |
+| Snag pictures | The figure is hidden from the snag click until its picture is saved (`SnagAwaitingPicture`, then `SnagPictureBusy` from the HUD) - snag pictures show the model only. **Snapshots (K) show the figure** (they are what you see); Q first for one without it. |
+| Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. After a walk ended in third person, the walk view's own camera stays where the third-person camera was (only if you stay in the walk view - normally you go back to your start view). |
+
+### Switching the figure off - what Revit allows
+
+The Revit API notes for `ExternalService.RemoveServer` (identical in the 2020, 2021, 2022, 2023, 2024, 2025, 2026 and
+2027 `Nice3point.Revit.Api` XML) say a server that **has drawn in a model that is still open cannot be removed**
+(`ArgumentException`). So the figure is never left drawing, but the server object can stay registered, inactive,
+until the model closes. AJ-Tools leaves its server registered and active for the whole Revit session; Model Walk does
+this instead:
+
+| When | What happens |
+|---|---|
+| Walk starts | `WalkFigureServer.Prepare` (inside the command): makes the switch-off `ExternalEvent` and watches models closing, once per Revit session. Nothing is registered yet. |
+| First third-person frame | `SwitchOn` (inside the frame `ExternalEvent`): `AddServer` the first time, then put on the active list. A refusal turns third person off with a plain message. |
+| Every walk end on Revit's thread - End walk, Esc Esc, the ribbon button, model closed, view switched, walk view deleted, locked view, a fault in the frame | `WalkEngine.End` calls `SwitchOff` **first**: hidden (`CanExecute` false), off the active list, `RemoveServer` tried; the view is refreshed so the figure goes at once. |
+| Alt+F4 / overlay closed, Revit busy for 3 s, an overlay fault (`Guard`) | `EndWithoutRevit` - no Revit API there: `SwitchOffSoon` hides the figure at once (plain .NET flag) and raises the switch-off event, which runs `SwitchOff` and refreshes the view on Revit's next idle moment (skipped if a new walk switched it on meanwhile). Alt+F4 normally goes the Revit-thread way first (it ends the walk the normal way). |
+| A model closing | `DocumentClosing`: if it is the walk's model, `SwitchOff` (also covers a close while paused). `DocumentClosed`: `RemoveServer` tried again when no walk uses it - this is when Revit lets it go. |
+| Revit closing | `HeronToolsApp.OnShutdown` calls `SwitchOff`. |
+
+No transaction anywhere for the figure. Every member used (`ExternalServiceRegistry.GetService`,
+`MultiServerService.AddServer / RemoveServer / IsRegisteredServerId / GetActiveServerIds / SetActiveServers`, the
+`IDirectContext3DServer` members, `DrawContext.IsAvailable / FlushBuffer`, `VertexBuffer`, `IndexBuffer`,
+`EffectInstance`) has the same signature in all eight years' API notes, so there is no version-specific code.
+
+### Results (both changes)
+
+| Check | State |
+|---|---|
+| Build Revit 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027 (`dotnet build ... -p:EnableWindowsTargeting=true`, Linux) | PASS - 0 warnings, 0 errors each, after each change |
+| Metadata check (rules of `build/check-metadata.ps1`, run in Python - no pwsh here) | PASS - 211 files |
+| XAML: HUD and Settings well-formed, every resource key (XAML, `SetResourceReference`) in the theme, no raw colours | PASS |
+| XAML rendered to a picture | NOT RUN - WPF needs Windows |
+| The figure draws, swings, hides behind walls; the camera slides; switch-off on every end path | NEEDS REAL REVIT |
+| Quick snags, the pause menu comment box and its keys | NEEDS REAL REVIT |
+
+**Owner decisions:** (1) the second Esc after closing the comment box ends the walk (as Esc in the pause menu does
+today) - say if it should carry on walking instead; (2) the figure's colours (orange body) - any palette colour can be
+swapped in `WalkFigureServer.GroupColors`; (3) snapshots (K) show the figure - say if they should hide it like snag
+pictures.
+
+### Revit test steps (third person)
+
+34. **Third person on / off.** Start a walk, press Q. Expect: the camera jumps back about 3 m and a little right, an
+    orange figure stands where you were, the status line says "Third person". Walk: arms and legs swing; stop: they
+    come to rest. Shift: bigger swing. Q again: "First person", the figure is gone. Tick the setting, start a new
+    walk: it starts in third person.
+35. **Camera slides in at a wall.** In third person, walk backwards towards a wall (look away from it). Expect the
+    camera to come closer instead of looking through the wall, and to go back out as you step away. Walk behind a
+    column: the figure is hidden by it.
+36. **Clicks land on the crosshair.** In third person: Inspect a duct (the readout names what is under the crosshair,
+    the distance is from the figure), Select it, Snag another, Hide a third, Measure two points, Go to point on a floor.
+    Each acts on what is under the crosshair, not on something in front of the figure.
+37. **Figure gone on every end.** In third person, end the walk with: End walk; Esc Esc; the ribbon button; Alt+F4 on
+    the overlay; switching to another view. Each time open the walk view afterwards: no figure. Then save and reopen the
+    model: no figure, nothing in the model, no "Model Walk" Undo step for it.
+38. **Model closed while paused.** In third person press Esc, then close the model (Save: No). Expect no error; open
+    another model, start Model Walk in it: no leftover figure in the new model. Close Revit with a walk paused in third
+    person: Revit closes normally.
+39. **Pictures, viewpoints, Save as 3D view.** In third person: a snag's picture has no figure; a Snapshot (K) has it.
+    Press B, walk away, press 1: you stand where you saved, camera behind you again. Save that viewpoint as a 3D view:
+    it looks from your eyes, no figure in it.
+40. **Speed in third person (F12).** On the big model of step 21, press F12, walk for a minute in first person, then in
+    third person. Write down both averages and the rays count: third person may add 1 ray a frame, the frame time should
+    stay close to first person.

@@ -284,6 +284,7 @@ namespace HeronTools.UI.ModelWalk
                 case WalkKeyBindings.Help: if (first) _helpVisible = !_helpVisible; break;
                 case WalkKeyBindings.Pause: PauseWalk(); break;
                 case WalkKeyBindings.FrameTiming: if (first) _showFrameTiming = !_showFrameTiming; break;
+                case WalkKeyBindings.ThirdPerson: if (first) ToggleThirdPerson(); break;
                 default: return;
             }
             e.Handled = true;
@@ -324,13 +325,28 @@ namespace HeronTools.UI.ModelWalk
 
         private void AutoHideHelp() => _helpVisible = false;
 
+        /// <summary>First / third person. The engine moves the camera and shows or hides the figure on the next frame.</summary>
+        private void ToggleThirdPerson()
+        {
+            WalkInput input = _session.Input;
+            input.ThirdPerson = !input.ThirdPerson;
+            _lookDirty = true;   // ask Revit for a frame now, even standing still
+            _session.Hud.Toast(input.ThirdPerson
+                ? "Third person - the camera is behind you; clicks still act on what is under the crosshair (" +
+                  _keys.Label(WalkKeyBindings.ThirdPerson) + " = first person)"
+                : "First person");
+        }
+
         /// <summary>Settings - only while paused. Save applies them to this walk at once; Cancel changes nothing.</summary>
         private void OpenSettings()
         {
             var window = new ModelWalkSettingsWindow(_session.Settings) { Owner = this };
             if (window.ShowDialog() != true || window.Result == null)
                 return;
+            bool thirdPersonChanged = window.Result.ThirdPerson != _session.Settings.ThirdPerson;
             _session.Settings = window.Result;
+            if (thirdPersonChanged)
+                _session.Input.ThirdPerson = window.Result.ThirdPerson;   // the new setting applies to this walk at once
             _session.Input.SettingsChangedQueued = true;   // the engine finds the floor again at the new eye height
             HelpText.Text = BuildHelpText();
             _session.Hud.Toast(window.SaveProblem ?? "Settings saved", window.SaveProblem == null ? WalkToastKind.Done : WalkToastKind.Refused);

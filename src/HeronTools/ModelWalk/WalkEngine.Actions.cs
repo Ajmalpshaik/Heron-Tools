@@ -167,7 +167,7 @@ namespace HeronTools.Services.ModelWalk
         private void Measure(XYZ position, XYZ forward, WalkHudState hud)
         {
             string key = _session.Keys.Label(WalkKeyBindings.Measure);
-            WalkRayHit hit = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+            WalkRayHit hit = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
             if (hit == null)
             {
                 hud.Toast("Measure: aim at a surface, then press " + key, WalkToastKind.Refused);
@@ -356,7 +356,7 @@ namespace HeronTools.Services.ModelWalk
 
         private XYZ GoToPoint(XYZ position, XYZ forward, WalkHudState hud)
         {
-            WalkRayHit target = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+            WalkRayHit target = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
             if (target == null)
             {
                 hud.Toast("Aim at a floor or a surface first, then release " + _session.Keys.Label(WalkKeyBindings.GoToPoint), WalkToastKind.Refused);
@@ -369,7 +369,7 @@ namespace HeronTools.Services.ModelWalk
 
             if (_session.Mode == WalkMoveMode.PassThrough)
             {
-                hud.Toast("Moved " + WalkTuning.FtToMm(target.DistanceFt).ToString("N0") + " mm", WalkToastKind.Done);
+                hud.Toast("Moved " + WalkTuning.FtToMm(PlayerDistanceFt(target, position)).ToString("N0") + " mm", WalkToastKind.Done);
                 return landing;
             }
 
@@ -382,7 +382,7 @@ namespace HeronTools.Services.ModelWalk
             _session.VerticalSpeedFtPerSec = 0;
             _session.Grounded = _session.Mode == WalkMoveMode.Walk;
             _forceFloorCheck = true;
-            hud.Toast("Moved " + WalkTuning.FtToMm(target.DistanceFt).ToString("N0") + " mm", WalkToastKind.Done);
+            hud.Toast("Moved " + WalkTuning.FtToMm(PlayerDistanceFt(target, position)).ToString("N0") + " mm", WalkToastKind.Done);
             return standing;
         }
 
@@ -503,7 +503,7 @@ namespace HeronTools.Services.ModelWalk
 
         private WalkRayHit ClickTarget(XYZ position, XYZ forward, WalkHudState hud)
         {
-            WalkRayHit hit = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+            WalkRayHit hit = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
             if (hit?.Element == null)
             {
                 hud.Toast("Nothing under the crosshair", WalkToastKind.Refused);
@@ -594,8 +594,11 @@ namespace HeronTools.Services.ModelWalk
 
             snag.Coloured = whyNot == null;
             snag.NotColouredWhy = whyNot;
-            if (snag.Coloured)
-                uidoc.RefreshActiveView();   // so the snag's picture shows it red
+            // The snag's picture is of the model: the third-person figure is hidden until it is taken.
+            bool figureWasShown = WalkFigureServer.Pose.Visible;
+            WalkFigureServer.Pose.Visible = false;
+            if (snag.Coloured || figureWasShown)
+                uidoc.RefreshActiveView();   // so the snag's picture shows it red, without the figure
 
             string problem = _session.Report.Save();
             hud.SnagCount = _session.Report.Count;

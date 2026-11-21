@@ -1,6 +1,6 @@
 # Model Walk - user guide
 
-Walk through the live Revit model in first person: look at things, select them, measure, and record snags with a
+Walk through the live Revit model in first person (or third person, with a figure): look at things, select them, measure, and record snags with a
 picture and a comment for the coordination meeting. Heron tab, **Coordination** panel, **Model Walk**.
 
 > Not yet tested in a real Revit. See [model-walk-move-notes.md](model-walk-move-notes.md) for what still needs a test.
@@ -42,6 +42,7 @@ you walk through it. Change these while paused, then carry on.
 | H | Help card on / off |
 | P or Esc | Pause |
 | F12 | Frame timing (for checking speed on a big model) |
+| Q | First person / third person - see a figure where you stand (below) |
 
 Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow keys.
 
@@ -129,6 +130,25 @@ changed yourself after snagging is left as you set it. To get the colours back a
   a sheet or in the meeting.
 - **Play viewpoints** (O) moves smoothly through all of them, pausing at each. Any move key stops it.
 
+## Third person
+
+**Q** switches to third person: the camera moves **3000 mm behind you and 500 mm to the right**, and a simple blocky
+figure stands where you are, in the Heron colours (orange body, dark legs, light head). Its arms and legs swing while you
+walk or run and come to rest when you stop. **Q** again goes back to first person. The status line (top left) always
+says **First person** or **Third person**. To start every walk in third person, tick **Third-person view (show a
+figure)** in Settings.
+
+- **Nothing is added to the model.** The figure is drawn on screen by Revit's own graphics, in the walk view only - no
+  element, no Undo step, nothing saved. Walls and ducts hide it when it walks behind them.
+- When a wall is behind you, the camera **slides in** closer (never closer than 300 mm) so it never looks through it.
+- You still walk, bump into walls, climb steps and go through doors as **you**, not the camera.
+- **Clicks act on what is under the crosshair**: Select, Snag, Hide, Measure, Go to point and the readout aim from the
+  camera, so they hit what you see in the middle of the screen. The distance shown is from you, not from the camera.
+- **Viewpoints** and **Open snag** keep where *you* stood and looked, not the camera behind you. "Save as 3D view"
+  looks from your eyes (first person).
+- **Snag pictures never show the figure** (it is hidden for the moment the picture is taken). **Snapshots (K) do show
+  it** - they are what you see. Press Q first for a snapshot without it.
+
 ## Measure
 
 **M** at the first point, **M** at the second. The HUD shows the distance in mm, with its horizontal and vertical
@@ -141,6 +161,7 @@ Nothing is drawn on the model. M again starts a new measure.
 |---|---|---|
 | Mouse sensitivity | 100 % | 25 - 250 % (lower it if fast turning makes you feel unwell) |
 | Invert look | off | mouse forward looks down |
+| Third-person view (show a figure) | off | start each walk in third person; Q switches during the walk |
 | Walk speeds, slowest first | 0.8, 1.5, 3.5, 5.5, 8 m/s | 0.2 - 20 m/s, each faster than the last. Fly x2, Shift x3 |
 | Eye height | 1700 mm | 1000 - 2000 mm (low eye = 1000 mm, or 300 mm under the eye) |
 | Step-up height | 350 mm | 100 - 450 mm - the highest stair or step you walk up |

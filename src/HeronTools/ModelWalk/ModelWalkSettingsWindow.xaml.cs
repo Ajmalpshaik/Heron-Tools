@@ -44,6 +44,7 @@ namespace HeronTools.UI.ModelWalk
         {
             SensitivityBox.Text = Number(s.SensitivityPercent);
             InvertLookBox.IsChecked = s.InvertLook;
+            ThirdPersonBox.IsChecked = s.ThirdPerson;
             EyeHeightBox.Text = Number(s.EyeHeightMm);
             StepUpBox.Text = Number(s.StepUpMm);
             for (int i = 0; i < _speedBoxes.Length; i++)
@@ -86,6 +87,7 @@ namespace HeronTools.UI.ModelWalk
                 return null;
             }
             s.InvertLook = InvertLookBox.IsChecked == true;
+            s.ThirdPerson = ThirdPersonBox.IsChecked == true;
 
             if (!TryRead(EyeHeightBox.Text, out s.EyeHeightMm) ||
                 !WalkSettings.InRange(s.EyeHeightMm, WalkSettings.MinEyeHeightMm, WalkSettings.MaxEyeHeightMm))

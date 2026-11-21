@@ -105,9 +105,11 @@ namespace HeronTools.UI.ModelWalk
             if (snag == null)
                 return;
             string fileName = "Snag " + number.ToString("000") + ".png";
+            _session.Hud.SnagPictureBusy = true;   // the third-person figure stays out of the picture
             CapturePicture(fileName,
                 saved =>
                 {
+                    _session.Hud.SnagPictureBusy = false;
                     snag.PictureFile = saved;
                     string problem = _session.Report.Save();
                     if (problem != null)
@@ -116,6 +118,7 @@ namespace HeronTools.UI.ModelWalk
                 },
                 failed =>
                 {
+                    _session.Hud.SnagPictureBusy = false;
                     _session.Hud.Toast("Snag " + number + " picture not saved (" + failed + ")", WalkToastKind.Refused);
                     AskSnagComment(snag);
                 });

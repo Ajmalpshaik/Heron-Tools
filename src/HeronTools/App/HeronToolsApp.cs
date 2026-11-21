@@ -61,6 +61,8 @@ namespace HeronTools.App
 
         public Result OnShutdown(UIControlledApplication application)
         {
+            // Model Walk's third-person figure: off the graphics service's active list, removed if Revit allows.
+            Services.ModelWalk.WalkFigureServer.SwitchOff();
             return Result.Succeeded;
         }
 
@@ -267,7 +269,8 @@ namespace HeronTools.App
                 "category or use a section box to walk through it. Right-click or Tab changes the mode: Inspect, Select, Snag (a " +
                 "picture and a red colour, click after click; write the comments in the pause menu; the report goes in a folder next " +
                 "to the model), Hide. Snag colours are given back by J and before every Save and Sync - no red is saved in the " +
-                "model. Pause (Esc) for snags, viewpoints and settings. Camera " +
+                "model. Q (standard key) switches to third person: a figure drawn on screen, nothing added to the model. Pause (Esc) for snags, " +
+                "viewpoints and settings. Camera " +
                 "moves make no Undo entries; each snag is one Undo step."));
 
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")

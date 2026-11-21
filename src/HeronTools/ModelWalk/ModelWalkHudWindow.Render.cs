@@ -204,6 +204,7 @@ namespace HeronTools.UI.ModelWalk
                 "Viewpoints\t" + k(WalkKeyBindings.SaveViewpoint) + " saves and names one  -  1 to 9 go back  -  " + k(WalkKeyBindings.PlayViewpoints) + " plays them",
                 "Snapshot\t" + k(WalkKeyBindings.Snapshot) + " saves a picture of the view, without the HUD",
                 "Back to start\t" + k(WalkKeyBindings.BackToStart),
+                "View\t" + k(WalkKeyBindings.ThirdPerson) + " first / third person (a figure where you stand) - clicks act on the crosshair",
                 "Pause\tEsc or " + k(WalkKeyBindings.Pause) + " - Revit is free to use; the pause menu has snags, viewpoints, settings",
                 "Screen\t" + k(WalkKeyBindings.Help) + " this help  -  " + k(WalkKeyBindings.CleanScreen) + " clean screen  -  " +
                     k(WalkKeyBindings.FrameTiming) + " frame timing"
