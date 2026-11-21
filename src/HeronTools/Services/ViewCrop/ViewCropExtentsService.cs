@@ -398,15 +398,8 @@ namespace HeronTools.Services.ViewCrop
                     .ToElements()
                     .ToList();
                 _linkElementsVisibleInView = new Dictionary<long, List<Element>>();
-#if REVIT2024_OR_GREATER
                 // Revit 2024+ can say which LINKED elements this view shows; collect them now, uncropped.
-                foreach (RevitLinkInstance link in elements.OfType<RevitLinkInstance>())
-                {
-                    if (link.GetLinkDocument() == null) continue;
-                    _linkElementsVisibleInView[link.Id.LongValue()] =
-                        new FilteredElementCollector(_doc, view.Id, link.Id).WhereElementIsNotElementType().ToElements().ToList();
-                }
-#endif
+                ViewCropCompat.CollectLinkElementsInView(_doc, view, elements, _linkElementsVisibleInView);
 
             foreach (Element element in elements)
             {
@@ -1076,10 +1069,8 @@ namespace HeronTools.Services.ViewCrop
         {
             if (element is BasePoint)
                 return true;
-#if REVIT2021_OR_GREATER
-            if (element is InternalOrigin)
+            if (ViewCropCompat.IsInternalOrigin(element))
                 return true;
-#endif
             return false;
         }
 
