@@ -629,3 +629,37 @@ you know it and it can go in `NOTICE`; (3) at the faster speed steps the feet sl
 | Turning the pose into Revit's buffers (one `XYZ` pair per vertex, about 4,600 a rebuilt frame) | NEEDS REAL REVIT (F12, step 46) |
 | The character draws, animates, hides behind walls; snag / snapshot pictures; switch-off on every end path | NEEDS REAL REVIT (steps 43-47, 37) |
 | Install into Revit on the build PC | NOT RUN - Linux build machine, no Revit |
+
+## Stage 8 review (2026-11-21)
+
+A fresh read of the whole change (`git diff origin/main...HEAD`), every Model Walk file it touches, `NOTICE`, and the
+`Nice3point.Revit.Api` XML for the DirectContext3D members. The reader and animator were run outside Revit in a
+throwaway .NET test (not committed) in en-US, **de-DE** and fr-FR, with 18 broken files. Builds only - nothing here
+has run in Revit.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| S1 | Important | `WalkJson`: a file nested very deep (100,000 `[`) ran the reader out of stack. A stack overflow cannot be caught - it ends Revit, not just the character. | **Fixed** (`8ad405d`) - deeper than 64 levels is refused with a plain reason ("nested too deep"). The glTF file nests about six. |
+| S2 | Medium | Animator: one NaN speed went into the clip time and stayed there - every later frame was NaN (character gone or garbage) for the rest of the walk. | **Fixed** (`d1efd9b`) - a NaN or negative speed counts as standing. An infinite speed was already capped. |
+| S3 | Medium | glTF reader: a damaged `count` (2,000,000,000) made its array first and checked the buffer after - 7.4 GB allocated inside Revit's process before the refusal. | **Fixed** (`c26f1f7`) - count, view and buffer range checked before the array is made; one block capped at 4 million values (the shipped file's biggest: 10,368). Now refused with 2 MB used. |
+| S4 | Low | Animator: `w <= 0.0` lets a NaN bone weight through, so one damaged weight makes its vertex NaN. | **Fixed** (`daf09b4`) - guard only, the shipped file has none. |
+| S5 | Checked, no defect | JSON numbers: invariant culture, exponents (`1.5e2`, `-0.25E-1`) right in de-DE; `\u` escapes incl. surrogate pairs; base64 `data:` buffers; component types byte / ubyte / short / ushort / uint / float and `normalized`; accessor + view offsets, stride, bounds (long maths, no overflow); triangle indices and skin joints checked; bone loops cannot hang (`BuildOrder`); every failure is caught in `TryLoad` / `EnsureCharacter` / `Advance` with a plain reason. | - |
+| S6 | Checked, no defect | Animator: parents before children, inverse bind matrices column-major to row-major right, weights re-normalised when they do not sum to 1, clip time wraps, dt NaN / negative / huge clamped; **0 bytes allocated per frame** (measured, 300 frames walk / run / blend), 0.17-0.23 ms a frame. The posed character stays inside `GetBoundingBox` (widest 675 mm of 1200, highest 1870 mm of 2000). Stops into Idle and `IsMoving` goes false. | - |
+| S7 | Checked, no defect | Server: vertex format, effect and stream are all PositionNormal; index count = triangles x 3 shorts; parts over 65,535 vertices skipped (16-bit indices); every buffer tested with `IsValid()` before use; `CanExecute` needs Visible + view id + document; `RenderScene` and `CanExecute` cannot throw; nothing drawn while hidden (snag pictures). Switch on / off, `Prepare`, `TryRemove` and the end paths are line-for-line the stage 6 code (diffed against `main`). Camera back on the eye at End, wall slide and the 24-ray budget unchanged. | - |
+| S8 | Checked, no defect | The embedded resource `HeronTools.ModelWalk.WalkCharacter.gltf` is in every year's DLL (net472, net48 x4, net8 x2, net10), full 469,422 bytes - read from each DLL's resource table. No `int` element id, no transaction, no window colour, no model change; every new file has its 5-field header; `NOTICE` CC0 entry sits with the Manrope entry and says what the Apache grant does not cover. | - |
+| S9 | Note, not changed | A replaced Revit buffer is disposed on the next redraw after it was drawn. The API notes say nothing about disposing a buffer that was already drawn, so this is not proven. | NEEDS REAL REVIT - step 48. |
+| S10 | Note, not changed | The animator is kept for the Revit session, so a new walk (or Q again) starts from the clip it was in last time and blends 0.2 s into Idle - a short settle, not a snap. | Left - cosmetic, no new behaviour asked for. |
+
+Extra Revit test step:
+
+48. **Long walk, many redraws.** In third person, walk and run for five minutes in one model, end, open a second model
+    and do the same (F12 on). Expect no flicker, no missing parts and no slow-down over time; Revit's memory (Task
+    Manager) climbs no more than a few MB across the two walks.
+
+| Check (stage 8 review) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Character resource in all eight DLLs | PASS |
+| Reader + animator outside Revit, en-US / de-DE / fr-FR, 18 broken files, NaN / infinite input | PASS (S1-S3 failed before their fixes) |
+| Buffer reuse and dispose over a long walk and two models (step 48) | NEEDS REAL REVIT |
