@@ -13,16 +13,10 @@ namespace HeronTools.Utils
 {
     /// <summary>
     /// Version-safe ElementId numeric-value access, replacing direct ElementId.IntegerValue usage
-    /// (removed in Revit 2026). Keeps call sites readable: <c>id.IntValue()</c> / <c>id.LongValue()</c>.
+    /// (removed in Revit 2026). Keeps call sites readable: <c>id.LongValue()</c>. There is no int version on purpose: from Revit 2024 an id can be larger than an int holds.
     /// </summary>
     internal static class ElementIdExtensions
     {
-        /// <summary>
-        /// The ElementId numeric value as int, matching the pre-2026 ElementId.IntegerValue behaviour.
-        /// Returns the InvalidElementId value when <paramref name="id"/> is null.
-        /// </summary>
-        internal static int IntValue(this ElementId id) => ElementIdHelper.GetIntegerValue(id);
-
         /// <summary>
         /// The full 64-bit ElementId numeric value. Use when an id may exceed 32 bits (Revit 2024+).
         /// Returns the InvalidElementId value when <paramref name="id"/> is null.
