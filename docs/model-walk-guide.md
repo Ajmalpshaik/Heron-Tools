@@ -52,7 +52,7 @@ Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow
 | **Inspect** (standard) | Nothing - the bottom line always shows what is under the crosshair: category, family : type, size, ID, level, system, link, and the distance | No |
 | **Select** | Adds the element to Revit's selection (click again takes it out). It stays selected after the walk, ready to edit | No |
 | **Snag** | Records a snag (below) and colours the element red in the walk view | Yes - one Undo step per snag; colours given back |
-| **Hide** | Hides the element for now (Temporary Hide). U shows again only what this walk hid | No (temporary) |
+| **Hide** | Hides the element for now (Temporary Hide). U shows again only what this walk hid | No (temporary). If your Revit year asks for a transaction for it, it is one Undo step "Model Walk: hide" / "show hidden" |
 
 Linked elements: Select and Hide refuse them (they cannot be picked alone). Snag records them, without a colour.
 
@@ -123,4 +123,5 @@ Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). S
 ## What goes in the Undo list
 
 Making the walk view (first time only), each snag colour, Clear snag colours, giving colours back at the end, and
-Save as 3D view - one named step each ("Model Walk: ..."). Walking and looking make no Undo entries.
+Save as 3D view - one named step each ("Model Walk: ..."); Hide and Show hidden too, only if your Revit year asks
+for a transaction for them. Walking and looking make no Undo entries.

@@ -265,3 +265,64 @@ Use a copy of a real project with MEP, rooms and at least one link. Revit 2024 f
 14. **Viewpoints kept.** Close and reopen the model, start Model Walk, Esc: "Plant room" is still in the list.
 
 Report each step as PASS / FAIL (with what you saw) and the Revit year.
+
+---
+
+# Final review (2026-11-21)
+
+A fresh read of the whole branch (every file in `src/HeronTools/ModelWalk/`, the helper changes, the ribbon entry,
+the theme key) against `AGENTS.md`, `CONTRIBUTING.md` and the Revit API notes of the `Nice3point.Revit.Api`
+packages (2020, 2021). The docs were read after the code and checked against it.
+
+## Findings
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| R1 | Medium | `WalkEngine.EndWithoutRevit` - run on the overlay's own events (overlay closed, Revit busy for 3 s, an overlay fault, Revit's main window closing) - called `Document.IsValidObject`, `GetElement` and `SnagColourMemory.Find` outside Revit's API context. The notes said the HUD touches no Revit API; this path did. | **Fixed** (`949ff3f`). It now reads only the colour memory's plain .NET count, found on Revit's thread (first frame, each snag colour). |
+| R2 | Medium | The snag colour memory was dropped on `DocumentClosing`. A close can still be cancelled after that event (the save question, another add-in): the model stays open with the red on and no way back, and the next Save writes the red into the file. Most likely with "Keep snag colours" on. | **Fixed** (`8c69db2`). Dropped only on `DocumentClosed` with status Succeeded, matched by `DocumentId`. |
+| R3 | Low | The start-up warning for an action left without a key said "Pause (Esc) and press S" - S opens Settings; Keys is K. | **Fixed** (`124d24f`). |
+| R4 | Low | A snapshot / snag picture asked for before the view's place on screen is known was refused as "a picture is already being taken". | **Fixed** (`f20953d`). |
+| R5 | Low (doc) | The guide said Hide changes nothing and left Hide / Show hidden out of the Undo list; when Revit asks for a transaction for Temporary Hide they are Undo steps. | **Fixed** in `model-walk-guide.md`. |
+| R6 | Low | `Snags.csv` uses commas. In a Windows region whose list separator is `;` (decimal-comma countries) Excel opens it in one column. Numbers in the file are culture-free (invariant, whole mm), so nothing is misread - only the columns. | **Not changed** - owner decision. A `sep=,` first line is the usual fix, but how Excel treats it together with the UTF-8 mark that keeps accents right needs a test on a real Excel, not a guess. Workaround: Excel, Data, From Text/CSV, comma. |
+| R7 | Low | Revit's own Undo of "Model Walk: give back snag colours" after the walk brings the red back with nothing left to give it back again. | **Not changed** - Revit's Undo raises no event an add-in can safely act on. Same limit as Quick Clash. Told here so the owner knows. |
+| R8 | Nit | `BeginEndSequence` frees the mouse before it marks the walk as ending, so the lost-capture handler runs the pause code inside the same call. Nothing shows: the end card replaces it before WPF draws. | Not changed - no visible effect, and the order is part of the tested-on-paper end sequence. |
+| R9 | Nit | `ElementIdHelper` has a doubled `<summary>` above `FromLong` / `FromInt`. | Not changed - it is on `main` already, not part of this change. |
+
+## Checked and found right
+
+- **Revit API only on Revit's thread.** Every transaction is in the command (walk view, give back leftovers) or the
+  `ExternalEvent` handler (snag, clear, give back, save as 3D view, temporary hide) or Revit's own Save / Sync
+  events (allowed to change the model, per the API note). Each is `using`, started in `try`, rolled back on a Revit
+  exception, and its `Commit()` checked. No transaction is left open on any path.
+- **Camera.** `View3D.SetOrientation` is a temporary orientation "not saved in the document" (API note) - no
+  transaction, no Undo entry, as the notes claim.
+- **Overrides, hide, selection.** Each element's own override is copied before the red; given back at the end, on X,
+  and before Save / Save As / Sync; an element the modeller recoloured is left alone. Hide refuses to mix with the
+  modeller's own Temporary Hide/Isolate. The selection is changed only by Select mode and Open snag, as documented.
+- **Element ids.** No `int` id anywhere in Model Walk. The `ElementIdHelper` change: `GetIntegerValue` now has no
+  caller outside the helper; `IntValue()` had only the two `SelectionFilters` callers, which now use
+  `TryGetBuiltInCategory` / `IsCategory` - the same answer for every real id in 2020-2023, and no wrong match from a
+  large id in 2024-2027.
+- **Mouse, timer, overlay.** Every handler runs in `Guard()`; every end path frees capture, shows the pointer, stops
+  the timer and disposes the `ExternalEvent`. Not Topmost, owned by Revit's main window, and focus loss pauses.
+- **Per frame.** No file write in a frame; rays counted with a budget; no `SetOrientation` / redraw while the camera
+  is still; idle frames 4 a second.
+- **Files.** Model names cleaned of characters Windows refuses; unsaved and cloud models and read-only or too-long
+  folders fall back to Documents; CSV quoting handles commas, quotes and new lines in comments, and a leading
+  `= + - @` is made text; numbers invariant.
+- **UI.** Only `HeronStyles.xaml` keys (every key used in XAML and code exists); one orange button per window; no
+  gun, shoot, weapon or game wording a modeller sees.
+
+## Final review results
+
+| Check | State |
+|---|---|
+| Build Revit 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027 (`dotnet build ... -p:EnableWindowsTargeting=true`, Linux) | PASS - 0 warnings, 0 errors each |
+| Metadata check (rules of `build/check-metadata.ps1`, run in Python - no pwsh here) | PASS - 203 files |
+| XAML resource keys (XAML and `FindResource` / `SetResourceReference` in code) all in the theme | PASS |
+| XAML rendered to a picture | NOT RUN - WPF needs Windows |
+| R1 and R2 in Revit (close the overlay mid-walk; close the model with kept colours and press Cancel, then Save - the red must go) | NEEDS REAL REVIT - add to the test script below |
+| Everything in the owner's test script | NEEDS REAL REVIT |
+
+Add to the owner's test script: **15. Cancelled close.** Settings, tick Keep snag colours, snag something, end the
+walk. Close the model, press **Cancel** at Revit's question. Save. Expect: the red goes before saving.
