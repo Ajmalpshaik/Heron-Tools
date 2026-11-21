@@ -2,6 +2,23 @@
 
 All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
+## [Unreleased]
+
+### Added
+- **Model Walk** (Coordination panel, 3D views): walk the live model in first person - W A S D and the mouse, run,
+  five speeds, Fly, Pass-through, doors (E), Go to point, a low eye for ceiling voids, viewpoints and Play viewpoints,
+  Snapshot. Right-click or Tab picks the mode: **Inspect** (what is under the crosshair, its ID, level, system, link,
+  and how far), **Select** (adds to Revit's selection, kept after the walk), **Snag** (colours the element and writes a
+  snag report in shared coordinates to `Documents\Heron Model Walk\<model>`), **Hide** (Temporary Hide; Show hidden
+  brings back only what the walk hid). Every element's own colours are remembered and given back at the end of the
+  walk and before every Save and Sync with Central. Esc pauses and Revit is free to use; a second click on the button
+  ends the walk and takes you back to your view. Rebuilt from AJ-Tools' Game Mode with every audit finding fixed - see
+  [docs/model-walk-move-notes.md](docs/model-walk-move-notes.md). Not yet tested in Revit.
+
+### Fixed
+- `ElementIdHelper` no longer cuts a 64-bit element id (Revit 2024+) to 32 bits; the two selection filters that used
+  it compare the full value.
+
 ## [1.1.0] - 2026-11-16
 
 ### Added
