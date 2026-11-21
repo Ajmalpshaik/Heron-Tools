@@ -68,13 +68,17 @@ namespace HeronTools.Services.ModelWalk
                     Name = "Viewpoint " + number + " - " + hud.LocationLine,
                     Eye = position,
                     YawDeg = input.YawDeg,
-                    PitchDeg = input.PitchDeg
+                    PitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, input.PitchDeg))
                 });
-                _session.ViewpointsVersion++;
-                hud.Toast(number <= 9
-                    ? "Viewpoint " + number + " saved - press " + number + " to come back"
-                    : "Viewpoint " + number + " saved - Play viewpoints (" + keys.Label(WalkKeyBindings.PlayViewpoints) + ") visits it",
-                    WalkToastKind.Done);
+                string problem = _session.SaveViewpoints();
+                hud.ViewpointAwaitingName = number;   // the HUD asks for a name (Esc keeps this one)
+                if (problem != null)
+                    hud.Toast(problem, WalkToastKind.Refused);
+                else
+                    hud.Toast(number <= 9
+                        ? "Viewpoint " + number + " saved - press " + number + " to come back"
+                        : "Viewpoint " + number + " saved - Play viewpoints (" + keys.Label(WalkKeyBindings.PlayViewpoints) + ") visits it",
+                        WalkToastKind.Done);
             }
 
             if (input.JumpViewpoint > 0)
@@ -188,12 +192,13 @@ namespace HeronTools.Services.ModelWalk
             WalkInput input = _session.Input;
             WalkHudState hud = _session.Hud;
             StopMotion();
-            if (!input.ClearSnagsQueued)
+            if (!input.ClearSnagsQueued && input.SaveViewpointAsView <= 0)
                 return;
 
             if (uidoc == null || !uidoc.Document.Equals(doc))
             {
                 input.ClearSnagsQueued = false;
+                input.SaveViewpointAsView = 0;
                 hud.SayInPause("Go back to the walk's model first, then try again.");
                 return;
             }
@@ -208,6 +213,73 @@ namespace HeronTools.Services.ModelWalk
                 input.ClearSnagsQueued = false;
                 hud.SayInPause(ClearSnagColours(doc, view) ?? "No snag colours to clear.");
             }
+            if (input.SaveViewpointAsView > 0)
+            {
+                int number = input.SaveViewpointAsView;
+                input.SaveViewpointAsView = 0;
+                WalkViewpoint vp = _session.Viewpoints.Find(v => v.Number == number);
+                hud.SayInPause(vp == null ? "That viewpoint is no longer there." : SaveAsRevitView(doc, view, vp));
+            }
+        }
+
+        /// <summary>
+        /// "Save as Revit 3D view": a copy of the walk view (same Visibility/Graphics, filters and section box) looking
+        /// from the viewpoint, with that camera saved in the model - one named transaction, one Undo step, a unique
+        /// view name. Snag colours are never carried into it: each snagged element gets its own colours in the new
+        /// view. Returns the plain line for the pause menu.
+        /// </summary>
+        private string SaveAsRevitView(Document doc, View3D walkView, WalkViewpoint vp)
+        {
+            if (doc.IsReadOnly)
+                return "The model is read-only, so no view can be saved.";
+            if (!walkView.CanViewBeDuplicated(ViewDuplicateOption.Duplicate))
+                return "Revit does not let the walk view be copied, so no view was saved.";
+
+            string name = UniqueViewName(doc, "Model Walk - " + vp.Name);
+            using (var t = new Transaction(doc, "Model Walk: save viewpoint as 3D view"))
+            {
+                try
+                {
+                    t.Start();
+                    var copy = doc.GetElement(walkView.Duplicate(ViewDuplicateOption.Duplicate)) as View3D;
+                    if (copy == null)
+                    {
+                        t.RollBack();
+                        return "Revit did not make the view, so nothing was changed.";
+                    }
+                    copy.Name = name;
+                    SnagColourMemory.Find(doc, walkView)?.GiveOriginalsTo(doc, copy);
+                    copy.SetOrientation(Orientation(vp.Eye, vp.YawDeg, vp.PitchDeg));
+                    copy.SaveOrientation();   // the camera is kept in the model for this view (it does not lock it)
+                    if (t.Commit() != TransactionStatus.Committed)
+                        return "Revit did not keep the new view, so nothing was changed.";
+                    return "Saved the 3D view \"" + name + "\" (one Undo step). Find it under 3D Views in the Project Browser.";
+                }
+                catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+                {
+                    if (t.HasStarted() && !t.HasEnded())
+                        t.RollBack();
+                    return "The view could not be saved, so nothing was changed (Revit said: " + ex.Message + ").";
+                }
+            }
+        }
+
+        /// <summary>A view name Revit takes: no \ : { } [ ] | ; &lt; &gt; ? ` ~, and "name (2)", "(3)"... when taken.</summary>
+        private static string UniqueViewName(Document doc, string wanted)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in wanted)
+                sb.Append("\\:{}[]|;<>?`~".IndexOf(c) >= 0 ? '-' : c);
+            string clean = sb.ToString().Trim();
+            if (clean.Length == 0)
+                clean = "Model Walk viewpoint";
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (View v in new FilteredElementCollector(doc).OfClass(typeof(View)))
+                taken.Add(v.Name);
+            string free = clean;
+            for (int n = 2; taken.Contains(free); n++)
+                free = clean + " (" + n + ")";
+            return free;
         }
 
         private void LookAt(WalkHudState hud, double yawDeg, double pitchDeg)
@@ -306,6 +378,11 @@ namespace HeronTools.Services.ModelWalk
             if (input.AnyMoveHeld)
             {
                 StopPlaying(hud, "Stopped");
+                return position;
+            }
+            if (_playIndex < 0 || _playIndex >= _session.Viewpoints.Count)
+            {
+                StopPlaying(hud, "Stopped - the viewpoints changed");   // one was deleted from the pause menu
                 return position;
             }
 

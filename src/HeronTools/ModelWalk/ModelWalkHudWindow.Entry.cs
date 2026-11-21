@@ -117,13 +117,24 @@ namespace HeronTools.UI.ModelWalk
                 });
         }
 
+        private void AskViewpointName(int number)
+        {
+            WalkViewpoint vp = _session.Viewpoints.Find(v => v.Number == number);
+            if (vp == null || _paused || _ending || _closedDown)
+                return;
+            OpenEntry(EntryKind.ViewpointName, number, "Name viewpoint " + number, vp.Name,
+                "Type a name  -  Enter saves  -  Esc keeps this one");
+        }
+
         private void FinishViewpointName(int number, string name)
         {
             WalkViewpoint vp = _session.Viewpoints.Find(v => v.Number == number);
-            if (vp == null || string.IsNullOrWhiteSpace(name))
+            name = WalkViewpointStore.CleanName(name);
+            if (vp == null || vp.Name == name)
                 return;
-            vp.Name = name.Trim();
-            _session.ViewpointsVersion++;
+            vp.Name = name;
+            string problem = _session.SaveViewpoints();
+            _session.Hud.Toast(problem ?? "Viewpoint " + number + ": " + name, problem == null ? WalkToastKind.Done : WalkToastKind.Refused);
         }
 
         private void AskSnagComment(WalkSnag snag)

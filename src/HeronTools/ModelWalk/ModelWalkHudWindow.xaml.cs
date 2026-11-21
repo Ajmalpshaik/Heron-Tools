@@ -268,6 +268,12 @@ namespace HeronTools.UI.ModelWalk
                 hud.SnagAwaitingPicture = 0;
                 FinishSnagRecord(number);
             }
+            else if (hud.ViewpointAwaitingName > 0 && !_snapshotBusy && !EntryOpen)
+            {
+                int number = hud.ViewpointAwaitingName;
+                hud.ViewpointAwaitingName = 0;
+                AskViewpointName(number);
+            }
 
             // Follow the Revit view window if it moved or changed size.
             if (hud.RectValid && (hud.RectLeft != _fullLeft || hud.RectTop != _fullTop || hud.RectRight != _fullRight || hud.RectBottom != _fullBottom))
@@ -342,6 +348,7 @@ namespace HeronTools.UI.ModelWalk
                 return;
             CloseEntry(save: true);                 // keep what was typed
             _session.Hud.SnagAwaitingPicture = 0;   // the view may change while paused: no picture of the wrong place
+            _session.Hud.ViewpointAwaitingName = 0; // it keeps its own name; rename it by saving again
             _paused = true;
             _session.Paused = true;
             ReleaseLook();

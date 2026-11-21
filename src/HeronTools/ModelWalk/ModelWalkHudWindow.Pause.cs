@@ -92,9 +92,28 @@ namespace HeronTools.UI.ModelWalk
         {
             ViewpointMenuList.Children.Clear();
             foreach (WalkViewpoint vp in _session.Viewpoints)
-                ViewpointMenuList.Children.Add(RowButton((vp.Number <= 9 ? vp.Number + "    " : "      ") + vp.Name,
-                    "Go to this viewpoint", vp.Number, OnViewpointGoClick));
+            {
+                var row = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
+                Button delete = SmallButton("Delete", "Forget this viewpoint (the saved Revit views stay)", vp.Number, OnViewpointDeleteClick);
+                Button save = SmallButton("Save as 3D view", "Save a Revit 3D view looking from here - for a meeting or a sheet (one Undo step)",
+                                          vp.Number, OnViewpointSaveViewClick);
+                DockPanel.SetDock(delete, Dock.Right);
+                DockPanel.SetDock(save, Dock.Right);
+                row.Children.Add(delete);
+                row.Children.Add(save);
+                row.Children.Add(RowButton((vp.Number <= 9 ? vp.Number + "    " : "      ") + vp.Name,
+                    "Go to this viewpoint" + (vp.Number <= 9 ? " (" + vp.Number + " in the walk)" : ""), vp.Number, OnViewpointGoClick));
+                ViewpointMenuList.Children.Add(row);
+            }
             ViewpointSection.Visibility = _session.Viewpoints.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private Button SmallButton(string text, string tip, object tag, RoutedEventHandler click)
+        {
+            var button = new Button { Content = text, Tag = tag, ToolTip = tip, Margin = new Thickness(4, 1, 0, 1) };
+            button.SetResourceReference(StyleProperty, "CompactSecondaryButton");
+            button.Click += (s, e) => Guard(() => click(s, e));
+            return button;
         }
 
         private void OnViewpointGoClick(object sender, RoutedEventArgs e)
@@ -103,6 +122,30 @@ namespace HeronTools.UI.ModelWalk
                 return;
             _session.Input.JumpViewpoint = number;
             EnterPlay();
+        }
+
+        private void OnViewpointSaveViewClick(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is Button button) || !(button.Tag is int number))
+                return;
+            _session.Input.SaveViewpointAsView = number;
+            SetPauseStatus("Saving the 3D view...");
+            ShrinkToPill();
+            RaiseFrame();   // the engine makes the view on Revit's thread, while the walk stays paused
+        }
+
+        private void OnViewpointDeleteClick(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is Button button) || !(button.Tag is int number))
+                return;
+            WalkViewpoint vp = _session.Viewpoints.Find(v => v.Number == number);
+            if (vp == null)
+                return;
+            _session.Viewpoints.Remove(vp);
+            string problem = _session.SaveViewpoints();   // numbers close up: 1, 2, 3...
+            SetPauseStatus(problem ?? "Viewpoint \"" + vp.Name + "\" deleted. The others are numbered again.");
+            RebuildViewpointMenu();
+            ShrinkToPill();
         }
 
         private void OnPlayViewpointsClick(object sender, RoutedEventArgs e) => Guard(() =>

@@ -141,6 +141,7 @@ namespace HeronTools.Services.ModelWalk
         public bool ResyncViewQueued;      // re-fit the picture to the window (aim and picture in step)
         public bool SettingsChangedQueued; // eye height or step-up changed: find the floor again
         public int OpenSnag;               // pause menu: go back to snag N and select its element, 0 = none
+        public int SaveViewpointAsView;    // pause menu: save viewpoint N as a Revit 3D view, 0 = none
 
         /// <summary>True while any held key asks for movement.</summary>
         public bool AnyMoveHeld => MoveForward || MoveBack || StrafeLeft || StrafeRight || UpKey || DownKey;
@@ -149,7 +150,7 @@ namespace HeronTools.Services.ModelWalk
         public bool AnyQueued =>
             DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued ||
             GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || ShowHiddenQueued ||
-            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0;
+            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0 || SaveViewpointAsView > 0;
     }
 
     /// <summary>What the engine tells the HUD after each frame.</summary>
@@ -175,6 +176,9 @@ namespace HeronTools.Services.ModelWalk
 
         // Engine to HUD: a snag was just recorded - take its picture (HUD hidden), then ask for its comment.
         public int SnagAwaitingPicture;
+
+        // Engine to HUD: a viewpoint was just saved - ask for its name.
+        public int ViewpointAwaitingName;
 
         // While paused: the engine's answer to a pause-menu action, and a counter the HUD watches.
         public string PauseStatus = "";
@@ -303,6 +307,18 @@ namespace HeronTools.Services.ModelWalk
 
         public List<WalkViewpoint> Viewpoints { get; } = new List<WalkViewpoint>();
         public int ViewpointsVersion;
+
+        /// <summary>Where this model's viewpoints are kept for this user (set by the command, on Revit's thread).</summary>
+        public string ViewpointFile { get; set; }
+
+        /// <summary>Numbers 1, 2, 3... in list order, then keeps the list. Returns null, or why it could not be kept.</summary>
+        public string SaveViewpoints()
+        {
+            for (int i = 0; i < Viewpoints.Count; i++)
+                Viewpoints[i].Number = i + 1;
+            ViewpointsVersion++;
+            return WalkViewpointStore.Save(ViewpointFile, Viewpoints);
+        }
 
         public double EyeHeightFt => LowEye && Mode == WalkMoveMode.Walk ? Settings.LowEyeHeightFt : Settings.EyeHeightFt;
     }

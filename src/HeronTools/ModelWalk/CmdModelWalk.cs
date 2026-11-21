@@ -124,6 +124,14 @@ namespace HeronTools.Commands.ModelWalk
                 }
 
                 var session = new WalkSession(doc, walkView.Id, startView.Id, eye, yaw, pitch, WalkKeyBindings.Load(), settings);
+                session.ViewpointFile = WalkViewpointStore.ModelFile(doc);
+                session.Viewpoints.AddRange(WalkViewpointStore.Load(session.ViewpointFile, out int skipped, out string viewpointProblem));
+                session.ViewpointsVersion++;
+                if (viewpointProblem != null)
+                    session.Keys.LoadWarnings.Add(viewpointProblem);
+                else if (skipped > 0)
+                    session.Keys.LoadWarnings.Add(skipped + (skipped == 1 ? " saved viewpoint" : " saved viewpoints") + " could not be read and " +
+                                                  (skipped == 1 ? "was" : "were") + " left out.");
                 var engine = new WalkEngine(session);
                 ExternalEvent frameEvent = ExternalEvent.Create(engine);
                 FillFirstRectangle(uidoc, session);

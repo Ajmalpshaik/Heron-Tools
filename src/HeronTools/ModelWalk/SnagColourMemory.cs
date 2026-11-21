@@ -146,6 +146,28 @@ namespace HeronTools.Services.ModelWalk
             }
         }
 
+        /// <summary>
+        /// A copy of the walk view must not carry the snag red: every remembered element gets its own colours in
+        /// <paramref name="target"/>. Call inside a transaction.
+        /// </summary>
+        internal void GiveOriginalsTo(Document doc, View target)
+        {
+            foreach (KeyValuePair<long, OverrideGraphicSettings> entry in _originals)
+            {
+                ElementId id = ElementIdHelper.FromLong(entry.Key);
+                if (doc.GetElement(id) == null)
+                    continue;
+                try
+                {
+                    target.SetElementOverrides(id, entry.Value);
+                }
+                catch (Autodesk.Revit.Exceptions.ApplicationException)
+                {
+                    // one refused element must not stop the view being saved
+                }
+            }
+        }
+
         /// <summary>Call after the put-back transaction committed.</summary>
         internal void Clear()
         {
