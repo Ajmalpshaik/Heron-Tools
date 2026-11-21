@@ -227,7 +227,7 @@ namespace HeronTools.Services.QuickClash
                 group.Start();
                 try
                 {
-                    keep = RunCore(app, s);
+                    keep = RunCore(app, s, before);
                 }
                 finally
                 {
@@ -260,6 +260,22 @@ namespace HeronTools.Services.QuickClash
             private readonly Dictionary<long, List<Solid>> _linkedSolidsById;
             private readonly ClashColour _overlayColour;
 
+            // The view's memory when it was still coloured before this Run: a Run with new colours updates it, and a
+            // rollback brings the old colours back on the view - so the memory must say the old colours again, or
+            // Reset view would no longer see the view as coloured.
+            private ClashColourMemory _reusedMemory;
+            private ClashColour _oldA, _oldB, _oldRest;
+            private int _oldRestTransparency;
+
+            internal void RememberColours(ClashColourMemory memory)
+            {
+                _reusedMemory = memory;
+                _oldA = memory.ColourA;
+                _oldB = memory.ColourB;
+                _oldRest = memory.ColourRest;
+                _oldRestTransparency = memory.RestTransparency;
+            }
+
             internal RunSnapshot(QuickClashSession s)
             {
                 _isolatedByUs = s._isolatedByUs;
@@ -284,6 +300,11 @@ namespace HeronTools.Services.QuickClash
                 s._linkedSolids = _linkedSolids;
                 s._linkedSolidsById = _linkedSolidsById;
                 s._overlayColour = _overlayColour;
+                if (_reusedMemory != null)
+                {
+                    _reusedMemory.SetColours(_oldA, _oldB, _oldRest, _oldRestTransparency, ClashColourMemory.SolidFillId(s._doc));
+                    _reusedMemory.SaveToDisk();
+                }
                 try
                 {
                     s.UpdateColouredState();   // buttons and overlay follow the view as it is again
@@ -299,7 +320,7 @@ namespace HeronTools.Services.QuickClash
         /// The run itself. True when it ended normally (whether or not it coloured anything); false when what it did
         /// must be rolled back (Esc). An exception also rolls it back.
         /// </summary>
-        private bool RunCore(UIApplication app, QuickClashSettings s)
+        private bool RunCore(UIApplication app, QuickClashSettings s, RunSnapshot before)
         {
             if (_window == null) return true;
             if (!TryActive3DView(app, out View3D view, out string why))
@@ -398,6 +419,8 @@ namespace HeronTools.Services.QuickClash
             // colours (Reset, Undo, or changed by hand since), the copy is old: forget it and copy afresh, so a
             // second Run never puts back yesterday's overrides over the modeller's newer ones.
             ClashColourMemory memory = FreshOrStillColoured(view);
+            if (memory.StillColoured(_doc, view))
+                before.RememberColours(memory);
             View previous = ColouredView();
             ClashColourMemory previousMemory = null;
             if (previous != null && previous.Id.LongValue() != view.Id.LongValue())
