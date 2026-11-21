@@ -40,6 +40,7 @@ namespace HeronTools.Installer
         private static readonly Color Mist = Color.FromRgb(0xF7, 0xF5, 0xF2);
         private static readonly Color Accent = Color.FromRgb(0xFD, 0x64, 0x1A);
         private static readonly Color AccentLight = Color.FromRgb(0xFF, 0x9A, 0x5C);
+        private static readonly Color White = Color.FromRgb(0xFF, 0xFF, 0xFF);   // text on Accent
 
         private static Color At(Color colour, byte alpha) => Color.FromArgb(alpha, colour.R, colour.G, colour.B);
 
@@ -128,9 +129,10 @@ namespace HeronTools.Installer
                 Height = 34,
                 Margin = new Thickness(0, 0, 10, 0),
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Ink),
+                Foreground = new SolidColorBrush(White),   // White text on Accent (brand rule)
                 Cursor = Cursors.Hand,
-                Template = ButtonTemplate(Accent, AccentLight, null),
+                // Hover: Accent Light only as the light end of an Accent gradient, never alone.
+                Template = ButtonTemplate(new SolidColorBrush(Accent), new LinearGradientBrush(AccentLight, Accent, 90.0), null),
             };
             _install.Click += (s, e) => StartInstall();
 
@@ -144,7 +146,7 @@ namespace HeronTools.Installer
                 Foreground = new SolidColorBrush(Ink),
                 Cursor = Cursors.Hand,
                 ToolTip = "Takes Heron Tools out of every Revit on this PC. It asks first.",
-                Template = ButtonTemplate(Colors.Transparent, At(Ink, 0x0F), At(Ink, 0x40)),
+                Template = ButtonTemplate(Brushes.Transparent, new SolidColorBrush(At(Ink, 0x0F)), At(Ink, 0x40)),
             };
             _remove.Click += (s, e) => StartRemove();
 
@@ -156,7 +158,7 @@ namespace HeronTools.Installer
                 Foreground = new SolidColorBrush(Ink),
                 Cursor = Cursors.Hand,
                 IsCancel = true,
-                Template = ButtonTemplate(Colors.Transparent, At(Ink, 0x0F), At(Ink, 0x40)),
+                Template = ButtonTemplate(Brushes.Transparent, new SolidColorBrush(At(Ink, 0x0F)), At(Ink, 0x40)),
             };
             close.Click += (s, e) => Close();
 
@@ -429,12 +431,12 @@ namespace HeronTools.Installer
             Margin = new Thickness(0, 14, 0, 0),
         };
 
-        private static ControlTemplate ButtonTemplate(Color fill, Color hover, Color? border)
+        private static ControlTemplate ButtonTemplate(Brush fill, Brush hover, Color? border)
         {
             var template = new ControlTemplate(typeof(Button));
             var box = new FrameworkElementFactory(typeof(Border), "box");
             box.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
-            box.SetValue(Border.BackgroundProperty, new SolidColorBrush(fill));
+            box.SetValue(Border.BackgroundProperty, fill);
             box.SetValue(Border.BorderThicknessProperty, new Thickness(border.HasValue ? 1 : 0));
             if (border.HasValue)
                 box.SetValue(Border.BorderBrushProperty, new SolidColorBrush(border.Value));
@@ -446,7 +448,7 @@ namespace HeronTools.Installer
             template.VisualTree = box;
 
             var over = new Trigger { Property = IsMouseOverProperty, Value = true };
-            over.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(hover), "box"));
+            over.Setters.Add(new Setter(Border.BackgroundProperty, hover, "box"));
             template.Triggers.Add(over);
 
             var off = new Trigger { Property = IsEnabledProperty, Value = false };
