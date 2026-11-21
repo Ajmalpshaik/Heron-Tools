@@ -23,7 +23,9 @@ model, then `PROVEN`. Everything in Heron Tools 1.0.0 is `DRAFT` until the Filte
 ## Where the checker looks
 
 Every `.cs`, `.ps1` and `.xaml` file under `src/`, `build/` and `installer/`, skipping `bin`, `obj` and `.vs`. A field
-counts only in the file's first 41 lines, on a comment line.
+counts only in the file's first 41 lines, on a comment line: `//` in C#, `#` in PowerShell, and in XAML
+inside the file's first `<!-- -->` comment. The checker also refuses a field with no value, a `Heron-Agent`
+that is not `none`, and a `Heron-Status` or `Heron-Layer` that is not spelled exactly as in the table above.
 
 ## What it looks like
 
