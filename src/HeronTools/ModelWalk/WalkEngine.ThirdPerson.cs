@@ -137,7 +137,14 @@ namespace HeronTools.Services.ModelWalk
                 {
                     WalkRayHit blocker = _collision.CastNear(pivot, direction, length);
                     if (blocker != null)
-                        allowed = Math.Min(length, Math.Max(WalkTuning.ThirdPersonMinBackFt, blocker.DistanceFt - WalkTuning.ThirdPersonWallGapFt));
+                    {
+                        // A gap before the surface; with no room for the gap (a duct just above the head, looking
+                        // down) half way to it - always in front of the surface, never 300 mm past it.
+                        double room = blocker.DistanceFt - WalkTuning.ThirdPersonWallGapFt;
+                        allowed = room >= WalkTuning.ThirdPersonMinBackFt
+                            ? Math.Min(length, room)
+                            : Math.Min(WalkTuning.ThirdPersonMinBackFt, blocker.DistanceFt * 0.5);
+                    }
                 }
                 _slidePivot = pivot;
                 _slideDirection = direction;
