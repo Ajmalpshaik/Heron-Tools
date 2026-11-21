@@ -105,7 +105,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | GM-A36 | Low | Teleport into a ceiling void | Fixed: Go to point lands on the floor below the aimed point and needs head room and body room; refused with a reason. |
 | GM-A37 | Low | `Raise()` result ignored | Fixed: Denied / TimedOut for more than 5 s ends the walk with a plain message. |
 | GM-A38 | Low | Toggle after view validation | Fixed with GM-A13. |
-| GM-A39 | Low | `MM_TO_FEET` rounded | Fixed in Model Walk (`1 / 304.8` from `FEET_TO_MM`). Heron's shared `Constants.MM_TO_FEET` left as is - changing it touches every tool (owner decision). |
+| GM-A39 | Low | `MM_TO_FEET` rounded | Fixed in Model Walk (`1 / 304.8` from `FEET_TO_MM`). Heron's shared `Constants.MM_TO_FEET` made exact too, in its own change (issue #40, `19b2a12`); only View Crop uses it, moving by less than 0.001 mm. |
 | GM-A40 | Low | Frame ms shown to everyone | Fixed: hidden behind F12. |
 | GM-A41 | Low | First 3D view type, no template | Kept; now said in the tooltip. |
 | GM-A42 | Low | AJ credit lines and names | Fixed: Heron names; no credit lines (About Heron covers it). |
@@ -133,9 +133,8 @@ distances in mm in `WalkTuning` (19).
    2026-11-21: "Keep snag colours after walk"); Clear snag colours, Save and Sync still give them back.
 3. **One walk view per person** in workshared models - kept.
 4. **J** clears snag colours - kept.
-5. Heron's shared `Constants.MM_TO_FEET` (0.00328084) - **not changed** (other tools use it). Follow-up: make it
-   exactly `1 / 304.8` for every tool in its own change, with each tool re-tested. Model Walk already uses
-   `1 / Constants.FEET_TO_MM`.
+5. Heron's shared `Constants.MM_TO_FEET` - made exactly `1 / 304.8` in its own change (issue #40). View Crop is its
+   only user; its margins and offsets move by less than 0.001 mm. View Crop still needs a Revit look.
 6. Removing Game Mode from AJ-Tools - only on Ajmal's typed "yes", after the Revit test.
 
 ## Results
@@ -348,3 +347,19 @@ Issues opened by the review session for later work: #40, #41, #42.
 Add to the owner's test script: **16. Held Esc.** Walk, hold Esc for two seconds: paused, not ended. **17. Alt+F4.**
 Hide something, Alt+F4 on the walk: the walk ends, the element shows again, back in your 3D view. **18. Kept red,
 snag again.** With colours kept from an earlier walk, snag the same element: a new report row, still red.
+
+## Revit test results (issue #42)
+
+Fill in after the owner's Revit test: PASS / FAIL, and what was seen for a FAIL. When every row passes, the Model Walk
+files go from `Heron-Status: DRAFT` to `PROVEN`. Only after that, and on the owner's typed "yes", is Game Mode removed
+from AJ-Tools.
+
+| Step | Revit 2024 | Revit 2020 | Revit 2027 | What was seen |
+|---|---|---|---|---|
+| 1-14 (owner's test script) | | | | |
+| 15 Cancelled close | | | | |
+| 16 Held Esc | | | | |
+| 17 Alt+F4 | | | | |
+| 18 Kept red, snag again | | | | |
+| 19 Snags.csv on a ";" Windows region opens in columns (issue #41) | | | | |
+| 20 View Crop margin and annotation offset look the same as before (issue #40) | | | | |
