@@ -250,13 +250,16 @@ namespace HeronTools.Services.ModelWalk
             hud.Hovering = _session.Mode == WalkMoveMode.Walk && _hovering;
             _session.Position = position;
 
+            // --- Third person: the camera behind the player, and the figure's pose (WalkEngine.ThirdPerson.cs) ---
+            XYZ eye = UpdateThirdPerson(doc, view, input, hud, position, forward, right, dt, out bool figureRedraw, out bool figureAnimating);
+
             // --- Camera: no transaction, no Undo entry. Sent only when it changed. ---
-            if (_lastEye == null || !_lastEye.IsAlmostEqualTo(position) ||
+            if (_lastEye == null || !_lastEye.IsAlmostEqualTo(eye) ||
                 Math.Abs(_lastYaw - input.YawDeg) > 1e-6 || Math.Abs(_lastPitch - pitchDeg) > 1e-6)
             {
                 try
                 {
-                    view.SetOrientation(new ViewOrientation3D(position, up, forward));
+                    view.SetOrientation(new ViewOrientation3D(eye, up, forward));
                 }
                 catch (Autodesk.Revit.Exceptions.InvalidOperationException)
                 {
@@ -264,19 +267,24 @@ namespace HeronTools.Services.ModelWalk
                         "(the lock on the view control bar) and start Model Walk again.", touchModel: true, returnToStart: true);
                     return;
                 }
-                _lastEye = position;
+                _lastEye = eye;
                 _lastYaw = input.YawDeg;
                 _lastPitch = pitchDeg;
                 uidoc.RefreshActiveView();
+            }
+            else if (figureRedraw)
+            {
+                uidoc.RefreshActiveView();   // the figure appeared, went, or its limbs are easing to rest: no camera move
             }
 
             // --- Readout under the crosshair: the full view, ten times a second at most ---
             if (now - _lastInspect >= WalkTuning.InspectRefreshSec || input.GoToPointAimHold)
             {
                 _lastInspect = now;
-                WalkRayHit aim = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+                // The crosshair ray starts at the camera (the player's eye in first person); the distance is the player's.
+                WalkRayHit aim = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
                 hud.AimHasHit = aim != null;
-                hud.AimDistanceMm = aim != null ? WalkTuning.FtToMm(aim.DistanceFt) : 0;
+                hud.AimDistanceMm = aim != null ? WalkTuning.FtToMm(PlayerDistanceFt(aim, position)) : 0;
                 hud.AimLine1 = aim != null ? WalkCollision.DescribeLine1(aim) : "";
                 hud.AimLine2 = aim != null ? WalkCollision.DescribeLine2(aim) : "";
                 hud.GoToPointValid = input.GoToPointAimHold && aim != null;
@@ -299,7 +307,7 @@ namespace HeronTools.Services.ModelWalk
             UpdateStatus(doc, hud, input, position);
             UpdateViewRectangle(uidoc, hud, input);
 
-            hud.NeedsFrames = playing || input.GoToPointAimHold || _velocity.GetLength() > 0 ||
+            hud.NeedsFrames = playing || input.GoToPointAimHold || _velocity.GetLength() > 0 || figureAnimating ||
                               (_session.Mode == WalkMoveMode.Walk && !_session.Grounded && !hud.Hovering);
         }
 
@@ -404,6 +412,7 @@ namespace HeronTools.Services.ModelWalk
                     break;
             }
             if (input.Run) mode += " - running";
+            mode += input.ThirdPerson ? "  -  Third person" : "  -  First person";
 
             hud.StatusLine = "Facing " + facing + " (project)  -  " + mode + "  -  Speed " + (input.SpeedStep + 1) + "/" + _session.Settings.SpeedStepCount;
         }
@@ -456,9 +465,31 @@ namespace HeronTools.Services.ModelWalk
             var notes = new List<string>();
             Document doc = _session.Document;
 
+            // The third-person figure goes first, whatever else fails: hidden, off the active list, removed if Revit allows.
+            bool figureWasShown = WalkFigureServer.Pose.Visible;
+            WalkFigureServer.SwitchOff();
+            if (figureWasShown && doc.IsValidObject)
+            {
+                try { app?.ActiveUIDocument?.RefreshActiveView(); }
+                catch (Autodesk.Revit.Exceptions.ApplicationException) { /* the next redraw clears it */ }
+            }
+
             if (touchModel && doc.IsValidObject)
             {
                 View3D view = doc.GetElement(_session.WalkViewId) as View3D;
+                if (view != null && _thirdEye != null && _session.Position != null)
+                {
+                    // Third person left the walk view's camera 3 m behind the player. The next walk starts from the
+                    // walk view's camera, so put it back on the player's eyes - or that walk would start behind a wall.
+                    // No transaction: the same camera move every frame makes.
+                    try
+                    {
+                        double pitch = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, _session.Input.PitchDeg));
+                        view.SetOrientation(Orientation(_session.Position, _session.Input.YawDeg, pitch));
+                        _thirdEye = null;
+                    }
+                    catch (Autodesk.Revit.Exceptions.ApplicationException) { /* a locked view: the next walk starts from that camera */ }
+                }
                 if (view != null)
                 {
                     if (_session.Settings.KeepSnagColours)
@@ -518,6 +549,8 @@ namespace HeronTools.Services.ModelWalk
                 return null;
             _ended = true;
             _session.Running = false;
+            // No Revit API here: the figure is hidden at once and switched off on Revit's thread at its next idle moment.
+            WalkFigureServer.SwitchOffSoon();
             var notes = new List<string>();
             string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);

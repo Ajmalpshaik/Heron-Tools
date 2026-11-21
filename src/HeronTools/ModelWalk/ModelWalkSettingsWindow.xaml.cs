@@ -44,11 +44,13 @@ namespace HeronTools.UI.ModelWalk
         {
             SensitivityBox.Text = Number(s.SensitivityPercent);
             InvertLookBox.IsChecked = s.InvertLook;
+            ThirdPersonBox.IsChecked = s.ThirdPerson;
             EyeHeightBox.Text = Number(s.EyeHeightMm);
             StepUpBox.Text = Number(s.StepUpMm);
             for (int i = 0; i < _speedBoxes.Length; i++)
                 _speedBoxes[i].Text = i < s.SpeedsMetresPerSec.Length ? s.SpeedsMetresPerSec[i].ToString("0.0##", CultureInfo.CurrentCulture) : "";
             KeepSnagColoursBox.IsChecked = s.KeepSnagColours;
+            AskSnagCommentBox.IsChecked = s.AskSnagComment;
             UpdateLowEyeNote();
         }
 
@@ -85,6 +87,7 @@ namespace HeronTools.UI.ModelWalk
                 return null;
             }
             s.InvertLook = InvertLookBox.IsChecked == true;
+            s.ThirdPerson = ThirdPersonBox.IsChecked == true;
 
             if (!TryRead(EyeHeightBox.Text, out s.EyeHeightMm) ||
                 !WalkSettings.InRange(s.EyeHeightMm, WalkSettings.MinEyeHeightMm, WalkSettings.MaxEyeHeightMm))
@@ -119,6 +122,7 @@ namespace HeronTools.UI.ModelWalk
             }
             s.SpeedsMetresPerSec = speeds;
             s.KeepSnagColours = KeepSnagColoursBox.IsChecked == true;
+            s.AskSnagComment = AskSnagCommentBox.IsChecked == true;
             return s;
         }
 

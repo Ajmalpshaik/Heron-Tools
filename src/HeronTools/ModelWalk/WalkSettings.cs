@@ -6,7 +6,7 @@
 // See docs/metadata-standard.md
 
 // Model Walk - the modeller's own settings: mouse sensitivity, invert look, the five walk speeds, eye height,
-// step-up height and "keep snag colours after the walk". Saved for this Windows user in
+// step-up height, "keep snag colours after the walk", "ask for a comment at each snag" and "third-person view". Saved for this Windows user in
 // %AppData%\HeronTools\ModelWalkSettings.txt. Distances are millimetres here and in the window; feet only come out
 // of the *Ft properties, for the engine. A damaged or hand-edited file can never give a value outside the limits
 // below - such a line keeps its standard value. No Revit API here.
@@ -67,6 +67,20 @@ namespace HeronTools.Services.ModelWalk
         /// every Save / Sync - no snag colour is saved in the model.
         /// </summary>
         public bool KeepSnagColours = true;
+
+        /// <summary>
+        /// Off (standard - Ajmal, 2026-11-21: quick snagging): a snag click records, colours and pictures the element and
+        /// the walk carries on at once; the comments are written later in the pause menu's snag list. On: the comment
+        /// box opens right after each snag's picture (the first behaviour).
+        /// </summary>
+        public bool AskSnagComment;
+
+        /// <summary>
+        /// Off (standard): the walk starts in first person. On: it starts in third person - the camera behind the
+        /// player and a simple figure drawn where the player stands (screen graphics only, nothing in the model). The
+        /// third-person key switches it during a walk either way.
+        /// </summary>
+        public bool ThirdPerson;
 
         /// <summary>Lines saying what a loaded file could not use (shown once when the walk starts).</summary>
         public List<string> LoadWarnings { get; } = new List<string>();
@@ -171,6 +185,12 @@ namespace HeronTools.Services.ModelWalk
                     case "keepsnagcolours":
                         if (bool.TryParse(value, out bool keep)) s.KeepSnagColours = keep; else damaged = true;
                         break;
+                    case "thirdperson":
+                        if (bool.TryParse(value, out bool third)) s.ThirdPerson = third; else damaged = true;
+                        break;
+                    case "asksnagcomment":
+                        if (bool.TryParse(value, out bool ask)) s.AskSnagComment = ask; else damaged = true;
+                        break;
                 }
             }
             if (damaged)
@@ -206,7 +226,9 @@ namespace HeronTools.Services.ModelWalk
                     "SpeedsMetresPerSec=" + string.Join(";", speeds),
                     "EyeHeightMm=" + EyeHeightMm.ToString("0.###", CultureInfo.InvariantCulture),
                     "StepUpMm=" + StepUpMm.ToString("0.###", CultureInfo.InvariantCulture),
-                    "KeepSnagColours=" + KeepSnagColours
+                    "KeepSnagColours=" + KeepSnagColours,
+                    "AskSnagComment=" + AskSnagComment,
+                    "ThirdPerson=" + ThirdPerson
                 };
                 // Written beside it first, then moved over, so a crash half-way never leaves a broken file.
                 File.WriteAllLines(temp, lines);

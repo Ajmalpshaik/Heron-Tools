@@ -226,13 +226,34 @@
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"
                                Visibility="Collapsed"/>
 
-                    <!-- Snags: click one to go back to it -->
+                    <!-- Snags: click one to write its comment; Open goes back to it and selects the element -->
                     <StackPanel x:Name="SnagSection" Margin="0,14,0,0" Visibility="Collapsed">
-                        <TextBlock Text="Snags - click one to go back to it and select the element" Style="{StaticResource HudHint}"
-                                   Foreground="{StaticResource TextSecondary}" Margin="2,0,0,4"/>
-                        <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <DockPanel Margin="2,0,0,4">
+                            <TextBlock x:Name="SnagMissingText" DockPanel.Dock="Right" Style="{StaticResource HudHint}"
+                                       Foreground="{StaticResource AccentWarning}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Snags - click one to write its comment. Open goes back to it" Style="{StaticResource HudHint}"
+                                       Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel x:Name="SnagMenuList"/>
                         </ScrollViewer>
+
+                        <!-- One comment box for the snag picked in the list. Enter saves, Esc closes the box only. -->
+                        <Border x:Name="SnagEditCard" Background="{StaticResource BackgroundLight}" BorderBrush="{StaticResource BorderSoft}"
+                                BorderThickness="1" CornerRadius="10" Padding="10,8" Margin="0,8,0,0" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock x:Name="SnagEditTitle" Foreground="{StaticResource TextPrimary}" FontSize="12.5"
+                                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <DockPanel Margin="0,6,0,0">
+                                    <Button x:Name="SnagCommentSaveButton" DockPanel.Dock="Right" Content="Save comment"
+                                            Style="{StaticResource CompactSecondaryButton}" Margin="6,0,0,0" Click="OnSnagCommentSaveClick"
+                                            ToolTip="Write this comment in the snag report (Enter)"/>
+                                    <TextBox x:Name="SnagCommentBox" Style="{StaticResource ModernTextBox}" MaxLength="500"/>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource HudHint}" Margin="0,5,0,0"
+                                           Text="Enter saves and goes to the next snag with no comment  -  Esc closes the box without saving"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
 
                     <!-- Viewpoints: go, save as a Revit 3D view, delete -->

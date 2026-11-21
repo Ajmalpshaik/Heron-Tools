@@ -1,6 +1,6 @@
 # Model Walk - user guide
 
-Walk through the live Revit model in first person: look at things, select them, measure, and record snags with a
+Walk through the live Revit model in first person (or third person, with a figure): look at things, select them, measure, and record snags with a
 picture and a comment for the coordination meeting. Heron tab, **Coordination** panel, **Model Walk**.
 
 > Not yet tested in a real Revit. See [model-walk-move-notes.md](model-walk-move-notes.md) for what still needs a test.
@@ -42,6 +42,7 @@ you walk through it. Change these while paused, then carry on.
 | H | Help card on / off |
 | P or Esc | Pause |
 | F12 | Frame timing (for checking speed on a big model) |
+| Q | First person / third person - see a figure where you stand (below) |
 
 Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow keys.
 
@@ -69,9 +70,21 @@ Linked elements: Select and Hide refuse them (they cannot be picked alone). Snag
 
 ## Snags and the snag report
 
-1. Pick **Snag** mode, aim, left click.
-2. A picture of the view is taken (the HUD is hidden for it).
-3. A small box asks for a comment. Type it, **Enter** saves, **Esc** skips (the snag is kept without one).
+**Quick snagging (standard).** Pick **Snag** mode, aim, left click - and again, and again. Each click records the
+element, colours it red and takes a picture of the view (the HUD is hidden for it, about a tenth of a second). No box
+opens: a short message says "Snag n recorded ... - add a comment in the pause menu (Esc)" and you keep walking. A click
+while the last picture is still being taken is refused with "One moment"; click again.
+
+**Write the comments afterwards.** Press **Esc**. The pause menu lists every snag (newest first): its number, category,
+family : type and comment - **No comment yet** (in the warning colour) where there is none, and how many still have
+none. Click a snag: a comment box opens under the list. Type, then **Enter** (or **Save comment**) - it is saved and the
+box goes straight on to the next snag with no comment. **Esc** closes the box without saving (the next Esc ends the
+walk, as usual). Empty the box and save to remove a comment. While you type, no walk or menu key acts (S, K, W ... are
+just letters). Carry on walking, Open or End walk keep what you typed. **Open** on a row goes back to that snag.
+
+**Comment at each snag instead.** Tick **Ask for a comment at each snag** in Settings: after each snag's picture a
+small box asks for the comment, **Enter** saves, **Esc** skips (the snag is kept without one). You can still change any
+comment in the pause menu.
 
 Everything goes in one folder per walk, **next to the model**:
 `<model folder>\Model Walk - <model name>\<date time>\`. If the model is not saved, is a cloud model, or that folder
@@ -88,7 +101,8 @@ The folder holds:
 - **Snag 001.png**, **Snag 002.png**... - one picture per snag.
 - **Snapshot ....png** - pictures taken with K.
 
-The CSV is saved again after every snag and comment, so nothing is lost if Revit stops. If Excel has it open, close
+The CSV is saved again after every snag and every comment (also each one saved in the pause menu), so nothing is lost
+if Revit stops. If Excel has it open, close
 it - the next change saves it again. **Open report folder** in the pause menu opens the folder.
 
 **Snag colours:** the red stays in the walk view after the walk (standard), until J or **Clear snag colours** in the
@@ -100,7 +114,8 @@ changed yourself after snagging is left as you set it. To get the colours back a
 
 - **Carry on walking** (or Enter).
 - **Settings** (S), **Keys** (K), **Clear snag colours**, **Open report folder**, **End walk** (Esc).
-- **Snags** - newest first. Click one: the camera goes back where it was recorded and the element is added to Revit's
+- **Snags** - newest first, with the comment or **No comment yet**. Click one to write or change its comment (see
+  above). **Open** on a row: the camera goes back where it was recorded and the element is added to Revit's
   selection - what you already selected stays (a linked element is not selected).
 - **Viewpoints** - click one to go there; **Save as 3D view**; **Delete**; **Play viewpoints**.
 
@@ -115,6 +130,27 @@ changed yourself after snagging is left as you set it. To get the colours back a
   a sheet or in the meeting.
 - **Play viewpoints** (O) moves smoothly through all of them, pausing at each. Any move key stops it.
 
+## Third person
+
+**Q** switches to third person: the camera moves **3000 mm behind you and 500 mm to the right**, and a simple blocky
+figure stands where you are, in the Heron colours (orange body, dark legs, light head). Its arms and legs swing while you
+walk or run and come to rest when you stop. **Q** again goes back to first person. The status line (top left) always
+says **First person** or **Third person**. To start every walk in third person, tick **Third-person view (show a
+figure)** in Settings.
+
+- **Nothing is added to the model.** The figure is drawn on screen by Revit's own graphics, in the walk view only - no
+  element, no Undo step, nothing saved. Walls and ducts hide it when it walks behind them.
+- When a wall is behind you, the camera **slides in** closer, always stopping in front of the surface, so it never
+  looks through it.
+- You still walk, bump into walls, climb steps and go through doors as **you**, not the camera.
+- **Clicks act on what is under the crosshair**: Select, Snag, Hide, Measure, Go to point and the readout aim from the
+  camera, so they hit what you see in the middle of the screen. The distance shown is from you, not from the camera.
+- **Viewpoints** and **Open snag** keep where *you* stood and looked, not the camera behind you. "Save as 3D view"
+  looks from your eyes (first person). When the walk ends, the walk view's camera goes back to your eyes, so the next
+  walk starts where you stood.
+- **Snag pictures never show the figure** (it is hidden for the moment the picture is taken). **Snapshots (K) do show
+  it** - they are what you see. Press Q first for a snapshot without it.
+
 ## Measure
 
 **M** at the first point, **M** at the second. The HUD shows the distance in mm, with its horizontal and vertical
@@ -127,10 +163,12 @@ Nothing is drawn on the model. M again starts a new measure.
 |---|---|---|
 | Mouse sensitivity | 100 % | 25 - 250 % (lower it if fast turning makes you feel unwell) |
 | Invert look | off | mouse forward looks down |
+| Third-person view (show a figure) | off | start each walk in third person; Q switches during the walk |
 | Walk speeds, slowest first | 0.8, 1.5, 3.5, 5.5, 8 m/s | 0.2 - 20 m/s, each faster than the last. Fly x2, Shift x3 |
 | Eye height | 1700 mm | 1000 - 2000 mm (low eye = 1000 mm, or 300 mm under the eye) |
 | Step-up height | 350 mm | 100 - 450 mm - the highest stair or step you walk up |
 | Keep snag colours after the walk | on | |
+| Ask for a comment at each snag | off | off = quick snagging, comments in the pause menu; on = a box after each snag |
 
 Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). Save applies them at once.
 

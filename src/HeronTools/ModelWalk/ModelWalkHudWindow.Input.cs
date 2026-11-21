@@ -125,6 +125,10 @@ namespace HeronTools.UI.ModelWalk
             {
                 if (_session.Input.Pointer == WalkPointerMode.Inspect)
                     _session.Hud.Toast("Inspect only reads. Right-click or Tab for Select, Snag or Hide.");
+                else if (_session.Input.Pointer == WalkPointerMode.Snag && (_snapshotBusy || _session.Hud.SnagAwaitingPicture > 0))
+                    // Quick snagging: the last snag's picture is still being taken (about a tenth of a second). One
+                    // picture at a time, so the next snag waits for a click of its own rather than losing its picture.
+                    _session.Hud.Toast("One moment - the last snag's picture is being taken. Click again.");
                 else
                     _session.Input.ClickQueued = true;
                 e.Handled = true;
@@ -167,7 +171,9 @@ namespace HeronTools.UI.ModelWalk
             switch (mode)
             {
                 case WalkPointerMode.Select: return "Select - a click adds the element to Revit's selection (again takes it out). It stays selected after the walk.";
-                case WalkPointerMode.Snag: return "Snag - a click records the element with a picture and your comment, and colours it red in the walk view.";
+                case WalkPointerMode.Snag: return _session.Settings.AskSnagComment
+                    ? "Snag - a click records the element with a picture and your comment, and colours it red in the walk view."
+                    : "Snag - a click records the element with a picture and colours it red. Write the comments in the pause menu (Esc).";
                 case WalkPointerMode.Hide: return "Hide - a click hides the element for now. " + _keys.Label(WalkKeyBindings.ShowHidden) + " shows what this walk hid.";
                 default: return "Inspect - what is under the crosshair, and how far away it is. Changes nothing.";
             }
@@ -194,6 +200,10 @@ namespace HeronTools.UI.ModelWalk
 
             if (_paused)
             {
+                // Writing a snag comment in the pause menu: the box takes the keys (S, K, W... type letters, a held key
+                // repeats as in any text box). Enter saves, Esc closes the box only - the next Esc ends the walk as usual.
+                if (PauseCommentKeyDown(e, key))
+                    return;
                 // A held Esc pauses, then repeats: without this the same key press would also end the walk
                 // (and a held S / K / Enter would open or resume again and again).
                 if (e.IsRepeat) { e.Handled = true; return; }
@@ -274,6 +284,7 @@ namespace HeronTools.UI.ModelWalk
                 case WalkKeyBindings.Help: if (first) _helpVisible = !_helpVisible; break;
                 case WalkKeyBindings.Pause: PauseWalk(); break;
                 case WalkKeyBindings.FrameTiming: if (first) _showFrameTiming = !_showFrameTiming; break;
+                case WalkKeyBindings.ThirdPerson: if (first) ToggleThirdPerson(); break;
                 default: return;
             }
             e.Handled = true;
@@ -283,8 +294,8 @@ namespace HeronTools.UI.ModelWalk
         {
             Key key = e.Key == Key.System ? e.SystemKey : e.Key;
             WalkInput input = _session.Input;
-            if (EntryOpen)
-                return;   // typing: the box has the keys (held moves were cleared when it opened)
+            if (EntryOpen || (_paused && SnagCommentBox.IsKeyboardFocusWithin))
+                return;   // typing: the box has the keys (held moves were cleared when it opened, or when the walk paused)
 
             if (key == Key.Up) { input.MoveForward = false; e.Handled = true; return; }
             if (key == Key.Down) { input.MoveBack = false; e.Handled = true; return; }
@@ -314,13 +325,28 @@ namespace HeronTools.UI.ModelWalk
 
         private void AutoHideHelp() => _helpVisible = false;
 
+        /// <summary>First / third person. The engine moves the camera and shows or hides the figure on the next frame.</summary>
+        private void ToggleThirdPerson()
+        {
+            WalkInput input = _session.Input;
+            input.ThirdPerson = !input.ThirdPerson;
+            _lookDirty = true;   // ask Revit for a frame now, even standing still
+            _session.Hud.Toast(input.ThirdPerson
+                ? "Third person - the camera is behind you; clicks still act on what is under the crosshair (" +
+                  _keys.Label(WalkKeyBindings.ThirdPerson) + " = first person)"
+                : "First person");
+        }
+
         /// <summary>Settings - only while paused. Save applies them to this walk at once; Cancel changes nothing.</summary>
         private void OpenSettings()
         {
             var window = new ModelWalkSettingsWindow(_session.Settings) { Owner = this };
             if (window.ShowDialog() != true || window.Result == null)
                 return;
+            bool thirdPersonChanged = window.Result.ThirdPerson != _session.Settings.ThirdPerson;
             _session.Settings = window.Result;
+            if (thirdPersonChanged)
+                _session.Input.ThirdPerson = window.Result.ThirdPerson;   // the new setting applies to this walk at once
             _session.Input.SettingsChangedQueued = true;   // the engine finds the floor again at the new eye height
             HelpText.Text = BuildHelpText();
             _session.Hud.Toast(window.SaveProblem ?? "Settings saved", window.SaveProblem == null ? WalkToastKind.Done : WalkToastKind.Refused);

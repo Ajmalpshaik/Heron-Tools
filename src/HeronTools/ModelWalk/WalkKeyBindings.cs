@@ -60,6 +60,7 @@ namespace HeronTools.Services.ModelWalk
         public const string Help = "Help";
         public const string Pause = "Pause";
         public const string FrameTiming = "FrameTiming";
+        public const string ThirdPerson = "ThirdPerson";
 
         public static readonly IReadOnlyList<WalkKeyAction> Actions = new List<WalkKeyAction>
         {
@@ -87,6 +88,7 @@ namespace HeronTools.Services.ModelWalk
             new WalkKeyAction(Help,           "Help card on / off",                         Key.H),
             new WalkKeyAction(Pause,          "Pause",                                      Key.P),
             new WalkKeyAction(FrameTiming,    "Frame timing on / off",                      Key.F12),
+            new WalkKeyAction(ThirdPerson,    "First / third person (show a figure)",       Key.Q),
         };
 
         /// <summary>Keys no action may take: they are fixed, or Windows owns them.</summary>

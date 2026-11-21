@@ -32,6 +32,7 @@ step-by-step Revit test script. The user guide is [model-walk-guide.md](model-wa
 | nested `GameNative` | `WalkNative.cs` |
 | `GameKeySettingsWindow.xaml` / `.xaml.cs` | `ModelWalkKeysWindow.xaml` / `.xaml.cs` |
 | - (stage 4) | `WalkSettings.cs` + `ModelWalkSettingsWindow.xaml` / `.xaml.cs` (Settings), `WalkViewpointStore.cs` (viewpoints per model), `WalkEngine.Rooms.cs` (room in the location line), `ModelWalkHudWindow.Entry.cs` (comment / name box), `ModelWalkHudWindow.Pause.cs` (pause menu) |
+| `GameCharacterServer.cs`, `GameMotionEngine.ThirdPerson.cs` (AJ-Tools v1.60.0, `a5eb30b`, added after the first move) | `WalkFigureServer.cs` (the figure, DirectContext3D, switch on / off), `WalkEngine.ThirdPerson.cs` (camera and pose) - see "Third-person view" at the end |
 | `Resources/GameMode.png`, `GameGun.png`, `GameRifle.png`, `GameSnagGun.png` | `Resources/Icons/ModelWalk16.png`, `ModelWalk32.png` (new, house style, embedded); gun pictures dropped |
 | `RibbonManager.BuildGamePanel` | `App/HeronToolsApp.cs`, Coordination panel, button "Model Walk" |
 
@@ -372,6 +373,19 @@ from AJ-Tools.
 | 27 Shared coordinates (GM-A22) | | | | |
 | 28 Snapshot is clean (GM-A30) | | | | |
 | 29 J clears only snag colours | | | | |
+| 30 Quick snags | | | | |
+| 31 Comments in the pause menu | | | | |
+| 32 Change and remove a comment | | | | |
+| 33 Ask for a comment at each snag (on) | | | | |
+| 34 Third person on / off | | | | |
+| 35 Camera slides in at a wall | | | | |
+| 36 Clicks land on the crosshair | | | | |
+| 37 Figure gone on every end | | | | |
+| 38 Model closed while paused in third person | | | | |
+| 39 Pictures, viewpoints, Save as 3D view | | | | |
+| 40 Speed in third person (F12) | | | | |
+| 41 Next walk starts where you stood (after third person) | | | | |
+| 42 Camera under a low duct, looking down | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -400,3 +414,146 @@ next to each, with the Revit year.
 29. **J clears only snag colours.** Give a pipe your own colour override first. Snag two other elements, then
     change one of them by hand in Override Graphics in View. Press J. Expect: the one you changed keeps your change,
     the other snag gets its own colours back, and the pipe you coloured first is untouched.
+
+---
+
+# Quick snags and third-person view (2026-11-21)
+
+Two owner requests after the merge. Nothing here has run in Revit yet: builds only.
+
+## Quick snags
+
+The owner wants to click snag after snag without a box popping up, and write the comments later.
+
+| What | How |
+|---|---|
+| Setting | **Ask for a comment at each snag** (Settings, Snags card), `AskSnagComment` in `ModelWalkSettings.txt`, **off** by default. On = the first behaviour (comment box after each snag's picture). A file without the line reads as off. |
+| Snag click, setting off | Same record, colour (one Undo step) and picture (HUD hidden) as before; the engine's toast ends "- add a comment in the pause menu (Esc)"; the HUD opens no box, takes no focus, the walk carries on at once. |
+| Two snags in a row | One picture at a time. A Snag click while the last snag's picture is still waiting or being taken (about 0.1 s) is refused with "One moment - the last snag's picture is being taken. Click again." - before, the second number overwrote the first in `SnagAwaitingPicture` and the first snag lost its picture. The check runs in the HUD before the click is queued; the HUD and the ExternalEvent share Revit's UI thread, so there is no race. |
+| Pause menu snag list | Each row: number, category, family : type, and the comment - or **No comment yet** in `AccentWarning` (Warning = needs attention). The header says how many have no comment yet. Click a row = one comment box under the list (title "Snag n - ..."). **Open** (right of each row) = the old Open snag: camera back, element added to Revit's selection. |
+| Saving | Enter or **Save comment** writes the comment, rewrites `Snags.csv` through the temp file (same `WalkReport.Save`, so the Windows list separator from #41 is kept) and moves to the next snag (newest first) with no comment. An emptied box clears the comment. Carry on walking, Open, End walk and the end sequence save what was typed (`HidePauseMenu`). Esc drops it. |
+| Keys while typing | While the comment box has the keys, the paused key handler gives them to the box first: Enter saves, Esc closes the box only, every other key types - S and K do not open Settings / Keys, repeats are allowed (Backspace held). Key-up is ignored for the box too. Once the box is closed the old rules come back: repeats ignored while paused (held-Esc fix), Esc ends the walk, Enter carries on. |
+| Help, ribbon tooltip, Snag mode message | Say "click snag after snag, write the comments in the pause menu" when the setting is off. The ribbon tooltip also no longer says the colours come back when the walk ends (they stay by default since the owner's decision; J, Save and Sync give them back). |
+
+**Owner decision:** "Esc ... closes the box first, then resumes" was read as: the first Esc closes the comment box,
+the next Esc does what Esc does in the pause menu today (ends the walk). If the owner wants the second Esc to carry on
+walking instead, that is a one-line change in `OnWalkKeyDown`.
+
+### Revit test steps (quick snags)
+
+30. **Quick snags.** Settings: "Ask for a comment at each snag" is off. Snag mode, click five elements quickly. Expect
+    five red elements, five messages "Snag n recorded ... - add a comment in the pause menu (Esc)", no box, the walk
+    never stops. Click twice very fast: the second may say "One moment"; no snag may be left without a picture.
+31. **Comments in the pause menu.** Esc. Expect five rows, each "No comment yet", "5 with no comment yet". Click the
+    newest, type "Clash with tray" (try S, K, W in the text), Enter: saved, the box moves to the next one. Esc closes the
+    box; a second Esc ends the walk. Open the report folder: `Snags.csv` has the comment, 5 pictures.
+32. **Change and remove.** Pause, click a snag with a comment, change it, click Carry on walking: kept. Pause again,
+    empty another one, Enter: "comment removed", the row says "No comment yet" again.
+33. **Old way still there.** Tick "Ask for a comment at each snag", Save. Snag: the comment box opens as before.
+
+## Third-person view
+
+Ported from AJ-Tools Game Mode v1.60.0 (`a5eb30b`: `GameCharacterServer.cs`, `GameMotionEngine.ThirdPerson.cs` and
+the diffs in the HUD, keys and session). AJ-Tools was read only, never changed.
+
+| What | How |
+|---|---|
+| Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a figure)"; Q was free) and the setting **Third-person view (show a figure)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
+| Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** cast (`CastNear`, host + near links - up to 2 rays, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm - unless the surface is closer than 550 mm, then half way to it (always in front of it; stage 6 review). Cast only when the pivot or direction changed and both rays fit in the 24-ray budget; otherwise the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
+| Figure | `WalkFigureServer` (`IDirectContext3DServer`): about 17 shaded boxes (head, neck, body, pelvis, arms, legs, feet, a face stripe), 1810 mm tall, built fresh each redraw. Arms and legs swing with the distance walked (stride 900 mm; walk 26 degrees, run 43), easing to rest when you stop; a jump is not a step. Colours from the Heron palette only, as model-view colours like the snag red: Accent (body, arms), Surface (pelvis, legs), Mist (head, hands), Ink (feet, face stripe). Ambient / emissive / specular are darker steps of the same colour (shading, not new hues). Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
+| Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera, which is the picture the modeller aimed at. |
+| Rays | Third person adds at most **1** cast (2 rays with near links) a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
+| Redraws | The camera moving already redraws. With no camera move, the view is refreshed only when the figure appears or goes, or while its limbs ease to rest (frames are asked for until they do). |
+| Snag pictures | The figure is hidden from the snag click until its picture is saved (`SnagAwaitingPicture`, then `SnagPictureBusy` from the HUD) - snag pictures show the model only. **Snapshots (K) show the figure** (they are what you see); Q first for one without it. |
+| Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. When a walk ends in third person on Revit's thread, `End` puts the walk view's camera back on the player's eye (stage 6 review: the next walk starts from that camera). Only when the walk ends without Revit's thread (Revit busy, overlay fault) does it stay 3 m back. |
+
+### Switching the figure off - what Revit allows
+
+The Revit API notes for `ExternalService.RemoveServer` (identical in the 2020, 2021, 2022, 2023, 2024, 2025, 2026 and
+2027 `Nice3point.Revit.Api` XML) say a server that **has drawn in a model that is still open cannot be removed**
+(`ArgumentException`). So the figure is never left drawing, but the server object can stay registered, inactive,
+until the model closes. AJ-Tools leaves its server registered and active for the whole Revit session; Model Walk does
+this instead:
+
+| When | What happens |
+|---|---|
+| Walk starts | `WalkFigureServer.Prepare` (inside the command): makes the switch-off `ExternalEvent` and watches models closing, once per Revit session. Nothing is registered yet. |
+| First third-person frame | `SwitchOn` (inside the frame `ExternalEvent`): `AddServer` the first time, then put on the active list. A refusal turns third person off with a plain message. |
+| Every walk end on Revit's thread - End walk, Esc Esc, the ribbon button, model closed, view switched, walk view deleted, locked view, a fault in the frame | `WalkEngine.End` calls `SwitchOff` **first**: hidden (`CanExecute` false), off the active list, `RemoveServer` tried; the view is refreshed so the figure goes at once. |
+| Alt+F4 / overlay closed, Revit busy for 3 s, an overlay fault (`Guard`) | `EndWithoutRevit` - no Revit API there: `SwitchOffSoon` hides the figure at once (plain .NET flag) and raises the switch-off event, which runs `SwitchOff` and refreshes the view on Revit's next idle moment (skipped if a new walk switched it on meanwhile). Alt+F4 normally goes the Revit-thread way first (it ends the walk the normal way). |
+| A model closing | `DocumentClosing`: if it is the walk's model, `SwitchOff` (also covers a close while paused). `DocumentClosed`: `RemoveServer` tried again when no walk uses it - this is when Revit lets it go. |
+| Revit closing | `HeronToolsApp.OnShutdown` calls `SwitchOff`. |
+
+No transaction anywhere for the figure. Every member used (`ExternalServiceRegistry.GetService`,
+`MultiServerService.AddServer / RemoveServer / IsRegisteredServerId / GetActiveServerIds / SetActiveServers`, the
+`IDirectContext3DServer` members, `DrawContext.IsAvailable / FlushBuffer`, `VertexBuffer`, `IndexBuffer`,
+`EffectInstance`) has the same signature in all eight years' API notes, so there is no version-specific code.
+
+### Results (both changes)
+
+| Check | State |
+|---|---|
+| Build Revit 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027 (`dotnet build ... -p:EnableWindowsTargeting=true`, Linux) | PASS - 0 warnings, 0 errors each, after each change |
+| Metadata check (rules of `build/check-metadata.ps1`, run in Python - no pwsh here) | PASS - 211 files |
+| XAML: HUD and Settings well-formed, every resource key (XAML, `SetResourceReference`) in the theme, no raw colours | PASS |
+| XAML rendered to a picture | NOT RUN - WPF needs Windows |
+| The figure draws, swings, hides behind walls; the camera slides; switch-off on every end path | NEEDS REAL REVIT |
+| Quick snags, the pause menu comment box and its keys | NEEDS REAL REVIT |
+
+**Owner decisions:** (1) the second Esc after closing the comment box ends the walk (as Esc in the pause menu does
+today) - say if it should carry on walking instead; (2) the figure's colours (orange body) - any palette colour can be
+swapped in `WalkFigureServer.GroupColors`; (3) snapshots (K) show the figure - say if they should hide it like snag
+pictures.
+
+### Revit test steps (third person)
+
+34. **Third person on / off.** Start a walk, press Q. Expect: the camera jumps back about 3 m and a little right, an
+    orange figure stands where you were, the status line says "Third person". Walk: arms and legs swing; stop: they
+    come to rest. Shift: bigger swing. Q again: "First person", the figure is gone. Tick the setting, start a new
+    walk: it starts in third person.
+35. **Camera slides in at a wall.** In third person, walk backwards towards a wall (look away from it). Expect the
+    camera to come closer instead of looking through the wall, and to go back out as you step away. Walk behind a
+    column: the figure is hidden by it.
+36. **Clicks land on the crosshair.** In third person: Inspect a duct (the readout names what is under the crosshair,
+    the distance is from the figure), Select it, Snag another, Hide a third, Measure two points, Go to point on a floor.
+    Each acts on what is under the crosshair, not on something in front of the figure.
+37. **Figure gone on every end.** In third person, end the walk with: End walk; Esc Esc; the ribbon button; Alt+F4 on
+    the overlay; switching to another view. Each time open the walk view afterwards: no figure. Then save and reopen the
+    model: no figure, nothing in the model, no "Model Walk" Undo step for it.
+38. **Model closed while paused.** In third person press Esc, then close the model (Save: No). Expect no error; open
+    another model, start Model Walk in it: no leftover figure in the new model. Close Revit with a walk paused in third
+    person: Revit closes normally.
+39. **Pictures, viewpoints, Save as 3D view.** In third person: a snag's picture has no figure; a Snapshot (K) has it.
+    Press B, walk away, press 1: you stand where you saved, camera behind you again. Save that viewpoint as a 3D view:
+    it looks from your eyes, no figure in it.
+40. **Speed in third person (F12).** On the big model of step 21, press F12, walk for a minute in first person, then in
+    third person. Write down both averages and the rays count: third person may add 1 ray a frame, the frame time should
+    stay close to first person.
+
+## Stage 6 review (2026-11-21)
+
+A fresh read of the whole change (`git diff origin/main...HEAD`), the files it touches, and the Revit API notes in
+`Nice3point.Revit.Api` 2020-2027 for every graphics-service member used. Builds only - nothing here has run in Revit.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). Left: an end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view; that rare case still starts 3 m back. |
+| R2 | Medium | Wall slide: with a surface closer than 550 mm along the camera ray (a duct or slab just above the head while looking down), the camera was still put 300 mm out - past the surface, so the view looked from inside or behind it. | **Fixed** - the camera stops half way to such a surface, always in front of it. |
+| R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. |
+| R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and cancels a pending switch-off. `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
+| R5 | Checked, no defect | Quick snags: the "One moment" refusal, the picture hand-off (`SnagAwaitingPicture` cleared and `SnagPictureBusy` set in the same UI-thread call, so the figure cannot come back between them), `Snags.csv` rewritten through the temp file with the #41 separator and quoting for commas, quotes and line breaks, comment-box keys (Enter / Esc / repeats), Open still adds to the selection, the setting on = the old box. | - |
+| R6 | Note, not changed | A click uses the previous frame's camera with this frame's look direction; turning fast while clicking in third person can shift the hit by a few centimetres. First person has the same one-frame lag. A snag recorded and then paused within 0.1 s keeps no picture (as before this change). The "One moment" message also shows while a Snapshot (K) is being taken. | Left - no new behaviour asked for. |
+
+Extra Revit test steps:
+
+41. **Next walk starts where you stood.** In third person, walk next to a wall with a room behind you, end the walk
+    (End walk). Click Model Walk again: you start where the figure stood, not 3 m back.
+42. **Camera under a low duct.** In third person, stand under a duct or beam about 200 mm above your head and look
+    down. Expect the camera close above the figure, never inside or above the duct.
+
+| Check (stage 6) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 211 files |
+| XAML resource keys used by the change all in the theme | PASS |
+| R1-R3 in Revit (steps 35, 41, 42) | NEEDS REAL REVIT |
