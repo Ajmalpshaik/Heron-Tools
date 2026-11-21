@@ -131,12 +131,13 @@ namespace HeronTools.UI.ModelWalk
         {
             CancelCapture();
             string problem = _keys.Save();
-            _saved = true;   // in memory either way: the keys work for this walk
             if (problem != null)
             {
+                // Not saved: keep the window open so the modeller sees why. Cancel still puts the old keys back.
                 StatusText.Text = problem;
-                return;      // keep the window open so the modeller sees why
+                return;
             }
+            _saved = true;
             DialogResult = true;
         }
 
