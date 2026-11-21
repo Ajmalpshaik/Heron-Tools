@@ -77,8 +77,13 @@ namespace HeronTools.Services.ModelWalk
 
         private sealed class Reader
         {
+            // Deeper nesting than this is refused: each level is one call deeper, and running out of stack would end
+            // Revit itself (a stack overflow cannot be caught). A glTF file nests about six levels.
+            private const int MaxDepth = 64;
+
             private readonly string _s;
             private int _i;
+            private int _depth;
 
             public Reader(string s) { _s = s; }
 
@@ -106,8 +111,13 @@ namespace HeronTools.Services.ModelWalk
                 char c = _s[_i];
                 switch (c)
                 {
-                    case '{': return ObjectValue();
-                    case '[': return ArrayValue();
+                    case '{':
+                    case '[':
+                        if (++_depth > MaxDepth)
+                            throw Fail("nested too deep");
+                        object nested = c == '{' ? (object)ObjectValue() : ArrayValue();
+                        _depth--;
+                        return nested;
                     case '"': return StringValue();
                     case 't': Word("true"); return true;
                     case 'f': Word("false"); return false;
