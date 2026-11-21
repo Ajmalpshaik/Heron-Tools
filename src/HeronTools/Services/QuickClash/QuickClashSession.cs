@@ -275,39 +275,104 @@ namespace HeronTools.Services.QuickClash
 
         /// <summary>
         /// Run is one Undo step "Quick Clash", even when it first ends Quick Clash's isolate (its own small transaction):
-        /// the group folds them together.
+        /// the group folds them together. The group is kept only when the run ends normally. On an error (or Esc) it is
+        /// rolled back - the ended isolate comes back too - so "nothing was changed" is true.
         /// </summary>
         internal void Run(UIApplication app, QuickClashSettings s)
         {
+            var before = new RunSnapshot(this);
+            bool keep = false;
             using (var group = new TransactionGroup(_doc, RunName))
             {
                 group.Start();
                 try
                 {
-                    RunCore(app, s);
+                    keep = RunCore(app, s);
                 }
                 finally
                 {
                     if (group.GetStatus() == TransactionStatus.Started)
-                        group.Assimilate();   // what committed inside stays; an empty group leaves no Undo step
+                    {
+                        if (keep)
+                        {
+                            group.Assimilate();   // what committed inside stays; an empty group leaves no Undo step
+                        }
+                        else
+                        {
+                            group.RollBack();     // the view is as it was before Run, isolate included
+                            before.Restore(this);
+                        }
+                    }
                 }
             }
         }
 
-        private void RunCore(UIApplication app, QuickClashSettings s)
+        /// <summary>What Run may change in this session, put back when the Run group is rolled back.</summary>
+        private sealed class RunSnapshot
         {
-            if (_window == null) return;
+            private readonly bool _isolatedByUs;
+            private readonly long _isolatedViewId;
+            private readonly List<ElementId> _isolatedIds;
+            private readonly List<ElementId> _hiddenSample;
+            private readonly long _colouredViewId;
+            private readonly long _resultsViewId;
+            private readonly List<Solid> _linkedSolids;
+            private readonly Dictionary<long, List<Solid>> _linkedSolidsById;
+            private readonly ClashColour _overlayColour;
+
+            internal RunSnapshot(QuickClashSession s)
+            {
+                _isolatedByUs = s._isolatedByUs;
+                _isolatedViewId = s._isolatedViewId;
+                _isolatedIds = s._isolatedIds;
+                _hiddenSample = s._hiddenSample;
+                _colouredViewId = s._colouredViewId;
+                _resultsViewId = s._resultsViewId;
+                _linkedSolids = s._linkedSolids;
+                _linkedSolidsById = s._linkedSolidsById;
+                _overlayColour = s._overlayColour;
+            }
+
+            internal void Restore(QuickClashSession s)
+            {
+                s._isolatedByUs = _isolatedByUs;
+                s._isolatedViewId = _isolatedViewId;
+                s._isolatedIds = _isolatedIds;
+                s._hiddenSample = _hiddenSample;
+                s._colouredViewId = _colouredViewId;
+                s._resultsViewId = _resultsViewId;
+                s._linkedSolids = _linkedSolids;
+                s._linkedSolidsById = _linkedSolidsById;
+                s._overlayColour = _overlayColour;
+                try
+                {
+                    s.UpdateColouredState();   // buttons and overlay follow the view as it is again
+                }
+                catch (Autodesk.Revit.Exceptions.ApplicationException)
+                {
+                    // best effort: the error that rolled the run back is the one the modeller is told about
+                }
+            }
+        }
+
+        /// <summary>
+        /// The run itself. True when it ended normally (whether or not it coloured anything); false when what it did
+        /// must be rolled back (Esc). An exception also rolls it back.
+        /// </summary>
+        private bool RunCore(UIApplication app, QuickClashSettings s)
+        {
+            if (_window == null) return true;
             if (!TryActive3DView(app, out View3D view, out string why))
             {
                 _window.ShowNotA3DView(why);
-                return;
+                return true;
             }
             UIDocument uiDoc = app.ActiveUIDocument;
 
             // Quick Clash's own Isolate hides elements; a new test must see the whole view, so it ends first
             // (wherever it is - an isolate left on another view would otherwise be forgotten).
             if (!EndOwnIsolate())
-                return;
+                return true;
 
             // ---- who takes part
             List<Element> host = ClashElementCollector.HostElementsInView(_doc, view);
@@ -328,7 +393,7 @@ namespace HeronTools.Services.QuickClash
                         : picked.Count == 0
                         ? "Nothing is selected in Revit. Select the elements to test as Selection A, or tick categories instead."
                         : "None of the selected elements is a model element shown in this view. Select elements you can see here.");
-                    return;
+                    return true;
                 }
                 _selectionAKeys = new HashSet<long>(picked);
                 string count = elementsA.Count.ToString("N0", CultureInfo.InvariantCulture);
@@ -358,7 +423,7 @@ namespace HeronTools.Services.QuickClash
                     // nothing ran.
                     Refresh(app, s);
                     _window.SetStatus("The link picked for Selection B is no longer loaded. Pick it again, or reload it in Manage Links.");
-                    return;
+                    return true;
                 }
                 elementsB = ClashElementCollector.LinkElementsShown(_doc, view, link)
                     .Where(e => catsB.Contains(e.Category.Id.LongValue())).ToList();
@@ -368,7 +433,7 @@ namespace HeronTools.Services.QuickClash
             {
                 _window.SetStatus((elementsA.Count == 0 ? "Selection A" : "Selection B") +
                     " has no elements shown in this view. Tick categories that have a count, or widen the section box.");
-                return;
+                return true;
             }
 
             Transform toHost = link?.GetTotalTransform();
@@ -386,7 +451,7 @@ namespace HeronTools.Services.QuickClash
                     "A tighter section box makes it quicker."))
             {
                 _window.SetStatus("Not run. Tighten the section box or tick fewer categories, then press Run.");
-                return;
+                return true;
             }
 
             // ---- step 2: shapes
@@ -394,7 +459,7 @@ namespace HeronTools.Services.QuickClash
             if (found.StoppedByEsc)
             {
                 _window.SetStatus("Stopped with Esc. Nothing was changed.");
-                return;
+                return false;
             }
 
             // ---- colour the view: one Undo step
@@ -453,12 +518,10 @@ namespace HeronTools.Services.QuickClash
                 {
                     ClashOverlayServer.Instance.Hide();
                     _window.SetStatus("Revit did not keep the colours, so the view is as it was. Try again.");
-                    return;
+                    return false;
                 }
             }
 
-            if (previousMemory != null)
-                ClashColourMemory.Forget(_doc, previous);
             if (coloured.Count > 0)
                 memory.SaveToDisk();
             else
@@ -470,20 +533,22 @@ namespace HeronTools.Services.QuickClash
             var linkedIds = new HashSet<long>(coloured.Where(c => c.BIsLinked).Select(c => c.ElementBId));
             _linkedSolidsById = itemsB.Where(i => linkedIds.Contains(i.Id))
                 .ToDictionary(i => i.Id, i => i.Solids.Select(p => p.Solid).ToList());
-            _linkedSolids = _linkedSolidsById.Values.SelectMany(x => x).ToList();
             _overlayColour = s.ColourB;
             _overlayLinkId = linkId;
             _overlayLinkTransform = toHost;
             _overlayLinkDoc = link?.GetLinkDocument();
-            if (_linkedSolids.Count > 0)
-                ClashOverlayServer.Instance.Show(_doc, view, _linkedSolids, _overlayColour);
-            else
-                ClashOverlayServer.Instance.Hide();
+            ShowOverlay(view, _linkedSolidsById.Values.SelectMany(x => x).ToList());   // guarded: a refused overlay never stops the run
             uiDoc.RefreshActiveView();
 
             s.Save();
             _window.ShowResults(clashes, RunStatus(found, itemsA.Count, itemsB.Count) + selectionANote);
             _window.SetColoured(coloured.Count > 0);
+
+            // Last, so an error above (which rolls the run back and colours the other view again) never leaves that
+            // view coloured with its memory gone.
+            if (previousMemory != null)
+                ClashColourMemory.Forget(_doc, previous);
+            return true;
         }
 
         /// <summary>The view's memory if its colours are still on; otherwise a new, empty one.</summary>
@@ -509,6 +574,9 @@ namespace HeronTools.Services.QuickClash
                 text += " Stopped at " + ClashEngine.MaxClashes + " clashes - tighten the section box to see the rest.";
             if (notChecked > 0)
                 text += " " + notChecked + " pair(s) could not be checked (Revit refused their shapes) - listed as Not checked.";
+            if (found.GapSampled > 0)
+                text += " " + found.GapSampled + " pair(s) had very detailed shapes, so their clearance was measured on a sample " +
+                        "of their edges - check those near misses by eye.";
             return text;
         }
 
@@ -677,13 +745,18 @@ namespace HeronTools.Services.QuickClash
             List<ElementId> sample = new FilteredElementCollector(_doc, view.Id).WhereElementIsNotElementType().ToElementIds()
                 .Where(id => !keys.Contains(id.LongValue())).Take(HiddenSampleSize).ToList();
 
+            // Quick Clash's own isolate on this view (clash 1, then clash 2 is picked) ends first, in the same Undo step:
+            // a new isolate on top of it could only show what the old one left visible. A Temporary Hide/Isolate of the
+            // modeller's is never ended here - OwnIsolateOn is false for it.
+            bool endOwnFirst = OwnIsolateOn() && _isolatedViewId == view.Id.LongValue();
+
             // Revit can refuse an id it cannot isolate (e.g. insulation of a hidden category): then try without the wraps.
             List<ElementId> isolated = ids;
-            string refused = TryIsolate(view, ids);
+            string refused = TryIsolate(view, ids, endOwnFirst);
             if (refused != null && ids.Count > bare.Count)
             {
                 isolated = bare;
-                refused = TryIsolate(view, bare);
+                refused = TryIsolate(view, bare, endOwnFirst);
             }
             if (refused != null)
             {
@@ -712,14 +785,19 @@ namespace HeronTools.Services.QuickClash
             _window?.SetStatus("Showing only " + Clashes(clashes.Count) + ". Show all brings back the rest of the view.");
         }
 
-        /// <summary>One Undo step "Quick Clash - Isolate". Null when done; otherwise what Revit said.</summary>
-        private string TryIsolate(View view, List<ElementId> ids)
+        /// <summary>
+        /// One Undo step "Quick Clash - Isolate". Null when done; otherwise what Revit said (and the view is as it was).
+        /// <paramref name="endOwnFirst"/>: Quick Clash's own isolate is on this view - it ends in the same transaction.
+        /// </summary>
+        private string TryIsolate(View view, List<ElementId> ids, bool endOwnFirst)
         {
             try
             {
                 using (var t = new Transaction(_doc, IsolateName))
                 {
                     t.Start();
+                    if (endOwnFirst)
+                        view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
                     view.IsolateElementsTemporary(ids);
                     return t.Commit() == TransactionStatus.Committed ? null : "Revit did not keep the change";
                 }
