@@ -170,7 +170,7 @@ Built on branch `claude/game-mode-heron`, one commit per item, each built for Re
 |---|---|---|
 | a. Settings window | DONE | Pause, S (or the Settings button). Mouse sensitivity (25-250 %), invert look (GM-A44), five walk speeds (m/s), eye height (1000-2000 mm), step-up height (100-450 mm), keep snag colours. Saved per user in `%AppData%\HeronTools\ModelWalkSettings.txt`; mm and m/s in the window, feet only inside (`WalkSettings.*Ft`). A damaged line keeps its standard value and is said once at start. Save applies at once and finds the floor again at the new eye height. Speeds are in m/s, not mm/s - easier to read; distances are mm as asked. |
 | b. Snag record | DONE | Snag click: the element is recorded, coloured (one Undo step), a picture taken with the HUD hidden, then a comment box (Enter saves, Esc skips, a click saves). `Snags.csv` (UTF-8 with BOM, Excel-safe quoting, a leading `= + - @` made text) and the pictures in one folder per walk next to the model, or under Documents. Columns: No., Time, Author, Comment, Category, Family : Type, Size, Element ID (64-bit), Unique ID, Level, System, Link, Room, East / North / Elevation (mm, shared; "internal" in the header if the shared coordinates could not be read), Camera, Picture, Snag colour. The CSV is rewritten after each snag, comment and picture (through a temporary file) and once more at the end; the plain-text report is gone. Snapshots (K) go in the same folder. |
-| c. Open snag | DONE | The pause menu lists the snags (newest first). A click puts the camera back where the snag was recorded (Fly again if it was recorded flying), resumes the walk and makes the element Revit's selection (replacing the selection). A linked element is said, not selected; a deleted one is said. |
+| c. Open snag | DONE | The pause menu lists the snags (newest first). A click puts the camera back where the snag was recorded (Fly again if it was recorded flying), resumes the walk and adds the element to Revit's selection (owner's decision: add, never replace). A linked element is said, not selected; a deleted one is said. |
 | d. Viewpoints | DONE | B saves a viewpoint and asks for a name (Esc keeps "Viewpoint N - <level - room>"). Kept per model, per user, in `%AppData%\HeronTools\ModelWalk Viewpoints\<model> <hash>.txt` (a workshared model by its central path, so every local copy finds them; an unsaved model by its title). Not in the Revit file. Pause menu: go, Save as 3D view, Delete, Play viewpoints. **Save as 3D view**: one transaction "Model Walk: save viewpoint as 3D view" - `Duplicate` of the walk view (its VG, filters, section box), a unique name "Model Walk - <name>" (characters Revit refuses replaced), the camera set and `SaveOrientation` (does not lock). Snag colours are not carried: every snagged element gets its own overrides in the copy, in the same transaction. Runs in the ExternalEvent while paused. |
 | e. Measure | DONE | M at point 1, M at point 2: distance, horizontal and vertical parts in mm, text only - no line on screen. One ray per press; the live "mm to the crosshair" uses the readout's own 10 Hz ray. A finished measure fades after 20 s. |
 | f. Room name | DONE | Location line "Level 03  -  Room 3.12 Plant Room"; the snag's Room column (where you stood). `Document.GetRoomAtPoint` 300 mm above the floor, in the walk view's phase; at most 4 times a second and only after a 300 mm move. **Linked rooms: included**, because it is cheap and read-only - only when this model has no room there, only loaded links whose box holds the point (at most 4), in the link's coordinates and its last phase (a link's phases cannot be matched to this view's), marked "(link name)". |
@@ -198,7 +198,7 @@ All 19 still hold. What changed around them:
 - (11) Esc while typing a comment skips the comment (a second Esc pauses). Pause keeps what was typed.
 - (12) The report is still written once at the end with its message, and now also after every change.
 - (16) Open snag does not select a linked element.
-- (18) Open snag replaces the selection with the snag's element (Select mode still adds and keeps).
+- (18) Open snag adds the snag's element to the selection; nothing already selected is dropped.
 - (19) New distances (eased stop, Play viewpoints, room probe) are in `WalkTuning`; the modeller's own in `WalkSettings`.
 - No new transaction outside the ExternalEvent; no int ids (ids are `ElementId` or `LongValue()`); no override lost
   (Save as 3D view gives each snagged element its own overrides in the copy; kept colours are still given back by
@@ -216,13 +216,12 @@ All 19 still hold. What changed around them:
 | XAML rendered to a picture | NOT RUN - WPF needs Windows; this container is Linux |
 | Every behaviour in the test script below | NEEDS REAL REVIT |
 
-## Owner decisions after stage 4
+## Owner decisions after stage 4 (answered)
 
-1. **Keep snag colours + Save.** With the setting on, the red still goes before every Save and Sync (so no snag
-   colour reaches the file and the way back is never lost). If you want the red saved in the model for a meeting,
-   say so - it needs the original colours stored in the model (a bigger change).
-2. **Open snag replaces the selection** with the snag's element. Add it to the selection instead?
-3. **Speeds in m/s** in Settings (distances in mm). Change to mm/s?
+1. **Keep snag colours + Save:** keep the red until the save. With the setting on, the red stays after the walk and
+   is given back before every Save and Sync, so no snag colour reaches the file. No change needed.
+2. **Open snag adds to the selection** (it no longer replaces it). Changed.
+3. **Speeds in m/s** in Settings - kept.
 
 ## Still needs a real Revit test (stage 4)
 

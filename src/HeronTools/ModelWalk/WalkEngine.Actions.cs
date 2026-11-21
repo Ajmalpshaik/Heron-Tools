@@ -211,7 +211,7 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>
         /// Open snag: the camera goes back where the snag was recorded (Fly again if it was recorded flying) and the
-        /// element becomes Revit's selection - no transaction. A linked element cannot be selected on its own.
+        /// element is added to Revit's selection - no transaction. A linked element cannot be selected on its own.
         /// </summary>
         private XYZ OpenSnag(UIDocument uidoc, Document doc, int number, XYZ position, WalkHudState hud)
         {
@@ -234,8 +234,12 @@ namespace HeronTools.Services.ModelWalk
                 selected = "the element is no longer in the model";
             else
             {
-                uidoc.Selection.SetElementIds(new List<ElementId> { snag.HostElementId });
-                selected = "the element is selected";
+                // Added to Revit's selection, never replacing it (owner's decision): what Select mode picked stays.
+                var ids = new List<ElementId>(uidoc.Selection.GetElementIds());
+                if (!ids.Contains(snag.HostElementId))
+                    ids.Add(snag.HostElementId);
+                uidoc.Selection.SetElementIds(ids);
+                selected = "the element is added to the selection (" + ids.Count + " selected)";
             }
             hud.Toast("Snag " + number + ": back where it was recorded - " + selected, WalkToastKind.Done);
             return snag.Eye;

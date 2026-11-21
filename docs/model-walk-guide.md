@@ -86,8 +86,8 @@ it. To keep the red after the walk (for a meeting), turn on **Keep snag colours 
 
 - **Carry on walking** (or Enter).
 - **Settings** (S), **Keys** (K), **Clear snag colours**, **Open report folder**, **End walk** (Esc).
-- **Snags** - newest first. Click one: the camera goes back where it was recorded and the element becomes Revit's
-  selection (a linked element is not selected).
+- **Snags** - newest first. Click one: the camera goes back where it was recorded and the element is added to Revit's
+  selection - what you already selected stays (a linked element is not selected).
 - **Viewpoints** - click one to go there; **Save as 3D view**; **Delete**; **Play viewpoints**.
 
 ## Viewpoints
