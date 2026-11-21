@@ -254,14 +254,20 @@ namespace HeronTools.UI
         {
             try
             {
-                (int elements, int categories, bool committed) = ResetGraphicsMemory.Restore(_doc);
+                (int elements, int categories, int refused, bool committed) = ResetGraphicsMemory.Restore(_doc);
+                string refusedNote = refused > 0
+                    ? $" {refused} could not be put back - Revit refused them (a view template may now control the view's Visibility/Graphics)."
+                    : "";
                 if (!committed)
                     ShowStatus("Revit did not accept the change, so nothing was restored.", problem: true);
                 else if (elements + categories == 0)
-                    ShowStatus("Nothing could be restored: the views or elements of the last reset are gone.", problem: true);
+                    ShowStatus(refused > 0
+                        ? "Nothing was restored." + refusedNote
+                        : "Nothing could be restored: the views or elements of the last reset are gone.", problem: true);
                 else
                 {
-                    ShowStatus($"Restored {elements} element(s) and {categories} categor{(categories == 1 ? "y" : "ies")} as they were before the last reset.", problem: false);
+                    ShowStatus($"Restored {elements} element(s) and {categories} categor{(categories == 1 ? "y" : "ies")} as they were before the last reset." + refusedNote,
+                               problem: refused > 0);
                     ChangedSomething = true;
                 }
             }

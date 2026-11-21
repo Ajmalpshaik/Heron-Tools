@@ -141,14 +141,17 @@ namespace HeronTools.Services.Colorize
             return ids;
         }
 
+        internal static int Restore(Document doc, View view) => Restore(doc, view, out _);
+
         /// <summary>
         /// Puts the remembered original back on every element still showing a Colorize colour in this view
         /// (inside the caller's transaction) and returns how many were restored. Elements already restored, or
-        /// changed by hand since, are left as they are and not counted. The memory is kept, so an Undo of the
-        /// restore can be restored again.
+        /// changed by hand since, are left as they are and not counted. <paramref name="refused"/> counts elements
+        /// Revit refused. The memory is kept, so an Undo of the restore can be restored again.
         /// </summary>
-        internal static int Restore(Document doc, View view)
+        internal static int Restore(Document doc, View view, out int refused)
         {
+            refused = 0;
             Dictionary<long, Entry> perView = PerView(doc, view);
             if (perView == null)
                 return 0;
@@ -170,6 +173,7 @@ namespace HeronTools.Services.Colorize
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
                 {
+                    refused++;   // counted, so the status line can say the restore is not complete
                 }
             }
             return restored;

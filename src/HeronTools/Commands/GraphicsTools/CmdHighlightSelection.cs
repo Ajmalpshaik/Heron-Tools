@@ -165,7 +165,7 @@ namespace HeronTools.Commands.GraphicsTools
 
         private static Result Restore(GraphicsCommandContext context, Dictionary<long, OverrideGraphicSettings> saved)
         {
-            int restored = 0;
+            int restored = 0, refused = 0;
             using (var transaction = new Transaction(context.Document, "Clear Highlight"))
             {
                 transaction.Start();
@@ -182,7 +182,7 @@ namespace HeronTools.Commands.GraphicsTools
                     }
                     catch (Autodesk.Revit.Exceptions.ApplicationException)
                     {
-                        // one refused element must not stop the rest being put back
+                        refused++;   // one refused element must not stop the rest being put back
                     }
                 }
 
@@ -191,6 +191,14 @@ namespace HeronTools.Commands.GraphicsTools
                     DialogHelper.ShowError(DialogTitle, "Revit did not keep the change, so the highlight is still on. Try again, or press Undo.");
                     return Result.Failed;
                 }
+            }
+
+            // Some elements are still red or grey: a real problem the modeller must know about, so a pop-up.
+            if (refused > 0)
+            {
+                DialogHelper.ShowWarning(DialogTitle,
+                    $"Put back {restored} element(s), but Revit refused {refused} - they may still be red or grey. " +
+                    "A view template may now control this view's Visibility/Graphics: remove it from the view and click Highlight again, or press Undo.");
             }
 
             // The memory is kept: if this restore is undone, the next click restores again (StillHighlighted).
