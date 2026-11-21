@@ -319,6 +319,9 @@ namespace HeronTools.Services.ModelWalk
         /// <summary>Reads glTF accessors into flat float / int arrays, checking every read stays inside its buffer.</summary>
         private sealed class AccessorReader
         {
+            // The most values one data block may hold (the shipped file's biggest has 10,368).
+            private const int MaxValues = 4 * 1024 * 1024;
+
             private readonly List<object> _accessors;
             private readonly List<object> _views;
             private readonly List<byte[]> _buffers;
@@ -333,7 +336,7 @@ namespace HeronTools.Services.ModelWalk
             public float[] Floats(int accessor, int width)
             {
                 object a = Accessor(accessor);
-                int count = WalkJson.Int(a, "count", 0);
+                int count = CheckedCount(a, width);
                 bool normalized = WalkJson.Bool(a, "normalized");
                 var result = new float[count * width];
                 Walk(a, width, (k, c, bytes, offset, type) => result[(k * width) + c] = ReadFloat(bytes, offset, type, normalized));
@@ -343,7 +346,7 @@ namespace HeronTools.Services.ModelWalk
             public int[] Ints(int accessor, int width)
             {
                 object a = Accessor(accessor);
-                int count = WalkJson.Int(a, "count", 0);
+                int count = CheckedCount(a, width);
                 var result = new int[count * width];
                 Walk(a, width, (k, c, bytes, offset, type) => result[(k * width) + c] = ReadInt(bytes, offset, type));
                 return result;
@@ -354,6 +357,36 @@ namespace HeronTools.Services.ModelWalk
                 if (index < 0 || index >= _accessors.Count)
                     throw new InvalidDataException("data block " + index + " does not exist");
                 return _accessors[index];
+            }
+
+            /// <summary>
+            /// The accessor's count, checked BEFORE its array is made: a damaged count (2,000,000,000) must be refused, not
+            /// allocated first and refused after (gigabytes inside Revit's process). Walk checks the same again as it reads.
+            /// </summary>
+            private int CheckedCount(object a, int width)
+            {
+                int count = WalkJson.Int(a, "count", 0);
+                if (count < 0)
+                    throw new InvalidDataException("a negative count");
+                if ((long)count * width > MaxValues)
+                    throw new InvalidDataException("a data block is too big");
+                if (count == 0 || !WalkJson.Has(a, "bufferView"))
+                    return count;
+                int size = ComponentSize(WalkJson.Int(a, "componentType", 0));
+                int viewIndex = WalkJson.Int(a, "bufferView", -1);
+                if (viewIndex < 0 || viewIndex >= _views.Count)
+                    throw new InvalidDataException("a data view that does not exist");
+                object view = _views[viewIndex];
+                int bufferIndex = WalkJson.Int(view, "buffer", -1);
+                if (bufferIndex < 0 || bufferIndex >= _buffers.Count)
+                    throw new InvalidDataException("a buffer that does not exist");
+                int stride = WalkJson.Int(view, "byteStride", 0);
+                if (stride <= 0)
+                    stride = size * width;
+                long start = (long)WalkJson.Int(view, "byteOffset", 0) + WalkJson.Int(a, "byteOffset", 0);
+                if (start < 0 || start + ((long)(count - 1) * stride) + ((long)width * size) > _buffers[bufferIndex].Length)
+                    throw new InvalidDataException("data reaches past the end of its buffer");
+                return count;
             }
 
             private void Walk(object a, int width, Action<int, int, byte[], int, int> read)
