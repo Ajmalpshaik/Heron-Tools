@@ -36,6 +36,9 @@ namespace HeronTools.Services.ModelWalk
 
         // The camera last sent to Revit: no SetOrientation / redraw while nothing changed.
         private XYZ _lastEye;
+
+        // The eased move: speed and direction now, in feet per second (see the Move block in Frame).
+        private XYZ _velocity = XYZ.Zero;
         private double _lastYaw = double.NaN;
         private double _lastPitch = double.NaN;
 
@@ -162,12 +165,17 @@ namespace HeronTools.Services.ModelWalk
             Look(input.YawDeg, pitchDeg, out XYZ forward, out XYZ flatForward, out XYZ right, out XYZ up);
 
             XYZ position = _session.Position;
+            XYZ beforeActions = position;
 
             position = HandleActions(uidoc, doc, view, input, hud, position, forward, flatForward);
             position = HandlePlayViewpoints(input, hud, position, dt);
             bool playing = hud.PlayingViewpoints;
+            if (playing || !position.IsAlmostEqualTo(beforeActions))
+                StopMotion();   // a jump (viewpoint, go to point, door, open snag) starts from standing
 
-            // --- Move ---
+            // --- Move: eased in and out (time-based), so the picture never jolts on a key press or release. The
+            //     look stays direct. The same rays per frame as an un-eased move; a blocked part of the move is
+            //     dropped from the speed, so easing never pushes into a wall. ---
             XYZ before = position;   // after any jump this frame: a refused step goes back here
             if (!playing)
             {
@@ -182,8 +190,23 @@ namespace HeronTools.Services.ModelWalk
                 XYZ wish = flying
                     ? (forward * forwardAxis) + (right * strafeAxis) + (XYZ.BasisZ * verticalAxis)
                     : (flatForward * forwardAxis) + (right * strafeAxis);
-                if (wish.GetLength() > 1e-9)
-                    position = MoveWithCollision(position, wish.Normalize() * (speed * dt));
+                XYZ target = wish.GetLength() > 1e-9 ? wish.Normalize() * speed : XYZ.Zero;
+                double ease = 1.0 - Math.Exp(-dt / WalkTuning.EaseSeconds);
+                _velocity += (target - _velocity) * ease;
+                if (!flying)
+                    _velocity = new XYZ(_velocity.X, _velocity.Y, 0);   // gravity owns up and down in Walk
+                if (target.GetLength() < 1e-9 && _velocity.GetLength() < WalkTuning.MmToFt(20))
+                    _velocity = XYZ.Zero;                               // under 20 mm/s: stopped
+
+                XYZ move = _velocity * dt;
+                if (move.GetLength() > 1e-9)
+                {
+                    XYZ moved = MoveWithCollision(position, move);
+                    XYZ done = moved - position;
+                    if (done.GetLength() < move.GetLength() - 1e-9)
+                        _velocity = done / dt;
+                    position = moved;
+                }
             }
 
             // --- Door hint: a short ray, only a few times a second ---
@@ -211,6 +234,7 @@ namespace HeronTools.Services.ModelWalk
             if (input.BackToStartQueued)
             {
                 input.BackToStartQueued = false;
+                StopMotion();
                 position = _session.StartPosition;
                 _session.VerticalSpeedFtPerSec = 0;
                 _session.Grounded = false;
@@ -270,7 +294,7 @@ namespace HeronTools.Services.ModelWalk
             UpdateStatus(doc, hud, input, position);
             UpdateViewRectangle(uidoc, hud, input);
 
-            hud.NeedsFrames = playing || input.GoToPointAimHold ||
+            hud.NeedsFrames = playing || input.GoToPointAimHold || _velocity.GetLength() > 0 ||
                               (_session.Mode == WalkMoveMode.Walk && !_session.Grounded && !hud.Hovering);
         }
 
@@ -291,9 +315,10 @@ namespace HeronTools.Services.ModelWalk
             return new ViewOrientation3D(eye, up, forward);
         }
 
-        /// <summary>Stops any move still running (a jump, a pause).</summary>
+        /// <summary>Stops any move still easing out (a jump, a pause).</summary>
         private void StopMotion()
         {
+            _velocity = XYZ.Zero;
         }
 
         private void RefreshWorld()

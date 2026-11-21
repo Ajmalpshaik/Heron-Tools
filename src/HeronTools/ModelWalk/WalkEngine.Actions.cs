@@ -29,6 +29,7 @@ namespace HeronTools.Services.ModelWalk
         // Play viewpoints
         private int _playIndex = -1;
         private double _playDwellLeft;
+        private double _playSpeed;
 
         private OverrideGraphicSettings _snagOverride;
 
@@ -424,6 +425,7 @@ namespace HeronTools.Services.ModelWalk
                 {
                     _playIndex = 0;
                     _playDwellLeft = 0;
+                    _playSpeed = 0;
                     hud.PlayingViewpoints = true;
                     hud.Toast("Playing viewpoints - any move key stops");
                 }
@@ -447,7 +449,7 @@ namespace HeronTools.Services.ModelWalk
             if (_playDwellLeft > 0)
             {
                 _playDwellLeft -= dt;
-                LookAt(hud, target.YawDeg, target.PitchDeg);
+                EaseLookTo(hud, target.YawDeg, target.PitchDeg, dt);
                 if (_playDwellLeft <= 0 && ++_playIndex >= _session.Viewpoints.Count)
                     StopPlaying(hud, "All viewpoints played");
                 return position;
@@ -455,10 +457,15 @@ namespace HeronTools.Services.ModelWalk
 
             XYZ delta = target.Eye - position;
             double distance = delta.GetLength();
-            double step = _session.Settings.WalkSpeedFtPerSec(WalkTuning.DefaultSpeedStep) * 2.0 * dt;
-            if (distance <= step || distance < 1e-6)
+            // Eased: speeds up from each viewpoint and slows into the next, never faster than twice the walk step.
+            double top = _session.Settings.WalkSpeedFtPerSec(WalkTuning.DefaultSpeedStep) * 2.0;
+            double wanted = Math.Min(top, Math.Max(WalkTuning.MmToFt(300), distance * 1.5));
+            _playSpeed += (wanted - _playSpeed) * (1.0 - Math.Exp(-dt / 0.35));
+            double step = _playSpeed * dt;
+            if (distance <= step || distance < WalkTuning.MmToFt(5))
             {
                 _playDwellLeft = 1.6;
+                _playSpeed = 0;
                 hud.Toast(target.Name);
                 return target.Eye;
             }
@@ -466,8 +473,17 @@ namespace HeronTools.Services.ModelWalk
             XYZ direction = delta.Normalize();
             double yaw = Math.Atan2(direction.Y, direction.X) * 180.0 / Math.PI;
             double pitch = Math.Asin(Math.Max(-1.0, Math.Min(1.0, direction.Z))) * 180.0 / Math.PI;
-            LookAt(hud, yaw, Math.Max(-60.0, Math.Min(60.0, pitch)));
+            EaseLookTo(hud, yaw, Math.Max(-60.0, Math.Min(60.0, pitch)), dt);
             return position + (direction * step);
+        }
+
+        /// <summary>Play viewpoints turns smoothly (about a third of a second) instead of snapping to each new heading.</summary>
+        private void EaseLookTo(WalkHudState hud, double yawDeg, double pitchDeg, double dt)
+        {
+            double k = 1.0 - Math.Exp(-dt / 0.3);
+            double yawNow = _session.Input.YawDeg;
+            double turn = ((yawDeg - yawNow) % 360.0 + 540.0) % 360.0 - 180.0;   // the short way round
+            LookAt(hud, yawNow + (turn * k), _session.Input.PitchDeg + ((pitchDeg - _session.Input.PitchDeg) * k));
         }
 
         private void StopPlaying(WalkHudState hud, string message)
