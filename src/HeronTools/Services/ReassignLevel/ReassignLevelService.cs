@@ -8,7 +8,9 @@
 // The level-reassignment engine for MEP curves and free-standing family instances: candidate collection
 // (whole-project FROM level, or an explicit selection), eligibility checks, and a per-element change that
 // is MEASURED - each element's position is read before and after, its offset corrected if Revit moved it,
-// and the change undone for that element if it still is not where it was. Spaces are not reassigned: the
+// and the change undone for that element if it still is not where it was. The ducts, pipes and fittings
+// connected to it are measured the same way: if any of them was dragged, re-sloped or deleted, the change is
+// undone for that element too. Spaces are not reassigned: the
 // API cannot change a space's level without deleting and re-making it, which would lose its tags, zone and
 // schedule links.
 
@@ -28,7 +30,9 @@ namespace HeronTools.Services.ReassignLevel
         /// <summary>Revit would not take the new level for this element.</summary>
         Refused,
         /// <summary>The element would have moved and could not be put back by its offset - left as it was.</summary>
-        WouldMove
+        WouldMove,
+        /// <summary>The element stayed put, but a duct, pipe or fitting connected to it would have moved or been deleted - left as it was.</summary>
+        WouldMoveConnected
     }
 
     /// <summary>
@@ -150,6 +154,12 @@ namespace HeronTools.Services.ReassignLevel
             if (before.Count == 0)
                 return ReassignOutcome.Refused;   // nothing to measure, so "not moved" could not be proved
 
+            // Revit can drag, re-slope or delete what is connected to the element when its level changes,
+            // even when the element itself ends up back in place - so the neighbours are measured too.
+            Dictionary<ElementId, IList<XYZ>> neighboursBefore = GetConnectedPositions(doc, element);
+            if (neighboursBefore == null)
+                return ReassignOutcome.Refused;   // its connections could not be read, so "nothing moved" could not be proved
+
             using (var step = new SubTransaction(doc))
             {
                 step.Start();
@@ -182,6 +192,12 @@ namespace HeronTools.Services.ReassignLevel
                         step.RollBack();
                         return ReassignOutcome.WouldMove;
                     }
+                }
+
+                if (!ConnectedStayed(doc, neighboursBefore))
+                {
+                    step.RollBack();
+                    return ReassignOutcome.WouldMoveConnected;
                 }
 
                 return step.Commit() == TransactionStatus.Committed ? ReassignOutcome.Reassigned : ReassignOutcome.Refused;
@@ -320,6 +336,63 @@ namespace HeronTools.Services.ReassignLevel
                 points.Clear();
             }
             return points;
+        }
+
+        /// <summary>
+        /// Where every element physically connected to <paramref name="element"/> is now, by id. Logical
+        /// links (the duct system, the panel circuit) are not neighbours. Null when the connections could not
+        /// be read, or a neighbour has nothing to measure.
+        /// </summary>
+        private static Dictionary<ElementId, IList<XYZ>> GetConnectedPositions(Document doc, Element element)
+        {
+            var positions = new Dictionary<ElementId, IList<XYZ>>();
+            try
+            {
+                ConnectorManager manager = element is MEPCurve mepCurve
+                    ? mepCurve.ConnectorManager
+                    : (element as FamilyInstance)?.MEPModel?.ConnectorManager;
+                if (manager == null)
+                    return positions;   // no connectors (a plain family): nothing can be dragged with it
+
+                foreach (Connector connector in manager.Connectors)
+                {
+                    if (connector.ConnectorType == ConnectorType.Logical)
+                        continue;
+
+                    foreach (Connector other in connector.AllRefs)
+                    {
+                        Element owner = other.Owner;
+                        if (owner == null || owner is MEPSystem || other.ConnectorType == ConnectorType.Logical)
+                            continue;
+                        if (owner.Id == element.Id || positions.ContainsKey(owner.Id))
+                            continue;
+
+                        IList<XYZ> points = GetPositionPoints(owner);
+                        if (points.Count == 0)
+                            return null;
+                        positions.Add(owner.Id, points);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+            return positions;
+        }
+
+        /// <summary>True when every recorded neighbour still exists and is where it was.</summary>
+        private static bool ConnectedStayed(Document doc, Dictionary<ElementId, IList<XYZ>> before)
+        {
+            foreach (KeyValuePair<ElementId, IList<XYZ>> neighbour in before)
+            {
+                Element now = doc.GetElement(neighbour.Key);
+                if (now == null || !now.IsValidObject)
+                    return false;   // Revit deleted it (a short run swallowed by the change)
+                if (!SamePlace(neighbour.Value, GetPositionPoints(now)))
+                    return false;
+            }
+            return true;
         }
 
         private static bool SamePlace(IList<XYZ> before, IList<XYZ> after)
