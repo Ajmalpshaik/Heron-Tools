@@ -25,7 +25,7 @@ namespace HeronTools.Services.QuickClash
         private const int MaxVerticesPerBuffer = 60000;
 
         // Drawn 2 mm outside the real faces, so the overlay does not flicker against the grey link drawn in the same place.
-        private const double PushOutFeet = 2.0 / 304.8;
+        private const double PushOutFeet = 2.0 * Constants.MM_TO_FEET;
 
         private static readonly Guid ServerGuid = new Guid("5E8B1C2A-3F47-4D0B-9C61-7A2E4B9D1F03");
 

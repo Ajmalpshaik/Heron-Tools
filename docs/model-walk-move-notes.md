@@ -105,7 +105,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | GM-A36 | Low | Teleport into a ceiling void | Fixed: Go to point lands on the floor below the aimed point and needs head room and body room; refused with a reason. |
 | GM-A37 | Low | `Raise()` result ignored | Fixed: Denied / TimedOut for more than 5 s ends the walk with a plain message. |
 | GM-A38 | Low | Toggle after view validation | Fixed with GM-A13. |
-| GM-A39 | Low | `MM_TO_FEET` rounded | Fixed in Model Walk (`1 / 304.8` from `FEET_TO_MM`). Heron's shared `Constants.MM_TO_FEET` left as is - changing it touches every tool (owner decision). |
+| GM-A39 | Low | `MM_TO_FEET` rounded | **Fixed for every tool** (owner request, 2026-11-21): Heron's shared `Constants.MM_TO_FEET` is now exactly `1 / FEET_TO_MM`; Model Walk, Quick Clash and 3D Snapshot use the shared constants. |
 | GM-A40 | Low | Frame ms shown to everyone | Fixed: hidden behind F12. |
 | GM-A41 | Low | First 3D view type, no template | Kept; now said in the tooltip. |
 | GM-A42 | Low | AJ credit lines and names | Fixed: Heron names; no credit lines (About Heron covers it). |
@@ -133,9 +133,8 @@ distances in mm in `WalkTuning` (19).
    2026-11-21: "Keep snag colours after walk"); Clear snag colours, Save and Sync still give them back.
 3. **One walk view per person** in workshared models - kept.
 4. **J** clears snag colours - kept.
-5. Heron's shared `Constants.MM_TO_FEET` (0.00328084) - **not changed** (other tools use it). Follow-up: make it
-   exactly `1 / 304.8` for every tool in its own change, with each tool re-tested. Model Walk already uses
-   `1 / Constants.FEET_TO_MM`.
+5. Heron's shared `Constants.MM_TO_FEET` - **made exact** (`1 / 304.8`) for every tool in its own change
+   (2026-11-21). View Crop margins/offsets and Level Extents use it; re-test those in Revit.
 6. Removing Game Mode from AJ-Tools - only on Ajmal's typed "yes", after the Revit test.
 
 ## Results

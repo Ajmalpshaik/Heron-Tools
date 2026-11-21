@@ -10,6 +10,7 @@
 
 using System;
 using Autodesk.Revit.DB;
+using HeronTools.Utils;
 
 namespace HeronTools.Services.Snapshot3D
 {
@@ -158,9 +159,9 @@ namespace HeronTools.Services.Snapshot3D
             };
         }
 
-        internal static double MillimetresToFeet(double mm) => mm / 304.8;
+        internal static double MillimetresToFeet(double mm) => mm * Constants.MM_TO_FEET;
 
         internal static string Describe(double feet) =>
-            Math.Round(feet * 304.8).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " mm";
+            Math.Round(feet * Constants.FEET_TO_MM).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " mm";
     }
 }

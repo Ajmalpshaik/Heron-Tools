@@ -18,6 +18,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Autodesk.Revit.DB;
 using HeronTools.Models.QuickClash;
+using HeronTools.Utils;
 
 namespace HeronTools.Services.QuickClash
 {
@@ -33,7 +34,7 @@ namespace HeronTools.Services.QuickClash
 
     internal static class ClashEngine
     {
-        internal const double MmPerFoot = 304.8;
+        internal const double MmPerFoot = Constants.FEET_TO_MM;
 
         /// <summary>A run stops at this many clashes (more is not readable; tighten the section box instead).</summary>
         internal const int MaxClashes = 500;
