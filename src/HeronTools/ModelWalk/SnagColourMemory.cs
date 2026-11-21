@@ -166,6 +166,7 @@ namespace HeronTools.Services.ModelWalk
         /// </summary>
         internal void GiveOriginalsTo(Document doc, View target)
         {
+            OverrideGraphicSettings snag = SnagOverride(doc);
             foreach (KeyValuePair<long, OverrideGraphicSettings> entry in _originals)
             {
                 ElementId id = ElementIdHelper.FromLong(entry.Key);
@@ -173,6 +174,10 @@ namespace HeronTools.Services.ModelWalk
                     continue;
                 try
                 {
+                    // Same test as PutBack: an element the modeller recoloured since the snag (or whose snag was
+                    // undone) keeps the colour the copy got from the walk view - it is the modeller's, not ours.
+                    if (!LooksLikeSnag(target.GetElementOverrides(id), snag))
+                        continue;
                     target.SetElementOverrides(id, entry.Value);
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
