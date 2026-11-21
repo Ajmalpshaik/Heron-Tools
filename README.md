@@ -50,6 +50,7 @@ side on one **Heron** tab.
 | **Pin / Unpin** | Modify | Pin or unpin groups (title blocks, views on sheets, ducts, pipes, grids, levels...). |
 | **Smart Selection** | Modify | Pick one element, window-select, keep only that category. |
 | **Quick Clash** | Coordination | A Navisworks-style clash test in the active 3D view, in a window that stays open. Selection A (categories of this model, or your selection) against Selection B (categories of this model or of a linked model); Hard with a tolerance and/or Clearance with a distance, in mm. Clashes turn red and green, the rest grey and see-through; click one or several clashes to zoom to them, then **Isolate** (show only those), **Show all** or **Select** them in Revit, like Navisworks. **Reset view puts every element's own colours back exactly** - also done by itself before Save and Sync with Central. Only what the view shows is tested (in Revit 2020-2022, link elements inside the section box). 3D views only. |
+| **Model Walk** | Coordination | Walk the model in first person from a 3D view (W A S D, mouse, Fly, doors, Measure, viewpoints). Modes: **Inspect** (what is under the crosshair and how far), **Select**, **Snag** (picture + comment + red colour, a CSV report next to the model), **Hide** (for now). Only what the view shows blocks you. Snag colours stay after the walk; **every element's own colours come back** with J and before Save and Sync; Esc pauses and leaves Revit free, with the snag list, viewpoints (saved per model, or as a Revit 3D view) and Settings; click again to stop. 3D views only. [Guide](docs/model-walk-guide.md). |
 | **Element ID** | Coordination | See the ID of a picked element (also in links), or find an element by ID and zoom to it. |
 | **3D Views by Workset** | Coordination | One 3D view per user workset. |
 | **Link Workset** | Coordination | Put selected Revit links and CAD imports on a workset. |
@@ -243,6 +244,7 @@ src/HeronTools/          the add-in (one project, every Revit year)
   Services/              each tool's Revit work (FilterPro, Colorize, ViewCrop, UnhideAll, GraphicsTools)
   Models/  Helpers/      data classes; version-safe helpers
   UI/                    windows and the brand theme (HeronStyles.xaml)
+  QuickMenu/  ModelWalk/  tools kept in one folder each (command, services, windows)
   Resources/Icons/       16 and 32 px ribbon icons
 manifests/               one .addin manifest per Revit year
 installer/               HeronToolsInstaller.exe - the setup window (.NET Framework 4.8, one file)
@@ -258,7 +260,8 @@ Directory.Build.props    Revit year -> .NET runtime, output folders, compile sym
 [DISCLAIMER](DISCLAIMER.md) · [CHANGELOG](CHANGELOG.md) · [AGENTS](AGENTS.md) (for AI agents working on the code)
 
 Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
-[Panels move notes](docs/panels-move-notes.md) · [Model Walk spec](docs/game-mode-spec.md) ·
+[Panels move notes](docs/panels-move-notes.md) · [Model Walk move notes](docs/model-walk-move-notes.md) · [Model Walk guide](docs/model-walk-guide.md) ·
+[Model Walk spec](docs/game-mode-spec.md) · [Game Mode audit](docs/game-mode-audit.md) ·
 [Metadata standard](docs/metadata-standard.md) · [Ideas for Heron AI](docs/ideas-for-heron-ai.md)
 
 ## Licence

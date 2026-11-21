@@ -1,0 +1,166 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.2.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Model Walk - Settings (pause the walk, press S). Look, movement and snag colours, saved for this Windows user.
+  Distances in millimetres, speeds in metres per second. Save applies them to the walk at once.
+  Heron brand (UI/HeronStyles.xaml), the same layout as Model Walk keys: header with the mark, cards on Surface,
+  footer status on the left, then ONE Accent button (Save) and Cancel, as in every Heron Tools window.
+-->
+<Window x:Class="HeronTools.UI.ModelWalk.ModelWalkSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Model Walk Settings - Heron Tools"
+        Width="580"
+        Height="720"
+        MinWidth="520"
+        MinHeight="480"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/HeronTools;component/UI/HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="44" Height="44" CornerRadius="11" Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Model Walk settings" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Saved for you on this computer. Save applies them at once." Style="{StaticResource HeaderSubtitle}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Body -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,18,24,14">
+
+                <!-- Look -->
+                <Border Style="{StaticResource StepCard}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Look" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="130"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Mouse sensitivity" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="How fast the view turns with the mouse. 100 % is standard; lower it if fast turning makes you feel unwell."
+                                           Style="{StaticResource HelpText}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                <TextBlock Text="Sensitivity (%)" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SensitivityBox" Style="{StaticResource ModernTextBox}"
+                                         ToolTip="25 to 250 %. 100 % is standard."/>
+                            </StackPanel>
+                        </Grid>
+                        <CheckBox x:Name="InvertLookBox" Content="Invert look - mouse forward looks down" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,12,0,0" ToolTip="Moving the mouse forward tilts the view down, as in some flight viewers"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Movement -->
+                <Border Style="{StaticResource StepCard}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Movement" Style="{StaticResource SectionLabel}" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Eye height (mm)" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="EyeHeightBox" Style="{StaticResource ModernTextBox}"
+                                         ToolTip="Eye above the floor in Walk: 1000 to 2000 mm. Standard 1700 mm."/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Step-up height (mm)" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="StepUpBox" Style="{StaticResource ModernTextBox}"
+                                         ToolTip="The highest stair, step or threshold you walk up: 100 to 450 mm. Standard 350 mm."/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock x:Name="LowEyeNote" Style="{StaticResource HelpText}" Margin="0,8,0,0"/>
+
+                        <TextBlock Text="Walk speeds (m/s), slowest first" Style="{StaticResource FieldLabel}" Margin="0,16,0,5"/>
+                        <UniformGrid Rows="1" Columns="5">
+                            <TextBox x:Name="Speed1Box" Style="{StaticResource ModernTextBox}" Margin="0,0,6,0" ToolTip="Step 1 - the slowest"/>
+                            <TextBox x:Name="Speed2Box" Style="{StaticResource ModernTextBox}" Margin="3,0,3,0" ToolTip="Step 2"/>
+                            <TextBox x:Name="Speed3Box" Style="{StaticResource ModernTextBox}" Margin="3,0,3,0" ToolTip="Step 3 - where every walk starts"/>
+                            <TextBox x:Name="Speed4Box" Style="{StaticResource ModernTextBox}" Margin="3,0,3,0" ToolTip="Step 4"/>
+                            <TextBox x:Name="Speed5Box" Style="{StaticResource ModernTextBox}" Margin="6,0,0,0" ToolTip="Step 5 - the fastest"/>
+                        </UniformGrid>
+                        <TextBlock Style="{StaticResource HelpText}" Margin="0,6,0,0"
+                                   Text="+ / - or the mouse wheel change the step during the walk. Fly is twice as fast; holding Shift is three times."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Snags -->
+                <Border Style="{StaticResource StepCard}">
+                    <StackPanel>
+                        <TextBlock Text="Snag colours" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <CheckBox x:Name="KeepSnagColoursBox" Content="Keep snag colours after the walk" Style="{StaticResource ModernCheckBox}"
+                                  ToolTip="On (standard): the red stays after the walk. Off: each element gets its own colours back when the walk ends"/>
+                        <TextBlock Style="{StaticResource HelpText}" Margin="0,4,0,0"
+                                   Text="On (standard): the red stays in the walk view after the walk, for your meeting. Off: every snagged element gets its own colours back when the walk ends. Either way, Clear snag colours (J, or the pause menu) gives them back, and so does every Save and Sync with Central - no snag colour is saved in the model."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer: status left, one Accent button right -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}"
+                               Text="Save applies the settings now and keeps them for your next walks."/>
+                    <Button x:Name="ResetButton" Content="Reset to standard settings" Style="{StaticResource LinkButton}"
+                            HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnResetClick"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButton}" MinWidth="96"
+                            Margin="0,0,16,0" IsDefault="True" Click="OnSaveClick"/>
+                    <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource GhostButton}" MinWidth="88"
+                            IsCancel="True" Click="OnCancelClick" ToolTip="Close and keep the settings as they were (Esc)"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

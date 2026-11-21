@@ -88,7 +88,7 @@ namespace HeronTools.Utils
             if (cat == null)
                 return false;
 
-            return _categories.Contains((BuiltInCategory)cat.Id.IntValue());
+            return ElementIdHelper.TryGetBuiltInCategory(cat.Id, out BuiltInCategory builtIn) && _categories.Contains(builtIn);
         }
 
         public bool AllowReference(Reference reference, XYZ position)
@@ -111,7 +111,7 @@ namespace HeronTools.Utils
             if (cat == null)
                 return false;
 
-            return cat.Id.IntValue() == (int)BuiltInCategory.OST_DuctCurves;
+            return ElementIdHelper.IsCategory(cat.Id, BuiltInCategory.OST_DuctCurves);
         }
 
         public bool AllowReference(Reference reference, XYZ position)
