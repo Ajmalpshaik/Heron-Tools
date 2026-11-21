@@ -12,8 +12,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   and how far), **Select** (adds to Revit's selection, kept after the walk), **Snag** (a picture, your comment typed on
   the spot and a red colour; written to `Snags.csv` in a folder next to the model - 64-bit and unique IDs, room,
   shared coordinates, camera, picture), **Hide** (Temporary Hide; Show hidden brings back only what the walk hid).
-  Every element's own colours are given back at the end of the walk (or kept, if you set that) and always before Save
-  and Sync with Central. Esc pauses and Revit is free to use; the pause menu lists the snags (click one to go back and
+  Snag colours stay after the walk (a setting; on as standard); every element's own colours are remembered and given
+  back by Clear snag colours (J) and always before Save and Sync with Central. Esc pauses and Revit is free to use; the pause menu lists the snags (click one to go back and
   select it) and the **viewpoints** - named, kept per model, played, or saved as a real Revit 3D view. **Settings**:
   mouse sensitivity, invert look, the five speeds, eye height, step-up height, keep snag colours. A second click on
   the button ends the walk and takes you back to your view. Rebuilt from AJ-Tools' Game Mode with every audit finding

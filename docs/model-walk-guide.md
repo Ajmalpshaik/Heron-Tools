@@ -77,10 +77,10 @@ The folder holds:
 The CSV is saved again after every snag and comment, so nothing is lost if Revit stops. If Excel has it open, close
 it - the next change saves it again. **Open report folder** in the pause menu opens the folder.
 
-**Snag colours:** given back when the walk ends (standard), and always before every Save and Sync with Central - no
-snag red is ever saved in the model. An element whose colour you changed yourself after snagging is left as you set
-it. To keep the red after the walk (for a meeting), turn on **Keep snag colours after the walk** in Settings; J or
-**Clear snag colours** in the pause menu still gives them back.
+**Snag colours:** the red stays in the walk view after the walk (standard), until J or **Clear snag colours** in the
+pause menu, or the next Save or Sync with Central - no snag red is ever saved in the model. An element whose colour you
+changed yourself after snagging is left as you set it. To get the colours back as soon as the walk ends, turn off
+**Keep snag colours after the walk** in Settings.
 
 ## The pause menu (Esc)
 
@@ -116,7 +116,7 @@ Nothing is drawn on the model. M again starts a new measure.
 | Walk speeds, slowest first | 0.8, 1.5, 3.5, 5.5, 8 m/s | 0.2 - 20 m/s, each faster than the last. Fly x2, Shift x3 |
 | Eye height | 1700 mm | 1000 - 2000 mm (low eye = 1000 mm, or 300 mm under the eye) |
 | Step-up height | 350 mm | 100 - 450 mm - the highest stair or step you walk up |
-| Keep snag colours after the walk | off | |
+| Keep snag colours after the walk | on | |
 
 Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). Save applies them at once.
 

@@ -62,10 +62,11 @@ namespace HeronTools.Services.ModelWalk
         public double StepUpMm = StandardStepUpMm;
 
         /// <summary>
-        /// Off (standard): snag colours are given back when the walk ends. On: they stay in the walk view after the
-        /// walk - "Clear snag colours" (J, or the pause menu) still gives them back, and so does every Save / Sync.
+        /// On (standard - Ajmal, 2026-11-21): snag colours stay in the walk view after the walk. Off: they are given
+        /// back when the walk ends. Either way "Clear snag colours" (J, or the pause menu) gives them back, and so does
+        /// every Save / Sync - no snag colour is saved in the model.
         /// </summary>
-        public bool KeepSnagColours;
+        public bool KeepSnagColours = true;
 
         /// <summary>Lines saying what a loaded file could not use (shown once when the walk starts).</summary>
         public List<string> LoadWarnings { get; } = new List<string>();

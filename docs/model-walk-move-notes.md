@@ -68,7 +68,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | ID | Sev | What was wrong | Now |
 |---|---|---|---|
 | GM-A01 | Critical | J wiped every override in the view | **J made safe.** J now means "Clear my snag colours" - it gives back only what Model Walk coloured (owner request, 2026-11-21: same key as AJ-Tools, safe meaning). Reset Graphics stays the tool for a full reset. |
-| GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on J, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Stage 4 added the setting "Keep snag colours after the walk" (off). |
+| GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on J, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Stage 4 added the setting "Keep snag colours after the walk"; on by default since 2026-11-21 (owner). |
 | GM-A03 | High | Ids cut to 32-bit; Heron's helper did the same | **Fixed.** ElementIds compared with `==`, printed with `LongValue()`, categories with `ElementIdHelper.IsCategory`. Heron's `ElementIdHelper.GetIntegerValue` now throws instead of truncating; `IntValue()` removed; its two callers (`SelectionFilters`) use full-value helpers - same results for every real id. All 8 years build. |
 | GM-A04 | High | Levels by `Level.Elevation` (follows Elevation Base) | **Fixed.** `Level.ProjectElevation` for the location line. The start point no longer comes from a plan's level (Model Walk starts from a 3D view). NEEDS REAL REVIT with a moved project base point. |
 | GM-A05 | High | ~19 full-model rays a frame, links on, every frame | **Fixed (measure in Revit).** Collision tests host elements only in a 15 m box round the eye; links only when their box is near (a box filter is checked in the link's own coordinates, per the API note, so it cannot be used on links); readout ray 10 Hz, clear height 4 Hz; no ray while standing still; no `SetOrientation` / redraw when the camera did not change; frames raised only when something can change (4 a second when idle); ray budget 24 a frame - past it a move is refused, not guessed. F12 shows frame ms, average and rays. NEEDS REAL REVIT on a big federated model. |
@@ -129,8 +129,8 @@ distances in mm in `WalkTuning` (19).
 ## Owner decisions (answered before stage 4)
 
 1. Button enabled in **any 3D view** - kept.
-2. Snag colours **given back at the end** by default; a setting "Keep snag colours after the walk" (off) - added in
-   stage 4, with Clear snag colours still giving them back.
+2. Snag colours: a setting "Keep snag colours after the walk", added in stage 4. **On by default** (Ajmal,
+   2026-11-21: "Keep snag colours after walk"); Clear snag colours, Save and Sync still give them back.
 3. **One walk view per person** in workshared models - kept.
 4. **J** clears snag colours - kept.
 5. Heron's shared `Constants.MM_TO_FEET` (0.00328084) - **not changed** (other tools use it). Follow-up: make it
@@ -257,10 +257,10 @@ Use a copy of a real project with MEP, rooms and at least one link. Revit 2024 f
     mouse forward looks down, the eye is lower. Set them back.
 11. **Report.** Esc, Open report folder. Expect `Snags.csv`, `Snag 001.png`, `Snag 002.png`. Open the CSV in Excel:
     comment, IDs, room, East/North/Elevation match Spot Coordinates at the duct, picture names.
-12. **End.** Esc, End walk. Expect: back in your 3D view, the duct is its own colour again, the end message names the
+12. **End.** Esc, End walk. Expect: back in your 3D view, the duct still red (Keep snag colours is on as standard), the end message names the
     report. The Undo list shows "Model Walk: ..." steps only for the view, the snags and the colours.
-13. **Keep colours.** Start again, Settings, tick Keep snag colours, snag something, end the walk: still red. Save the
-    model: the red goes before saving.
+13. **Keep colours.** Keep snag colours is on as standard: snag something, end the walk: still red. Save the
+    model: the red goes before saving. Untick it in Settings, snag, end the walk: the red goes at once.
 14. **Viewpoints kept.** Close and reopen the model, start Model Walk, Esc: "Plant room" is still in the list.
 
 Report each step as PASS / FAIL (with what you saw) and the Revit year.
@@ -323,5 +323,5 @@ packages (2020, 2021). The docs were read after the code and checked against it.
 | R1 and R2 in Revit (close the overlay mid-walk; close the model with kept colours and press Cancel, then Save - the red must go) | NEEDS REAL REVIT - add to the test script below |
 | Everything in the owner's test script | NEEDS REAL REVIT |
 
-Add to the owner's test script: **15. Cancelled close.** Settings, tick Keep snag colours, snag something, end the
+Add to the owner's test script: **15. Cancelled close.** With Keep snag colours on (standard), snag something, end the
 walk. Close the model, press **Cancel** at Revit's question. Save. Expect: the red goes before saving.
