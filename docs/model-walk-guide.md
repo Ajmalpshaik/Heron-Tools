@@ -35,7 +35,7 @@ you walk through it. Change these while paused, then carry on.
 | B | Save a viewpoint and name it |
 | 1 to 9 | Go to viewpoint 1 to 9 |
 | O | Play viewpoints (any move key stops) |
-| X | Clear snag colours - every snagged element gets its own colours back |
+| J | Clear snag colours - every snagged element gets its own colours back |
 | U | Show again what this walk hid |
 | K | Snapshot - a picture of the view, without the HUD |
 | Z | Clean screen - only the crosshair |
@@ -79,7 +79,7 @@ it - the next change saves it again. **Open report folder** in the pause menu op
 
 **Snag colours:** given back when the walk ends (standard), and always before every Save and Sync with Central - no
 snag red is ever saved in the model. An element whose colour you changed yourself after snagging is left as you set
-it. To keep the red after the walk (for a meeting), turn on **Keep snag colours after the walk** in Settings; X or
+it. To keep the red after the walk (for a meeting), turn on **Keep snag colours after the walk** in Settings; J or
 **Clear snag colours** in the pause menu still gives them back.
 
 ## The pause menu (Esc)

@@ -134,7 +134,7 @@
                         <CheckBox x:Name="KeepSnagColoursBox" Content="Keep snag colours after the walk" Style="{StaticResource ModernCheckBox}"
                                   ToolTip="Off: each element gets its own colours back when the walk ends"/>
                         <TextBlock Style="{StaticResource HelpText}" Margin="0,4,0,0"
-                                   Text="Off (standard): every snagged element gets its own colours back when the walk ends. On: the red stays in the walk view for your meeting. Either way, Clear snag colours (X, or the pause menu) gives them back, and so does every Save and Sync with Central - no snag colour is saved in the model."/>
+                                   Text="Off (standard): every snagged element gets its own colours back when the walk ends. On: the red stays in the walk view for your meeting. Either way, Clear snag colours (J, or the pause menu) gives them back, and so does every Save and Sync with Central - no snag colour is saved in the model."/>
                     </StackPanel>
                 </Border>
             </StackPanel>

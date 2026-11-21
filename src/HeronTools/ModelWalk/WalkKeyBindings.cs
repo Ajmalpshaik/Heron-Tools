@@ -78,7 +78,7 @@ namespace HeronTools.Services.ModelWalk
             new WalkKeyAction(SaveViewpoint,  "Save viewpoint",                             Key.B),
             new WalkKeyAction(PlayViewpoints, "Play viewpoints",                            Key.O),
             new WalkKeyAction(ShowHidden,     "Show what this walk hid",                    Key.U),
-            new WalkKeyAction(ClearSnags,     "Clear my snag colours",                      Key.X),
+            new WalkKeyAction(ClearSnags,     "Clear my snag colours",                      Key.J),
             new WalkKeyAction(Snapshot,       "Snapshot (picture of the view)",             Key.K),
             new WalkKeyAction(Measure,        "Measure (point 1, then point 2)",            Key.M),
             new WalkKeyAction(SpeedUp,        "Faster",                                     Key.OemPlus),

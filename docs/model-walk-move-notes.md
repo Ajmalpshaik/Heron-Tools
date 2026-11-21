@@ -67,8 +67,8 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 
 | ID | Sev | What was wrong | Now |
 |---|---|---|---|
-| GM-A01 | Critical | J wiped every override in the view | **J dropped.** "Clear my snag colours" (X) gives back only what Model Walk coloured. Reset Graphics stays the tool for a full reset. |
-| GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on X, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Stage 4 added the setting "Keep snag colours after the walk" (off). |
+| GM-A01 | Critical | J wiped every override in the view | **J made safe.** J now means "Clear my snag colours" - it gives back only what Model Walk coloured (owner request, 2026-11-21: same key as AJ-Tools, safe meaning). Reset Graphics stays the tool for a full reset. |
+| GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on J, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Stage 4 added the setting "Keep snag colours after the walk" (off). |
 | GM-A03 | High | Ids cut to 32-bit; Heron's helper did the same | **Fixed.** ElementIds compared with `==`, printed with `LongValue()`, categories with `ElementIdHelper.IsCategory`. Heron's `ElementIdHelper.GetIntegerValue` now throws instead of truncating; `IntValue()` removed; its two callers (`SelectionFilters`) use full-value helpers - same results for every real id. All 8 years build. |
 | GM-A04 | High | Levels by `Level.Elevation` (follows Elevation Base) | **Fixed.** `Level.ProjectElevation` for the location line. The start point no longer comes from a plan's level (Model Walk starts from a 3D view). NEEDS REAL REVIT with a moved project base point. |
 | GM-A05 | High | ~19 full-model rays a frame, links on, every frame | **Fixed (measure in Revit).** Collision tests host elements only in a 15 m box round the eye; links only when their box is near (a box filter is checked in the link's own coordinates, per the API note, so it cannot be used on links); readout ray 10 Hz, clear height 4 Hz; no ray while standing still; no `SetOrientation` / redraw when the camera did not change; frames raised only when something can change (4 a second when idle); ray budget 24 a frame - past it a move is refused, not guessed. F12 shows frame ms, average and rays. NEEDS REAL REVIT on a big federated model. |
@@ -132,7 +132,7 @@ distances in mm in `WalkTuning` (19).
 2. Snag colours **given back at the end** by default; a setting "Keep snag colours after the walk" (off) - added in
    stage 4, with Clear snag colours still giving them back.
 3. **One walk view per person** in workshared models - kept.
-4. **X** clears snag colours - kept.
+4. **J** clears snag colours - kept.
 5. Heron's shared `Constants.MM_TO_FEET` (0.00328084) - **not changed** (other tools use it). Follow-up: make it
    exactly `1 / 304.8` for every tool in its own change, with each tool re-tested. Model Walk already uses
    `1 / Constants.FEET_TO_MM`.

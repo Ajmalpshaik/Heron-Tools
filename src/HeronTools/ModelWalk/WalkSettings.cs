@@ -63,7 +63,7 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>
         /// Off (standard): snag colours are given back when the walk ends. On: they stay in the walk view after the
-        /// walk - "Clear snag colours" (X, or the pause menu) still gives them back, and so does every Save / Sync.
+        /// walk - "Clear snag colours" (J, or the pause menu) still gives them back, and so does every Save / Sync.
         /// </summary>
         public bool KeepSnagColours;
 
