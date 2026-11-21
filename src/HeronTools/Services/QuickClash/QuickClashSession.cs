@@ -70,6 +70,15 @@ namespace HeronTools.Services.QuickClash
         /// <summary>The view the results list belongs to.</summary>
         private long _resultsViewId = -1;
 
+        /// <summary>
+        /// "Current selection" as Selection A: the element ids the last Run tested, or null. Clicking a clash selects its
+        /// two elements in Revit, so a later Run reuses these while the selection is still only what a click selected.
+        /// </summary>
+        private HashSet<long> _selectionAKeys;
+
+        /// <summary>Revit's selection just after Quick Clash itself selected clash elements (a click or Select), or null.</summary>
+        private HashSet<long> _clickSelectionKeys;
+
         internal static QuickClashSession Current { get; private set; }
 
         private QuickClashSession(UIApplication uiApp, Document doc)
@@ -252,17 +261,29 @@ namespace HeronTools.Services.QuickClash
             // ---- who takes part
             List<Element> host = ClashElementCollector.HostElementsInView(_doc, view);
             List<Element> elementsA;
+            string selectionANote = "";
             if (s.UseSelectionA)
             {
-                var picked = new HashSet<long>(uiDoc.Selection.GetElementIds().Select(id => id.LongValue()));
+                var current = new HashSet<long>(uiDoc.Selection.GetElementIds().Select(id => id.LongValue()));
+                // The selection is only what a clash click selected: keep testing the Selection A of the last Run.
+                bool reuse = _selectionAKeys != null && _clickSelectionKeys != null &&
+                             current.Count > 0 && current.SetEquals(_clickSelectionKeys);
+                HashSet<long> picked = reuse ? _selectionAKeys : current;
                 elementsA = host.Where(e => picked.Contains(e.Id.LongValue())).ToList();
                 if (elementsA.Count == 0)
                 {
-                    _window.SetStatus(picked.Count == 0
+                    _window.SetStatus(reuse
+                        ? "The Selection A of the last Run is no longer shown in this view. Select the elements to test again, then press Run."
+                        : picked.Count == 0
                         ? "Nothing is selected in Revit. Select the elements to test as Selection A, or tick categories instead."
                         : "None of the selected elements is a model element shown in this view. Select elements you can see here.");
                     return;
                 }
+                _selectionAKeys = new HashSet<long>(picked);
+                string count = elementsA.Count.ToString("N0", CultureInfo.InvariantCulture);
+                selectionANote = reuse
+                    ? " Selection A: the same " + count + " element(s) as the last Run (the clash elements Quick Clash selected were not used). Select new elements to change it."
+                    : " Selection A: the " + count + " selected element(s).";
             }
             else
             {
@@ -407,7 +428,7 @@ namespace HeronTools.Services.QuickClash
             uiDoc.RefreshActiveView();
 
             s.Save();
-            _window.ShowResults(clashes, RunStatus(found, itemsA.Count, itemsB.Count));
+            _window.ShowResults(clashes, RunStatus(found, itemsA.Count, itemsB.Count) + selectionANote);
             _window.SetColoured(coloured.Count > 0);
         }
 
@@ -767,17 +788,21 @@ namespace HeronTools.Services.QuickClash
                 Element inLink = instance?.GetLinkDocument()?.GetElement(ElementIdHelper.FromLong(c.ElementBId));
                 linked.Add(new KeyValuePair<Element, RevitLinkInstance>(inLink, instance));
             }
+            int notSelected;
             try
             {
-                return LinkSelection.Select(uiDoc, hostIds, linked);
+                notSelected = LinkSelection.Select(uiDoc, hostIds, linked);
             }
             catch (Autodesk.Revit.Exceptions.ApplicationException)
             {
                 // A linked reference Revit will not select here (e.g. the link was reloaded): select this model's elements.
                 try { uiDoc.Selection.SetElementIds(hostIds); }
-                catch (Autodesk.Revit.Exceptions.ApplicationException) { return linked.Count; }
-                return linked.Count;
+                catch (Autodesk.Revit.Exceptions.ApplicationException) { /* nothing selected: the note below says so */ }
+                notSelected = linked.Count;
             }
+            // What Revit now reports as selected is Quick Clash's own selection, not a new Selection A of the modeller's.
+            _clickSelectionKeys = new HashSet<long>(uiDoc.Selection.GetElementIds().Select(id => id.LongValue()));
+            return notSelected;
         }
 
         private static string LinkedNotSelectedNote(int notSelected)
