@@ -153,7 +153,7 @@ distances in mm in `WalkTuning` (19).
 Start from a perspective and an orthographic 3D view; walk stairs and ramps (300-350 mm risers); walk under a
 1,300 mm pipe (blocked, not climbed); door E with and without room on the far side; Go to point onto a floor, a
 ceiling, a duct; Fly / Pass-through; viewpoints and Play viewpoints; Select keeps the selection and the camera does
-not whip; Snag colours a host element, records a linked one, X gives colours back, a colour the modeller changes is
+not whip; Snag colours a host element, records a linked one, J gives colours back, a colour the modeller changes is
 kept, Save and Sync give colours back; Hide / U with and without the modeller's own Temporary Hide; Esc, ribbon and
 closing the view all end cleanly and write the report; back to the start view; locked view message; frame timing
 (F12) on a large federated model; 100 / 150 / 200 % scaling and a second monitor; a Revit dialog appearing during

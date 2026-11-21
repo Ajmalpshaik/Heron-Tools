@@ -463,7 +463,7 @@ namespace HeronTools.Services.ModelWalk
                 {
                     if (_session.Settings.KeepSnagColours)
                     {
-                        // The modeller's setting: the red stays for the meeting. The way back stays too - X in a walk,
+                        // The modeller's setting: the red stays for the meeting. The way back stays too - J in a walk,
                         // or any Save / Sync with Central gives every element its own colours back.
                         if (SnagColourMemory.Find(doc, view)?.Count > 0)
                             notes.Add("Snag colours kept, as your setting asks. Clear snag colours (" + _session.Keys.Label(WalkKeyBindings.ClearSnags) +
