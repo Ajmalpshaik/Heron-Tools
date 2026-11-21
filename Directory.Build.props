@@ -27,6 +27,13 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Platform>x64</Platform>
     <PlatformTarget>x64</PlatformTarget>
+    <!--
+      A warning stops the build, the same as an error: CONTRIBUTING asks for 0 warnings in every Revit
+      year, and this makes the Gates check hold the add-in to it. NuGet warnings (NU1603 and the rest)
+      count too, on purpose. If a new SDK or package brings a warning, fix its cause; do not switch
+      this off and do not hide a warning code without saying why next to it.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <!-- .NET runtime per Revit release -->
