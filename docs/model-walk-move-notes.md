@@ -604,8 +604,8 @@ you know it and it can go in `NOTICE`; (3) at the faster speed steps the feet sl
     you look, feet on the floor. Stand: idle pose. W at the second speed step (1.5 m/s): he walks, legs in step. Hold
     Shift: he runs. Let go of everything: he slows and stands, with no snap between the three.
 44. **Feet at speed, and turning.** At the 3.5 m/s step and with Shift, expect the legs to stay readable and the feet to
-    slide a little (expected). Turn on the spot with the mouse: he turns with you. Walk up a stair: he walks, feet on
-    each tread or just above.
+    slide a little (expected). Turn on the spot with the mouse: he turns with you. Walk up a stair: he walks and rises
+    with you (his feet do not fit each tread - there is no foot placement).
 45. **Standing still costs no redraws.** In third person, stand still and do not touch the mouse for 10 s with F12 on:
     the frame count stays at about four a second and Revit stays idle (Task Manager CPU low).
 46. **Big model speed with the character (F12).** On the model of step 21: F12, walk one minute in first person, then in
