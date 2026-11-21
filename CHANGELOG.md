@@ -21,9 +21,11 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   [docs/model-walk-guide.md](docs/model-walk-guide.md). Not yet tested in Revit.
 
 ### Fixed
-- **mm to feet is now exact for every tool**: the shared conversion was the rounded 0.00328084; it is now exactly
-  1 / 304.8, so a mm value typed in a window and read back gives the same mm. Quick Clash, 3D Snapshot and Model Walk
-  now use the same shared value instead of their own copies. Differences are far below a millimetre on any real model.
+- **Model Walk** `Snags.csv` opens in columns on Windows set to a ";" list separator (most decimal-comma countries):
+  the file now uses the Windows list separator (#41).
+- `Constants.MM_TO_FEET` is exactly 1 / 304.8 (was 0.00328084); View Crop values move by less than 0.001 mm (#40).
+- Quick Clash, 3D Snapshot and Model Walk use the shared `Constants` mm / feet values instead of their own copies of
+  304.8 (same numbers; one source).
 - `ElementIdHelper` no longer cuts a 64-bit element id (Revit 2024+) to 32 bits; the two selection filters that used
   it compare the full value.
 

@@ -15,15 +15,15 @@ namespace HeronTools.Utils
     internal static class Constants
     {
         /// <summary>
-        /// Conversion factor from feet (Revit internal units) to millimeters. Exact: one foot is 304.8 mm by definition.
-        /// </summary>
-        public const double FEET_TO_MM = 304.8;
-
-        /// <summary>
-        /// Conversion factor from millimeters to feet (Revit internal units). Exactly 1 / 304.8 - it used to be the
-        /// rounded 0.00328084, which drifted about 0.3 mm in every 10 km and did not round-trip with FEET_TO_MM.
+        /// Conversion factor from millimeters to feet (Revit internal units): exactly 1 / 304.8, so mm -> feet -> mm
+        /// gives back the same number (issue #40; it used to be the rounded 0.00328084).
         /// </summary>
         public const double MM_TO_FEET = 1.0 / FEET_TO_MM;
+
+        /// <summary>
+        /// Conversion factor from feet (Revit internal units) to millimeters.
+        /// </summary>
+        public const double FEET_TO_MM = 304.8;
 
         /// <summary>
         /// Minimum distance (feet) below which two points or a span are treated as zero (Level Extents).
