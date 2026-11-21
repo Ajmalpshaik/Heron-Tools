@@ -133,9 +133,18 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Measure: text only - no line is drawn over the model -->
+                <Border x:Name="MeasureCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                        Margin="0,0,0,92" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock x:Name="MeasureLine1" Style="{StaticResource HudMain}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="MeasureLine2" Style="{StaticResource HudSecond}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Door hint -->
                 <Border x:Name="HintCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                        Margin="0,0,0,128" Visibility="Collapsed">
+                        Margin="0,0,0,156" Visibility="Collapsed">
                     <TextBlock x:Name="HintText" Style="{StaticResource HudMain}"/>
                 </Border>
 

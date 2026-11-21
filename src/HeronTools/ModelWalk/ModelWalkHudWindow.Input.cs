@@ -262,6 +262,7 @@ namespace HeronTools.UI.ModelWalk
                 case WalkKeyBindings.ShowHidden: if (first) input.ShowHiddenQueued = true; break;
                 case WalkKeyBindings.ClearSnags: if (first) input.ClearSnagsQueued = true; break;
                 case WalkKeyBindings.Snapshot: if (first) TakeSnapshot(); break;
+                case WalkKeyBindings.Measure: if (first) input.MeasureQueued = true; break;
                 case WalkKeyBindings.SpeedUp: if (first) StepSpeed(+1); break;
                 case WalkKeyBindings.SpeedDown: if (first) StepSpeed(-1); break;
                 case WalkKeyBindings.CleanScreen: if (first) _cleanScreen = !_cleanScreen; break;

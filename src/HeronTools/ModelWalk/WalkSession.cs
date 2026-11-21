@@ -135,6 +135,7 @@ namespace HeronTools.Services.ModelWalk
         public bool SaveViewpointQueued;
         public int JumpViewpoint;          // 1..9, 0 = none
         public bool ClickQueued;           // a left click in Select / Snag / Hide
+        public bool MeasureQueued;         // M: the next measure point
         public bool ShowHiddenQueued;
         public bool ClearSnagsQueued;
         public bool PlayViewpointsQueued;
@@ -149,7 +150,7 @@ namespace HeronTools.Services.ModelWalk
         /// <summary>True while any one-shot is waiting for the engine.</summary>
         public bool AnyQueued =>
             DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued ||
-            GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || ShowHiddenQueued ||
+            GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || MeasureQueued || ShowHiddenQueued ||
             ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0 || SaveViewpointAsView > 0;
     }
 
@@ -166,6 +167,12 @@ namespace HeronTools.Services.ModelWalk
         public double AimDistanceMm;
         public string AimLine1 = "";       // category - family : type - ID
         public string AimLine2 = "";       // level - system - link
+
+        // Measure: two points from the crosshair, text only (nothing is drawn on the model)
+        public bool MeasureShown;
+        public string MeasureLine1 = "";   // "Point 1 set" / "2 450 mm"
+        public string MeasureLine2 = "";   // live distance / horizontal and vertical parts
+        public long MeasureDoneStampMs;    // a finished measure fades after 20 s; 0 while point 2 is awaited
 
         // Go to point
         public bool GoToPointValid;

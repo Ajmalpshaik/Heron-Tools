@@ -53,6 +53,7 @@ namespace HeronTools.Services.ModelWalk
         public const string ShowHidden = "ShowHidden";
         public const string ClearSnags = "ClearSnags";
         public const string Snapshot = "Snapshot";
+        public const string Measure = "Measure";
         public const string SpeedUp = "SpeedUp";
         public const string SpeedDown = "SpeedDown";
         public const string CleanScreen = "CleanScreen";
@@ -79,6 +80,7 @@ namespace HeronTools.Services.ModelWalk
             new WalkKeyAction(ShowHidden,     "Show what this walk hid",                    Key.U),
             new WalkKeyAction(ClearSnags,     "Clear my snag colours",                      Key.X),
             new WalkKeyAction(Snapshot,       "Snapshot (picture of the view)",             Key.K),
+            new WalkKeyAction(Measure,        "Measure (point 1, then point 2)",            Key.M),
             new WalkKeyAction(SpeedUp,        "Faster",                                     Key.OemPlus),
             new WalkKeyAction(SpeedDown,      "Slower",                                     Key.OemMinus),
             new WalkKeyAction(CleanScreen,    "Clean screen (crosshair only)",              Key.Z),

@@ -104,6 +104,16 @@ namespace HeronTools.UI.ModelWalk
                 ViewpointCard.Visibility = _session.Viewpoints.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             }
 
+            // Measure (a finished one fades after 20 s; M again starts a new one)
+            if (hud.MeasureShown && hud.MeasureDoneStampMs > 0 && DateTimeOffset.Now.ToUnixTimeMilliseconds() - hud.MeasureDoneStampMs > 20000)
+                hud.MeasureShown = false;
+            MeasureCard.Visibility = hud.MeasureShown ? Visibility.Visible : Visibility.Collapsed;
+            if (hud.MeasureShown)
+            {
+                MeasureLine1.Text = hud.MeasureLine1;
+                MeasureLine2.Text = hud.MeasureLine2;
+            }
+
             // Door hint
             if (hud.DoorHint)
             {
@@ -176,6 +186,7 @@ namespace HeronTools.UI.ModelWalk
                 "Snag colours\t" + k(WalkKeyBindings.ClearSnags) + " clears them now (they also come back at the end)",
                 "Viewpoints\t" + k(WalkKeyBindings.SaveViewpoint) + " saves  -  1..9 goes back  -  " + k(WalkKeyBindings.PlayViewpoints) + " plays them",
                 "Snapshot\t" + k(WalkKeyBindings.Snapshot) + " saves a picture of the view (no HUD)",
+                "Measure\t" + k(WalkKeyBindings.Measure) + " at point 1, " + k(WalkKeyBindings.Measure) + " at point 2 - distance in mm",
                 "Back to start\t" + k(WalkKeyBindings.BackToStart),
                 "Pause\tEsc or " + k(WalkKeyBindings.Pause) + " - Revit is free to use  -  paused: S = settings, K = keys, Esc = end",
                 "Help\t" + k(WalkKeyBindings.Help) + "  -  clean screen " + k(WalkKeyBindings.CleanScreen)

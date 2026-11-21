@@ -32,6 +32,9 @@ namespace HeronTools.Services.ModelWalk
 
         private OverrideGraphicSettings _snagOverride;
 
+        // Measure: the first point, until the second is taken. Null when no measure is running.
+        private XYZ _measureFrom;
+
         private XYZ HandleActions(UIDocument uidoc, Document doc, View3D view, WalkInput input, WalkHudState hud,
                                   XYZ position, XYZ forward, XYZ flatForward)
         {
@@ -101,6 +104,12 @@ namespace HeronTools.Services.ModelWalk
                 }
             }
 
+            if (input.MeasureQueued)
+            {
+                input.MeasureQueued = false;
+                Measure(position, forward, hud);
+            }
+
             if (input.ClickQueued)
             {
                 input.ClickQueued = false;
@@ -146,6 +155,54 @@ namespace HeronTools.Services.ModelWalk
 
             hud.SnagCount = _session.Report.Count;
             return position;
+        }
+
+        /// <summary>
+        /// Measure: the first press takes point 1 where the crosshair hits, the second takes point 2 and shows the
+        /// distance with its horizontal and vertical parts - in text only, so it cannot drift off the model the way
+        /// the old screen-drawn line did. One ray per press; the live distance uses the readout's own ray.
+        /// </summary>
+        private void Measure(XYZ position, XYZ forward, WalkHudState hud)
+        {
+            string key = _session.Keys.Label(WalkKeyBindings.Measure);
+            WalkRayHit hit = _collision.CastFull(position, forward, WalkTuning.AimRangeFt);
+            if (hit == null)
+            {
+                hud.Toast("Measure: aim at a surface, then press " + key, WalkToastKind.Refused);
+                return;
+            }
+
+            if (_measureFrom == null)
+            {
+                _measureFrom = hit.Point;
+                hud.MeasureShown = true;
+                hud.MeasureDoneStampMs = 0;
+                hud.MeasureLine1 = "Measure - point 1 set";
+                hud.MeasureLine2 = "Aim at point 2 and press " + key;
+                return;
+            }
+
+            XYZ d = hit.Point - _measureFrom;
+            double total = WalkTuning.FtToMm(d.GetLength());
+            double horizontal = WalkTuning.FtToMm(Math.Sqrt((d.X * d.X) + (d.Y * d.Y)));
+            double vertical = WalkTuning.FtToMm(Math.Abs(d.Z));
+            _measureFrom = null;
+            hud.MeasureShown = true;
+            hud.MeasureDoneStampMs = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            hud.MeasureLine1 = string.Format(System.Globalization.CultureInfo.CurrentCulture, "Measured {0:N0} mm", total);
+            hud.MeasureLine2 = string.Format(System.Globalization.CultureInfo.CurrentCulture,
+                "Horizontal {0:N0} mm  -  vertical {1:N0} mm  -  {2} again for a new one", horizontal, vertical, key);
+        }
+
+        /// <summary>While point 1 is set: the live distance to where the crosshair is now (no extra ray).</summary>
+        private void UpdateLiveMeasure(WalkRayHit aim, WalkHudState hud)
+        {
+            if (_measureFrom == null)
+                return;
+            hud.MeasureLine2 = aim == null
+                ? "Aim at point 2 and press " + _session.Keys.Label(WalkKeyBindings.Measure)
+                : string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:N0} mm to the crosshair  -  press {1} for point 2",
+                    WalkTuning.FtToMm((aim.Point - _measureFrom).GetLength()), _session.Keys.Label(WalkKeyBindings.Measure));
         }
 
         private static string ClearSnagColours(Document doc, View3D view) =>

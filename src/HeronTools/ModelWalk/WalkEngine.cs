@@ -252,6 +252,7 @@ namespace HeronTools.Services.ModelWalk
                 hud.AimLine2 = aim != null ? WalkCollision.DescribeLine2(aim) : "";
                 hud.GoToPointValid = input.GoToPointAimHold && aim != null;
                 hud.GoToPointDistanceMm = hud.AimDistanceMm;
+                UpdateLiveMeasure(aim, hud);
             }
 
             // --- Clear height (floor to whatever is above), four times a second ---
