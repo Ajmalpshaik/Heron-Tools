@@ -67,9 +67,9 @@ namespace HeronTools.Commands
             {
                 DialogHelper.ShowError(
                     ToolTitle,
-                    "Could not unhide elements in the active view.\n\nPlease check that the view is editable and try again."
+                    "Could not unhide elements in the active view, so nothing was changed.\n\nPlease check that the view is editable and try again."
                     + "\n\nWhat went wrong: " + ex.Message);
-                return Result.Failed;
+                return Result.Cancelled;
             }
         }
 

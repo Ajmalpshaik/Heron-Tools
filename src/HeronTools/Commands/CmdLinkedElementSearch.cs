@@ -37,7 +37,7 @@ namespace HeronTools.Commands
                 if (uiDoc == null)
                 {
                     DialogHelper.ShowError(Title, "Please open a project before running this tool.");
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 Document doc = uiDoc.Document;
@@ -46,14 +46,14 @@ namespace HeronTools.Commands
                 if (activeView == null || activeView.IsTemplate)
                 {
                     DialogHelper.ShowError(Title, "Run this command in a project view (not a template).");
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 if (activeView.ViewType == ViewType.DrawingSheet ||
                     activeView.ViewType == ViewType.DraftingView)
                 {
                     DialogHelper.ShowError(Title, "Linked element search is not available on sheets or drafting views.");
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 IList<RevitLinkInstance> linkInstances = new FilteredElementCollector(doc)
@@ -74,8 +74,10 @@ namespace HeronTools.Commands
             }
             catch (Exception ex)
             {
-                DialogHelper.ShowError(Title, "An error occurred:\n\n" + ex.Message);
-                return Result.Failed;
+                // This tool only reads the model, so nothing was changed. Cancelled: our box is the message.
+                DialogHelper.ShowError(Title,
+                    "Linked Element Search stopped because of an unexpected error. Nothing in the model was changed.\n\nRevit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }
