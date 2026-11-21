@@ -8,12 +8,15 @@
 // The installer's engine: reads the Heron Tools build packed inside the .exe, finds the Revit versions on the
 // PC, and installs or removes Heron Tools for each - with the same safeguards as build\build.ps1 (which in
 // turn follow the Heron AI platform's installer; no code shared):
+//   - finds a Revit year by its Revit.exe in Program Files, by Windows' list of installed programs (so
+//     Revit on another drive is found too), or by that year's Addins folder already being there;
 //   - per user only (%AppData%\Autodesk\Revit\Addins\<year>), no administrator, every Revit 2020-2027;
 //   - never while that Revit is open, and nothing at all while a Revit of unknown year is open; never closes Revit;
 //   - never writes through a link (a dev junction) - emptying it could empty its target;
 //   - keeps the install it replaces in %LocalAppData%\HeronTools\install-backup\<year> (the same folder
 //     build.ps1 -Rollback reads), and puts it back by itself if the new copy fails;
-//   - checks every file it wrote, byte for byte, against the build it carries;
+//   - checks every file it wrote, byte for byte, against the build it carries; a failed first install takes
+//     out only the files that run wrote, so Revit never loads half of one;
 //   - touches nothing but Heron Tools' own HeronTools.addin and HeronTools folder.
 // It decides nothing about the window; the window decides nothing about installing.
 
@@ -27,6 +30,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 
 namespace HeronTools.Installer
 {
@@ -128,6 +132,11 @@ namespace HeronTools.Installer
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Autodesk");
         public string BackupRoot = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"HeronTools\install-backup");
+        /// <summary>The all-users Addins folder Revit's own setup makes for each year. Null = do not look (a test run).</summary>
+        public string AllUsersAddinsRoot = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"Autodesk\Revit\Addins");
+        /// <summary>False in a test run: Windows' list of installed programs must not decide a test.</summary>
+        public bool ReadRegistry = true;
         /// <summary>False in a test run: a real Revit on the PC must not block a run into a test folder.</summary>
         public bool WatchRunningRevit = true;
     }
@@ -220,7 +229,7 @@ namespace HeronTools.Installer
                 var state = new YearState
                 {
                     Year = year,
-                    RevitInstalled = File.Exists(Path.Combine(_paths.RevitRoot, "Revit " + year, "Revit.exe")),
+                    RevitInstalled = RevitFound(year),
                     RevitOpen = running.Contains(year),
                     Installed = InstalledVersion(year),
                     AllUsersCopy = AllUsersCopy(year),
@@ -230,11 +239,88 @@ namespace HeronTools.Installer
             return states;
         }
 
+        /// <summary>
+        /// True when Revit of that year is on this PC. Any one of these is enough:
+        ///   - Revit.exe in Program Files\Autodesk\Revit &lt;year&gt; (the usual place);
+        ///   - Windows' list of installed programs has "Revit &lt;year&gt;" with Revit.exe in its folder (Revit on D:\);
+        ///   - Revit's own all-users Addins folder for that year (%ProgramData%\Autodesk\Revit\Addins\&lt;year&gt;);
+        ///   - the per-user Addins folder for that year holds another add-in (Heron Tools' own leftovers do not count,
+        ///     or a removed Revit would keep being offered).
+        /// </summary>
+        private bool RevitFound(int year)
+        {
+            string y = year.ToString(CultureInfo.InvariantCulture);
+            if (File.Exists(Path.Combine(_paths.RevitRoot, "Revit " + y, "Revit.exe")))
+                return true;
+            if (_paths.ReadRegistry && RegistryRevitFolders(year).Any(f => File.Exists(Path.Combine(f, "Revit.exe"))))
+                return true;
+            if (_paths.AllUsersAddinsRoot != null && Directory.Exists(Path.Combine(_paths.AllUsersAddinsRoot, y)))
+                return true;
+            string mine = YearFolder(year);
+            if (!Directory.Exists(mine))
+                return false;
+            try
+            {
+                return Directory.EnumerateFileSystemEntries(mine)
+                                .Select(Path.GetFileName)
+                                .Any(n => !n.Equals(Product, StringComparison.OrdinalIgnoreCase) &&
+                                          !n.Equals(Product + ".addin", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception)
+            {
+                return false;   // the folder cannot be read: it proves nothing
+            }
+        }
+
+        /// <summary>
+        /// Install folders Windows lists for "Revit &lt;year&gt;" / "Autodesk Revit &lt;year&gt;" (Apps and features).
+        /// Only the main program, never "Revit Content Libraries 2024" or similar.
+        /// </summary>
+        private static List<string> RegistryRevitFolders(int year)
+        {
+            var folders = new List<string>();
+            var name = new Regex(@"^(Autodesk\s+)?Revit\s+" + year.ToString(CultureInfo.InvariantCulture) + @"(\.\d+)*$", RegexOptions.IgnoreCase);
+            const string uninstall = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+            try
+            {
+                using (RegistryKey machine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+                using (RegistryKey list = machine.OpenSubKey(uninstall))
+                {
+                    if (list == null)
+                        return folders;
+                    foreach (string sub in list.GetSubKeyNames())
+                    {
+                        using (RegistryKey app = list.OpenSubKey(sub))
+                        {
+                            string display = (app?.GetValue("DisplayName") as string ?? "").Trim();
+                            string location = (app?.GetValue("InstallLocation") as string ?? "").Trim().Trim('"');
+                            if (location.Length > 0 && name.IsMatch(display))
+                                folders.Add(location);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // The list cannot be read (no access): Revit is then found by the other ways only.
+            }
+            return folders;
+        }
+
+        /// <summary>
+        /// The version installed for that year, "incomplete" when only one of HeronTools.addin and the HeronTools
+        /// folder is there (a leftover - Revit warns about it at every start, and Remove must still take it out),
+        /// or null when neither is.
+        /// </summary>
         private string InstalledVersion(int year)
         {
             string dll = Path.Combine(ProductFolder(year), Product + ".dll");
-            if (!File.Exists(dll) || !File.Exists(AddinFile(year)))
+            bool addin = File.Exists(AddinFile(year));
+            bool folder = Directory.Exists(ProductFolder(year));
+            if (!addin && !folder)
                 return null;
+            if (!addin || !File.Exists(dll))
+                return "incomplete";
             try
             {
                 string v = FileVersionInfo.GetVersionInfo(dll).ProductVersion;
@@ -293,6 +379,8 @@ namespace HeronTools.Installer
                 return Fail(result, $"'Heron Tools' was not installed for Revit {year}. The install already there could not be kept first, so it was left alone. {ex.Message}");
             }
 
+            bool folderWasThere = Directory.Exists(productFolder);
+            var written = new List<string>();
             try
             {
                 Directory.CreateDirectory(productFolder);
@@ -305,6 +393,7 @@ namespace HeronTools.Installer
                 {
                     string target = Path.Combine(YearFolder(year), file.Path.Replace('/', '\\'));
                     Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    written.Add(target);   // before writing: a write that fails half way still leaves a file
                     File.WriteAllBytes(target, _payload.Read(file));
                     // Written by this program, so Windows puts no "downloaded from the internet" mark on it.
                 }
@@ -319,8 +408,11 @@ namespace HeronTools.Installer
             }
             catch (Exception ex)
             {
-                // Half a new install is worse than the old one: put the old one back.
-                string putBack = kept != null ? (RestorePrevious(year) ?? "the previous install was put back") : "nothing was installed before";
+                // Half a new install is worse than the old one: put the old one back - or, on a first install,
+                // take out what this run wrote, so Revit does not load half of it at its next start.
+                string putBack = kept != null
+                    ? (RestorePrevious(year) ?? "the previous install was put back")
+                    : (RemoveWritten(written, productFolder, folderWasThere) ?? "nothing was installed before, and what this run wrote was taken out again");
                 return Fail(result, $"'Heron Tools' could not be installed for Revit {year}. {ex.Message} - {putBack}.");
             }
 
@@ -370,16 +462,41 @@ namespace HeronTools.Installer
                 Directory.CreateDirectory(productFolder);
                 foreach (string old in Directory.GetFiles(productFolder))
                     File.Delete(old);
+                foreach (string old in Directory.GetDirectories(productFolder))
+                    Directory.Delete(old, true);
                 foreach (string file in Directory.GetFiles(keptProduct))
                     File.Copy(file, Path.Combine(productFolder, Path.GetFileName(file)), true);
                 string keptAddin = Path.Combine(BackupFolder(year), Product + ".addin");
                 if (File.Exists(keptAddin))
                     File.Copy(keptAddin, AddinFile(year), true);
+                else if (File.Exists(AddinFile(year)))
+                    File.Delete(AddinFile(year));   // the old install had no .addin: the new one must not stay
                 return null;
             }
             catch (Exception ex)
             {
                 return "putting the previous install back failed too: " + ex.Message;
+            }
+        }
+
+        /// <summary>
+        /// After a failed first install: deletes the files this run wrote (only those), and the HeronTools folder
+        /// if this run made it and it is now empty. Null when it worked, or what went wrong.
+        /// </summary>
+        private static string RemoveWritten(List<string> written, string productFolder, bool folderWasThere)
+        {
+            try
+            {
+                foreach (string file in written)
+                    if (File.Exists(file))
+                        File.Delete(file);
+                if (!folderWasThere && Directory.Exists(productFolder) && !Directory.EnumerateFileSystemEntries(productFolder).Any())
+                    Directory.Delete(productFolder, false);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return "taking out what this run wrote failed too: " + ex.Message + " - run Remove Heron Tools";
             }
         }
 
