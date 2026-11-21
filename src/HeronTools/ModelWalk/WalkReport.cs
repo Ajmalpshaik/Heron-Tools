@@ -262,23 +262,36 @@ namespace HeronTools.Services.ModelWalk
                    Math.Round(yaw).ToString("0", CultureInfo.InvariantCulture) + " deg from project east, " + tilt;
         }
 
+        /// <summary>
+        /// The column separator: Windows' own list separator (Region settings), the one Excel uses when a .csv file is
+        /// double-clicked - "," on English Windows, ";" where the decimal mark is a comma (issue #41). Every number in
+        /// the file is a whole number with no thousands mark, so it reads the same with either. Anything unusual -> ",".
+        /// </summary>
+        internal static char ListSeparator()
+        {
+            string sep = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+            char c = string.IsNullOrEmpty(sep) ? ',' : sep.Trim().Length > 0 ? sep.Trim()[0] : ',';
+            return c == ',' || c == ';' || c == '\t' || c == '|' ? c : ',';
+        }
+
         private static void Row(StringBuilder r, params string[] cells)
         {
+            char separator = ListSeparator();
             for (int i = 0; i < cells.Length; i++)
             {
-                if (i > 0) r.Append(',');
-                r.Append(Cell(cells[i]));
+                if (i > 0) r.Append(separator);
+                r.Append(Cell(cells[i], separator));
             }
             r.Append("\r\n");
         }
 
-        /// <summary>Quoted when it holds a comma, quote or line break; a leading = + - @ is made plain text (no formulas).</summary>
-        private static string Cell(string text)
+        /// <summary>Quoted when it holds the separator, a comma, quote or line break; a leading = + - @ is made plain text (no formulas).</summary>
+        private static string Cell(string text, char separator)
         {
             text = text ?? "";
             if (text.Length > 0 && "=+-@".IndexOf(text[0]) >= 0 && !double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                 text = "'" + text;
-            if (text.IndexOfAny(new[] { ',', '"', '\r', '\n' }) < 0)
+            if (text.IndexOfAny(new[] { separator, ',', '"', '\r', '\n' }) < 0)
                 return text;
             return "\"" + text.Replace("\"", "\"\"") + "\"";
         }

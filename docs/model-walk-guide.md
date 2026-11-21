@@ -82,6 +82,9 @@ The folder holds:
 - **Snags.csv** - opens in Excel. One row per snag: No., Time, Author, Comment, Category, Family : Type, Size,
   Element ID (full 64-bit) and Unique ID, Level, System, Link, Room, East / North / Elevation in **shared coordinates
   (mm)** - the numbers Spot Coordinates shows - the camera, the picture file and whether it was coloured.
+  The columns are split with your Windows list separator (Region settings): a comma on English Windows, a semicolon
+  where the decimal mark is a comma (German, French...). So a double-click opens it in columns either way. If you open
+  it on a PC with another region and it lands in one column: Excel > Data > From Text/CSV, and pick the separator.
 - **Snag 001.png**, **Snag 002.png**... - one picture per snag.
 - **Snapshot ....png** - pictures taken with K.
 
