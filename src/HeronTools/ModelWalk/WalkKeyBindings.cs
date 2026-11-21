@@ -293,7 +293,7 @@ namespace HeronTools.Services.ModelWalk
                     bindings.Assign(action.Id, action.DefaultKey);
                 else
                     bindings.LoadWarnings.Add("\"" + action.Display + "\" has no key: its standard key " + LabelOf(action.DefaultKey) +
-                                              " is used by another action. Pause (Esc) and press S to give it one.");
+                                              " is used by another action. Pause (Esc) and press K (Keys) to give it one.");
             }
             return bindings;
         }
