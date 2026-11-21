@@ -101,6 +101,9 @@ namespace HeronTools.UI.QuickMenu
         private int _dropSlot = -1;
 
         private Point _dragOrigin;
+
+        /// <summary>True when the left button went down on a tool row in the list (not its scrollbar).</summary>
+        private bool _dragFromToolItem;
         private int _dragFromSlot = -1;
 
         /// <summary>
@@ -139,9 +142,15 @@ namespace HeronTools.UI.QuickMenu
             if (_layoutUnreadable)
             {
                 SaveButton.IsEnabled = false;
-                ShowError("Your saved Quick Menu layout could not be read, so the default layout is shown and " +
-                          "Save is turned off - saving now would replace your layout with these defaults. " +
-                          "Close this window and try again in a moment.");
+                ShowError("Your saved Quick Menu layout could not be opened (another program may have it open, " +
+                          "or Windows refused access), so the default layout is shown and Save is turned off - " +
+                          "saving now would replace your layout with these defaults. Close this window, close " +
+                          "whatever has quickmenu-slots.txt open, and open Quick Menu Settings again.");
+            }
+            else if (!string.IsNullOrEmpty(working.SetAsidePath))
+            {
+                ShowError("Your saved Quick Menu layout file was empty or damaged, so the default layout is shown. " +
+                          "The old file was kept as " + working.SetAsidePath + ". Save to start a new layout.");
             }
         }
 
@@ -165,7 +174,8 @@ namespace HeronTools.UI.QuickMenu
                 });
             }
 
-            SlotCountCombo.SelectedIndex = NearestIndex(SlotCountChoices, config.SlotCount);
+            SlotCountCombo.SelectedIndex = ChoiceIndex(SlotCountCombo, config.SlotCount,
+                config.SlotCount.ToString(CultureInfo.InvariantCulture) + " tools");
 
             for (int i = 0; i < WheelSizeChoices.Length; i++)
             {
@@ -176,7 +186,8 @@ namespace HeronTools.UI.QuickMenu
                 });
             }
 
-            WheelSizeCombo.SelectedIndex = NearestIndex(WheelSizeChoices, config.Diameter);
+            WheelSizeCombo.SelectedIndex = ChoiceIndex(WheelSizeCombo, config.Diameter,
+                "Custom (" + config.Diameter.ToString(CultureInfo.InvariantCulture) + ")");
 
             for (int i = 0; i < SourceFilterLabels.Length; i++)
             {
@@ -847,22 +858,36 @@ namespace HeronTools.UI.QuickMenu
             return entry != null ? entry.Key : null;
         }
 
-        private static int NearestIndex(int[] choices, int value)
+        /// <summary>
+        /// The combo item holding exactly <paramref name="value"/>. A saved value that is not one of the
+        /// standard choices (an older or hand-edited layout file, e.g. 5 slots or a 600 wheel) gets its own
+        /// item, in size order, so the window shows it as it is and Save keeps it - never quietly changed.
+        /// </summary>
+        private static int ChoiceIndex(ComboBox combo, int value, string label)
         {
-            int bestIndex = 0;
-            int bestDistance = int.MaxValue;
-
-            for (int i = 0; i < choices.Length; i++)
+            int insertAt = combo.Items.Count;
+            for (int i = 0; i < combo.Items.Count; i++)
             {
-                int distance = Math.Abs(choices[i] - value);
-                if (distance < bestDistance)
+                var item = combo.Items[i] as ComboBoxItem;
+                if (item == null || !(item.Tag is int))
                 {
-                    bestDistance = distance;
-                    bestIndex = i;
+                    continue;
+                }
+
+                int choice = (int)item.Tag;
+                if (choice == value)
+                {
+                    return i;
+                }
+
+                if (choice > value && insertAt == combo.Items.Count)
+                {
+                    insertAt = i;
                 }
             }
 
-            return bestIndex;
+            combo.Items.Insert(insertAt, new ComboBoxItem { Content = label, Tag = value });
+            return insertAt;
         }
 
         #endregion
@@ -937,6 +962,12 @@ namespace HeronTools.UI.QuickMenu
 
         private void OnToolListDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            // Only a double-click on a tool - not on the scrollbar or the empty space below the list.
+            if (ToolItemUnder(e.OriginalSource as DependencyObject) == null)
+            {
+                return;
+            }
+
             AssignSelectedTool();
         }
 
@@ -989,11 +1020,13 @@ namespace HeronTools.UI.QuickMenu
                 config.Slots[i] = _slotKeys[i];
             }
 
-            if (!config.Save())
+            string saveError;
+            if (!config.Save(out saveError))
             {
-                // Keep the window - and everything arranged in it - open, so nothing is lost.
-                ShowError("The layout could not be saved - the settings file may be locked or read-only. " +
-                          "Your arrangement is still here; try Save again.");
+                // Keep the window - and everything arranged in it - open, so nothing is lost. Say what
+                // Windows actually reported, not a guess.
+                ShowError("The layout could not be saved: " + saveError +
+                          " Your arrangement is still here - fix that and try Save again.");
                 return;
             }
 
@@ -1117,11 +1150,14 @@ namespace HeronTools.UI.QuickMenu
         private void OnToolListMouseDown(object sender, MouseButtonEventArgs e)
         {
             _dragOrigin = e.GetPosition(null);
+            // A drag may only start from a tool. Pressing on the scrollbar (to scroll the list) must
+            // never pick up the selected tool.
+            _dragFromToolItem = ToolItemUnder(e.OriginalSource as DependencyObject) != null;
         }
 
         private void OnToolListMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton != MouseButtonState.Pressed || !PastDragThreshold(e))
+            if (e.LeftButton != MouseButtonState.Pressed || !_dragFromToolItem || !PastDragThreshold(e))
             {
                 return;
             }
@@ -1274,6 +1310,30 @@ namespace HeronTools.UI.QuickMenu
             }
 
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// The tool row (ListBoxItem) the pointer is on, or null when it is on the list's scrollbar, its
+        /// empty space or anything else. Walks up from what was clicked, stopping at the list itself.
+        /// </summary>
+        private ListBoxItem ToolItemUnder(DependencyObject source)
+        {
+            DependencyObject current = source;
+            while (current != null && !ReferenceEquals(current, ToolList))
+            {
+                var item = current as ListBoxItem;
+                if (item != null)
+                {
+                    return item;
+                }
+
+                // Text runs are not part of the visual tree - step out through their logical parent.
+                current = current is Visual || current is System.Windows.Media.Media3D.Visual3D
+                    ? VisualTreeHelper.GetParent(current)
+                    : LogicalTreeHelper.GetParent(current);
+            }
+
+            return null;
         }
 
         private bool PastDragThreshold(MouseEventArgs e)

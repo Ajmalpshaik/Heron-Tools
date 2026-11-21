@@ -271,20 +271,41 @@ namespace HeronTools.UI.QuickMenu
                 }
 
                 // Screen pixels -> WPF units, so 125%/150% displays still land on the pointer.
-                var pointer = new Point(cursor.X, cursor.Y);
+                Matrix toUnits = Matrix.Identity;
                 PresentationSource source = PresentationSource.FromVisual(this);
                 if (source != null && source.CompositionTarget != null)
                 {
-                    pointer = source.CompositionTarget.TransformFromDevice.Transform(pointer);
+                    toUnits = source.CompositionTarget.TransformFromDevice;
                 }
+
+                Point pointer = toUnits.Transform(new Point(cursor.X, cursor.Y));
 
                 double left = pointer.X - (Width / 2.0);
                 double top = pointer.Y - (Height / 2.0);
 
-                double minLeft = SystemParameters.VirtualScreenLeft;
-                double minTop = SystemParameters.VirtualScreenTop;
-                double maxLeft = minLeft + SystemParameters.VirtualScreenWidth - Width;
-                double maxTop = minTop + SystemParameters.VirtualScreenHeight - Height;
+                // Keep the wheel inside the usable area (taskbar excluded) of the monitor the pointer is
+                // on - not the box round all monitors together, which with two different-sized screens
+                // takes in space no screen shows, so the lower slots could land off screen.
+                Rect area = new Rect(
+                    SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+                    SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+                IntPtr monitor = QuickMenuNative.MonitorFromPoint(cursor, QuickMenuNative.MonitorDefaultToNearest);
+                var info = new QuickMenuNative.MonitorInfo { Size = Marshal.SizeOf(typeof(QuickMenuNative.MonitorInfo)) };
+                if (monitor != IntPtr.Zero && QuickMenuNative.GetMonitorInfo(monitor, ref info))
+                {
+                    Rect work = new Rect(
+                        toUnits.Transform(new Point(info.Work.Left, info.Work.Top)),
+                        toUnits.Transform(new Point(info.Work.Right, info.Work.Bottom)));
+                    if (work.Width > 0 && work.Height > 0)
+                    {
+                        area = work;
+                    }
+                }
+
+                double minLeft = area.Left;
+                double minTop = area.Top;
+                double maxLeft = area.Right - Width;
+                double maxTop = area.Bottom - Height;
 
                 Left = maxLeft > minLeft ? Math.Min(Math.Max(left, minLeft), maxLeft) : minLeft;
                 Top = maxTop > minTop ? Math.Min(Math.Max(top, minTop), maxTop) : minTop;
@@ -1578,9 +1599,36 @@ namespace HeronTools.UI.QuickMenu
             return brush;
         }
 
-        /// <summary>Minimal user32 interop - only to find out where the mouse pointer is.</summary>
+        /// <summary>Minimal user32 interop - only to find out where the mouse pointer is, and which screen it is on.</summary>
         internal static class QuickMenuNative
         {
+            internal const uint MonitorDefaultToNearest = 2;
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct NativeRect
+            {
+                public int Left;
+                public int Top;
+                public int Right;
+                public int Bottom;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MonitorInfo
+            {
+                public int Size;
+                public NativeRect Monitor;
+                public NativeRect Work;
+                public uint Flags;
+            }
+
+            [DllImport("user32.dll")]
+            public static extern IntPtr MonitorFromPoint(NativePoint point, uint flags);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+
             [StructLayout(LayoutKind.Sequential)]
             public struct NativePoint
             {
