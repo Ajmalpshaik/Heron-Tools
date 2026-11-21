@@ -41,8 +41,8 @@ namespace HeronTools.Services.ModelWalk
             if (now - _lastRoomCheck < WalkTuning.ClearHeightRefreshSec)
                 return;
             // Standing on the floor, 300 mm up: inside the room's height even with a low upper limit.
-            XYZ probe = new XYZ(position.X, position.Y, position.Z - _session.EyeHeightFt + WalkTuning.MmToFt(300));
-            if (!_roomSourcesDirty && _lastRoomPoint != null && _lastRoomPoint.DistanceTo(probe) < WalkTuning.MmToFt(300))
+            XYZ probe = new XYZ(position.X, position.Y, position.Z - _session.EyeHeightFt + WalkTuning.MmToFt(WalkTuning.RoomProbeAboveFloorMm));
+            if (!_roomSourcesDirty && _lastRoomPoint != null && _lastRoomPoint.DistanceTo(probe) < WalkTuning.MmToFt(WalkTuning.RoomRecheckMoveMm))
                 return;
             _lastRoomCheck = now;
             _lastRoomPoint = probe;

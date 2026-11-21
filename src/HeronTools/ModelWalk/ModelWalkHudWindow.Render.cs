@@ -160,36 +160,51 @@ namespace HeronTools.UI.ModelWalk
                 _chips[i].Background = B(on ? "Accent" : "AccentGray");
                 _chipTexts[i].Foreground = B(on ? "TextOnAccent" : "TextSecondary");
             }
+            ModeHint.Text = ClickHint(_session.Input.Pointer) + "   -   right-click or Tab to change";
+        }
+
+        private static string ClickHint(WalkPointerMode mode)
+        {
+            switch (mode)
+            {
+                case WalkPointerMode.Select: return "Click selects";
+                case WalkPointerMode.Snag: return "Click records a snag";
+                case WalkPointerMode.Hide: return "Click hides for now";
+                default: return "Reads only";
+            }
         }
 
         private void UpdateKeyHints()
         {
-            KeyHints.Text = _keys.Label(WalkKeyBindings.Help) + " Help    " + _keys.Label(WalkKeyBindings.CleanScreen) + " Clean screen    Esc Pause";
+            KeyHints.Text = _keys.Label(WalkKeyBindings.Help) + " Help    " + _keys.Label(WalkKeyBindings.Measure) + " Measure    " +
+                            _keys.Label(WalkKeyBindings.SaveViewpoint) + " Viewpoint    Esc Pause";
         }
 
-        /// <summary>The help card, naming the keys actually bound (it follows Key Settings).</summary>
+        /// <summary>The help card: every key, in plain words, naming the keys actually bound (it follows Key Settings).</summary>
         private string BuildHelpText()
         {
             Func<string, string> k = _keys.Label;
             return string.Join("\n", new[]
             {
                 "Walk\t" + k(WalkKeyBindings.MoveForward) + " " + k(WalkKeyBindings.StrafeLeft) + " " + k(WalkKeyBindings.MoveBack) + " " +
-                    k(WalkKeyBindings.StrafeRight) + " or the arrows  -  look with the mouse  -  run: hold " + k(WalkKeyBindings.Run),
-                "Speed\t" + k(WalkKeyBindings.SpeedUp) + " / " + k(WalkKeyBindings.SpeedDown) + " or the mouse wheel (5 steps)",
-                "Eye\t" + k(WalkKeyBindings.DownOrLowEye) + " low eye on / off (" + _session.Settings.LowEyeHeightMm.ToString("N0") + " mm), for ceiling voids",
-                "Fly\t" + k(WalkKeyBindings.Fly) + " on / off  -  " + k(WalkKeyBindings.Up) + " up, " + k(WalkKeyBindings.DownOrLowEye) + " down",
-                "Pass-through\t" + k(WalkKeyBindings.PassThrough) + " on / off - nothing blocks you",
+                    k(WalkKeyBindings.StrafeRight) + " or the arrow keys  -  look with the mouse  -  hold " + k(WalkKeyBindings.Run) + " to go faster",
+                "Speed\t" + k(WalkKeyBindings.SpeedUp) + " / " + k(WalkKeyBindings.SpeedDown) + " or the mouse wheel (" + _session.Settings.SpeedStepCount + " steps)",
+                "Low eye\t" + k(WalkKeyBindings.DownOrLowEye) + " on / off (" + _session.Settings.LowEyeHeightMm.ToString("N0") + " mm) - to look under ducts and into ceiling voids",
+                "Fly\t" + k(WalkKeyBindings.Fly) + " on / off  -  hold " + k(WalkKeyBindings.Up) + " to rise, " + k(WalkKeyBindings.DownOrLowEye) + " to sink",
+                "Pass-through\t" + k(WalkKeyBindings.PassThrough) + " on / off - walls and slabs do not stop you",
                 "Door\t" + k(WalkKeyBindings.Door) + " when the door hint shows",
-                "Go to point\thold " + k(WalkKeyBindings.GoToPoint) + ", aim, release",
-                "Modes\tright-click or Tab: Inspect, Select, Snag, Hide - left click acts",
-                "Show hidden\t" + k(WalkKeyBindings.ShowHidden) + " brings back what this walk hid",
-                "Snag colours\t" + k(WalkKeyBindings.ClearSnags) + " clears them now (they also come back at the end)",
-                "Viewpoints\t" + k(WalkKeyBindings.SaveViewpoint) + " saves  -  1..9 goes back  -  " + k(WalkKeyBindings.PlayViewpoints) + " plays them",
-                "Snapshot\t" + k(WalkKeyBindings.Snapshot) + " saves a picture of the view (no HUD)",
+                "Go to point\thold " + k(WalkKeyBindings.GoToPoint) + ", aim at a floor, let go",
+                "Modes\tright-click or Tab (Shift+Tab back): Inspect, Select, Snag, Hide - left click acts",
+                "Snag\tin Snag mode, click: a picture is taken, then type a comment (Enter saves, Esc skips)",
+                "Snag colours\t" + k(WalkKeyBindings.ClearSnags) + " gives every snagged element its own colours back",
+                "Show hidden\t" + k(WalkKeyBindings.ShowHidden) + " shows again what this walk hid",
                 "Measure\t" + k(WalkKeyBindings.Measure) + " at point 1, " + k(WalkKeyBindings.Measure) + " at point 2 - distance in mm",
+                "Viewpoints\t" + k(WalkKeyBindings.SaveViewpoint) + " saves and names one  -  1 to 9 go back  -  " + k(WalkKeyBindings.PlayViewpoints) + " plays them",
+                "Snapshot\t" + k(WalkKeyBindings.Snapshot) + " saves a picture of the view, without the HUD",
                 "Back to start\t" + k(WalkKeyBindings.BackToStart),
-                "Pause\tEsc or " + k(WalkKeyBindings.Pause) + " - Revit is free to use  -  paused: S = settings, K = keys, Esc = end",
-                "Help\t" + k(WalkKeyBindings.Help) + "  -  clean screen " + k(WalkKeyBindings.CleanScreen)
+                "Pause\tEsc or " + k(WalkKeyBindings.Pause) + " - Revit is free to use; the pause menu has snags, viewpoints, settings",
+                "Screen\t" + k(WalkKeyBindings.Help) + " this help  -  " + k(WalkKeyBindings.CleanScreen) + " clean screen  -  " +
+                    k(WalkKeyBindings.FrameTiming) + " frame timing"
             });
         }
     }

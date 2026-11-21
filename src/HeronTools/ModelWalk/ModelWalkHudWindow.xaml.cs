@@ -191,7 +191,8 @@ namespace HeronTools.UI.ModelWalk
             _session.Paused = true;
             HidePauseMenu();
             _endTicks = _waitingForEngine ? EndWaitTicks : EndShowTicks;
-            ShowPill(title, string.IsNullOrWhiteSpace(text) ? "The walk view stays in the project - run Model Walk again to carry on." : text, "");
+            ShowPill(title, string.IsNullOrWhiteSpace(text) ? "The walk view stays in the project - run Model Walk again to carry on." : text,
+                     _waitingForEngine ? "" : "Click or press Enter to close.");
         }
 
         private void OnClosedCleanup(object sender, EventArgs e)
@@ -229,7 +230,7 @@ namespace HeronTools.UI.ModelWalk
                     // Revit ran the clean-up: show how it went.
                     _waitingForEngine = false;
                     _endTicks = EndShowTicks;
-                    ShowPill("Model Walk ended", hud.StopReason, "");
+                    ShowPill("Model Walk ended", hud.StopReason, "Click or press Enter to close.");
                 }
                 if (--_endTicks <= 0)
                 {
@@ -239,7 +240,8 @@ namespace HeronTools.UI.ModelWalk
                         string notes = _engine.EndWithoutRevit();
                         _waitingForEngine = false;
                         _endTicks = EndShowTicks;
-                        ShowPill("Model Walk ended", "Revit was busy, so the view could not be put back." + (notes != null ? "\n" + notes : ""), "");
+                        ShowPill("Model Walk ended", "Revit was busy, so the view could not be put back." + (notes != null ? "\n" + notes : ""),
+                                 "Click or press Enter to close.");
                         return;
                     }
                     _timer.Stop();

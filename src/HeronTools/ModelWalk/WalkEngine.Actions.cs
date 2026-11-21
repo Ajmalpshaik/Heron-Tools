@@ -459,10 +459,10 @@ namespace HeronTools.Services.ModelWalk
             double distance = delta.GetLength();
             // Eased: speeds up from each viewpoint and slows into the next, never faster than twice the walk step.
             double top = _session.Settings.WalkSpeedFtPerSec(WalkTuning.DefaultSpeedStep) * 2.0;
-            double wanted = Math.Min(top, Math.Max(WalkTuning.MmToFt(300), distance * 1.5));
+            double wanted = Math.Min(top, Math.Max(WalkTuning.MmToFt(WalkTuning.PlayMinSpeedMm), distance * 1.5));
             _playSpeed += (wanted - _playSpeed) * (1.0 - Math.Exp(-dt / 0.35));
             double step = _playSpeed * dt;
-            if (distance <= step || distance < WalkTuning.MmToFt(5))
+            if (distance <= step || distance < WalkTuning.MmToFt(WalkTuning.PlayArriveMm))
             {
                 _playDwellLeft = 1.6;
                 _playSpeed = 0;

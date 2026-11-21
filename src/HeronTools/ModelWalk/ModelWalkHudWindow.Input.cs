@@ -166,10 +166,10 @@ namespace HeronTools.UI.ModelWalk
         {
             switch (mode)
             {
-                case WalkPointerMode.Select: return "Select - click adds an element to Revit's selection (click again takes it out). Kept after the walk.";
-                case WalkPointerMode.Snag: return "Snag - click colours the element and adds it to the snag report. Its own colours come back at the end.";
-                case WalkPointerMode.Hide: return "Hide - click hides the element for now. " + _keys.Label(WalkKeyBindings.ShowHidden) + " shows what this walk hid.";
-                default: return "Inspect - what is under the crosshair, and how far it is.";
+                case WalkPointerMode.Select: return "Select - a click adds the element to Revit's selection (again takes it out). It stays selected after the walk.";
+                case WalkPointerMode.Snag: return "Snag - a click records the element with a picture and your comment, and colours it red in the walk view.";
+                case WalkPointerMode.Hide: return "Hide - a click hides the element for now. " + _keys.Label(WalkKeyBindings.ShowHidden) + " shows what this walk hid.";
+                default: return "Inspect - what is under the crosshair, and how far away it is. Changes nothing.";
             }
         }
 

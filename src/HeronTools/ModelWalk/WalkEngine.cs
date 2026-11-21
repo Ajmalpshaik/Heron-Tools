@@ -195,8 +195,8 @@ namespace HeronTools.Services.ModelWalk
                 _velocity += (target - _velocity) * ease;
                 if (!flying)
                     _velocity = new XYZ(_velocity.X, _velocity.Y, 0);   // gravity owns up and down in Walk
-                if (target.GetLength() < 1e-9 && _velocity.GetLength() < WalkTuning.MmToFt(20))
-                    _velocity = XYZ.Zero;                               // under 20 mm/s: stopped
+                if (target.GetLength() < 1e-9 && _velocity.GetLength() < WalkTuning.MmToFt(WalkTuning.StoppedBelowMmPerSec))
+                    _velocity = XYZ.Zero;                               // slow enough: stopped
 
                 XYZ move = _velocity * dt;
                 if (move.GetLength() > 1e-9)

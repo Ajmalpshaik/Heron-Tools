@@ -8,8 +8,8 @@
 
   Model Walk - Key Settings (pause the walk, press S). Click a key, then press the key you want. A key another
   action has is swapped with it (and the window says so). Reset to standard keys puts every key back.
-  Heron brand (UI/HeronStyles.xaml): header with the mark, rows on Surface, footer status on the left and ONE
-  Accent button (Save) on the right.
+  Heron brand (UI/HeronStyles.xaml): header with the mark, rows on Surface, footer status on the left, then ONE
+  Accent button (Save) and Cancel, as in every Heron Tools window.
 -->
 <Window x:Class="HeronTools.UI.ModelWalk.ModelWalkKeysWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -74,7 +74,7 @@
 
         <!-- Footer: status left, one Accent button right -->
         <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
-                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,12">
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -87,10 +87,10 @@
                             HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnResetClick"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButton}" MinWidth="96"
+                            Margin="0,0,16,0" Click="OnSaveClick"/>
                     <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource GhostButton}" MinWidth="88"
                             IsCancel="True" Click="OnCancelClick" ToolTip="Close and keep the keys as they were (Esc)"/>
-                    <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButton}" MinWidth="96"
-                            Margin="10,0,0,0" Click="OnSaveClick"/>
                 </StackPanel>
             </Grid>
         </Border>

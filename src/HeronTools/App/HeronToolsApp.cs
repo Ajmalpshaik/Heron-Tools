@@ -260,14 +260,14 @@ namespace HeronTools.App
             // Model Walk: walk the live model in first person from a 3D view; a second click ends the walk.
             coordination.AddItem(Button(assemblyPath, "HeronTools_ModelWalk", "Model\nWalk", typeof(Commands.ModelWalk.CmdModelWalk),
                 typeof(Commands.ModelWalk.CmdModelWalkAvailability), "ModelWalk",
-                "Walk through the model in first person from a 3D view - look at things, select them and record snags. Click again to stop.",
-                "Opens the view \"Heron Model Walk\" (made once, with Revit's first 3D view type and no view template; one per person " +
-                "in a workshared model) and starts where your 3D view looks. W A S D to walk, the mouse to look, Esc to pause - Revit " +
-                "is free to use while paused. Only what the view shows blocks you, so hide a category or use a section box to walk " +
-                "through it. Right-click or Tab changes the mode: Inspect (what is under the crosshair, and how far), Select (adds to " +
-                "Revit's selection), Snag (colours the element and writes it to a snag report in Documents\\Heron Model Walk), Hide " +
-                "(hides it for now). Snag colours and what you hid are given back when the walk ends, and snag colours before every " +
-                "Save and Sync with Central. Camera moves make no Undo entries; each snag is one Undo step. Works in 3D views."));
+                "Open a 3D view, click Model Walk, then walk with W A S D and look with the mouse. Esc pauses; click again to stop.",
+                "Walk the model in first person to look at things, select them, measure and record snags for a coordination " +
+                "meeting. Uses the view \"Heron Model Walk\" (made once with Revit's first 3D view type and no template; one per " +
+                "person in a workshared model) and starts where your 3D view looks. Only what the view shows blocks you - hide a " +
+                "category or use a section box to walk through it. Right-click or Tab changes the mode: Inspect, Select, Snag (a " +
+                "picture, your comment and a red colour; the report goes in a folder next to the model), Hide. Snag colours come " +
+                "back when the walk ends and before every Save and Sync. Pause (Esc) for snags, viewpoints and settings. Camera " +
+                "moves make no Undo entries; each snag is one Undo step."));
 
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")
             {

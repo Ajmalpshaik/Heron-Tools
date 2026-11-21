@@ -60,6 +60,13 @@ namespace HeronTools.Services.ModelWalk
         // --- Speeds: five steps (+ / - or the mouse wheel), set in WalkSettings. Fly is twice the step. ---
         public const int DefaultSpeedStep = 2;        // the middle step (3.5 m/s standard) - the speed the old tool walked at
         public const double EaseSeconds = 0.12;       // moves speed up and slow down over about a third of a second
+        public const double StoppedBelowMmPerSec = 20.0;  // an easing-out move slower than this has stopped
+        public const double PlayMinSpeedMm = 300.0;   // Play viewpoints never crawls slower than 300 mm/s into a viewpoint
+        public const double PlayArriveMm = 5.0;       // ...and is there within 5 mm
+
+        // --- Rooms (location line): looked up at this height above the floor, again after this much movement ---
+        public const double RoomProbeAboveFloorMm = 300.0;
+        public const double RoomRecheckMoveMm = 300.0;
         public const double FlyFactor = 2.0;
         public const double RunFactor = 3.0;          // Shift held
         public const double GravityMmPerSec2 = 9810.0;
