@@ -546,11 +546,19 @@ namespace HeronTools.Services.ModelWalk
                 return;
 
             string what = WalkCollision.DescribeLine1(hit);
-            SnagColourMemory memory = SnagColourMemory.Find(doc, view);
-            if (!hit.FromLink && memory != null && memory.IsColoured(hit.Element.Id))
+            // Already a snag in THIS walk's report: say which one, no second row. An element still red from an earlier
+            // walk (kept colours), or whose snag step was undone, is a new snag for this report: it gets its row, and
+            // the colour memory keeps its true original (Colour copies the override only the first time).
+            if (!hit.FromLink)
             {
-                hud.Toast("Already a snag: " + what);
-                return;
+                foreach (WalkSnag earlier in _session.Report.Snags)
+                {
+                    if (earlier.HostElementId != null && earlier.HostElementId == hit.Element.Id)
+                    {
+                        hud.Toast("Already snag " + earlier.Number + " in this walk: " + what);
+                        return;
+                    }
+                }
             }
 
             Element element = hit.Element;
@@ -607,6 +615,9 @@ namespace HeronTools.Services.ModelWalk
                 _snagOverride = SnagColourMemory.SnagOverride(doc);
             SnagColourMemory memory = SnagColourMemory.FindOrCreate(doc, view);
             _snagMemory = memory;
+            // Remembered already (an earlier walk, or a snag step undone): its stored original is the true one and must
+            // survive a refused colour. Only a copy made by THIS attempt is dropped when the colour does not go on.
+            bool newToMemory = !memory.IsColoured(id);
 
             using (var t = new Transaction(doc, "Model Walk: snag " + number))
             {
@@ -616,14 +627,14 @@ namespace HeronTools.Services.ModelWalk
                     memory.Colour(view, id, _snagOverride);
                     if (t.Commit() == TransactionStatus.Committed)
                         return null;
-                    memory.Forget(id);
+                    if (newToMemory) memory.Forget(id);
                     return "Revit did not keep the colour";
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException ex)
                 {
                     if (t.HasStarted() && !t.HasEnded())
                         t.RollBack();
-                    memory.Forget(id);
+                    if (newToMemory) memory.Forget(id);
                     return "Revit refused the colour (" + ex.Message + ")";
                 }
             }
