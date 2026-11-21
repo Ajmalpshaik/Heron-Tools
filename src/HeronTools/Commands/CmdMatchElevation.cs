@@ -68,17 +68,29 @@ namespace HeronTools.Commands
         /// </summary>
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            string title = $"Match Elevation ({ModeLabel})";
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
-            if (uidoc == null)
+            if (!ValidationHelper.ValidateUIDocument(uidoc, out string validationMessage))
             {
-                message = "No active document.";
-                return Result.Failed;
+                DialogHelper.ShowError(title, validationMessage);
+                return Result.Cancelled;
             }
 
             Document doc = uidoc.Document;
+
+            // Check before the picks: a read-only model would only refuse every target at the end.
+            if (!ValidationHelper.ValidateEditableDocument(doc, out validationMessage))
+            {
+                DialogHelper.ShowError(title, validationMessage);
+                return Result.Cancelled;
+            }
+
             var filter = new MepSelectionFilter();
-            string title = $"Match Elevation ({ModeLabel})";
             string modeLower = ModeLabel.ToLowerInvariant();
+
+            // Set once the matched targets are kept. After that an error must not return a non-Succeeded
+            // result, because Revit then undoes the moves.
+            bool workKept = false;
 
             try
             {
@@ -165,6 +177,7 @@ namespace HeronTools.Commands
                     if (updatedCount > 0)
                     {
                         group.Assimilate();
+                        workKept = true;
                     }
                     else
                     {
@@ -195,8 +208,18 @@ namespace HeronTools.Commands
             }
             catch (Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                if (workKept)
+                {
+                    DialogHelper.ShowError(title,
+                        "Something went wrong after the elements were moved. The moved elements were kept - use Undo if you do not want them."
+                        + "\n\nRevit said: " + ex.Message);
+                    return Result.Succeeded;
+                }
+
+                // The group was not assimilated, so it rolled back.
+                DialogHelper.ShowError(title,
+                    "Match Elevation stopped because of an unexpected error, so nothing was changed.\n\nRevit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
 

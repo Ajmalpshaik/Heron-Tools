@@ -10,6 +10,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using HeronTools.Utils;
 using HeronTools.Services.ResetDatums;
 using HeronTools.Models;
 
@@ -35,8 +36,11 @@ namespace HeronTools.Commands
             }
             catch (System.Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                // Cancelled, not Failed: our own box is the message, and Revit undoes anything not
+                // Succeeded - so "nothing was changed" is true.
+                DialogHelper.ShowError("Reset Grids & Levels",
+                    "Reset Grids & Levels stopped because of an unexpected error, so nothing was changed.\n\nRevit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }
@@ -61,8 +65,11 @@ namespace HeronTools.Commands
             }
             catch (System.Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                // Cancelled, not Failed: our own box is the message, and Revit undoes anything not
+                // Succeeded - so "nothing was changed" is true.
+                DialogHelper.ShowError("Reset Grids",
+                    "Reset Grids stopped because of an unexpected error, so nothing was changed.\n\nRevit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }
@@ -87,8 +94,11 @@ namespace HeronTools.Commands
             }
             catch (System.Exception ex)
             {
-                message = ex.Message;
-                return Result.Failed;
+                // Cancelled, not Failed: our own box is the message, and Revit undoes anything not
+                // Succeeded - so "nothing was changed" is true.
+                DialogHelper.ShowError("Reset Levels",
+                    "Reset Levels stopped because of an unexpected error, so nothing was changed.\n\nRevit said: " + ex.Message);
+                return Result.Cancelled;
             }
         }
     }

@@ -29,6 +29,8 @@ namespace HeronTools.Services.ViewCrop
             string commandTitle,
             ref string message)
         {
+            // Set once the annotation crops are kept - see ViewCropCommandService.ReportUnexpectedError.
+            bool workKept = false;
             try
             {
                 UIDocument uidoc = commandData.Application?.ActiveUIDocument;
@@ -91,6 +93,7 @@ namespace HeronTools.Services.ViewCrop
 
                 var service = new ViewCropAnnotationService(doc, settings);
                 var batch = service.Process(targetViews, $"View Crop - {commandTitle}");
+                workKept = batch.UpdatedCount > 0;
 
                 try
                 {
@@ -109,10 +112,7 @@ namespace HeronTools.Services.ViewCrop
             catch (Exception ex)
             {
                 string logPath = ViewCropReportPresenter.TryWriteErrorLog("AnnotationCrop", commandTitle, null, ex);
-                DialogHelper.ShowError(
-                    commandTitle,
-                    $"{ex.Message}\n\nDetails log:\n{logPath}");
-                return Result.Failed;
+                return ViewCropCommandService.ReportUnexpectedError(commandTitle, ex, logPath, workKept);
             }
         }
     }

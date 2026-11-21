@@ -83,7 +83,7 @@ namespace HeronTools.Commands.GraphicsTools
             {
                 DialogHelper.ShowError(DialogTitle,
                     "Highlight Selection stopped, and nothing was changed.\n\nRevit said: " + ex.Message);
-                return Result.Failed;
+                return Result.Cancelled;
             }
         }
 
@@ -188,8 +188,9 @@ namespace HeronTools.Commands.GraphicsTools
 
                 if (transaction.Commit() != TransactionStatus.Committed)
                 {
+                    // Our box is the message, so Cancelled (no second Revit box).
                     DialogHelper.ShowError(DialogTitle, "Revit did not keep the change, so the highlight is still on. Try again, or press Undo.");
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
             }
 
