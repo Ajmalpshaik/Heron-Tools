@@ -141,6 +141,8 @@ namespace HeronTools.Services.ModelWalk
             if (dt <= 0.0 || double.IsNaN(dt))
                 dt = 0.0;
             dt = Math.Min(dt, 0.25);   // a long stall must not fast-forward the legs
+            if (double.IsNaN(speedFtPerSec) || speedFtPerSec < 0.0)
+                speedFtPerSec = 0.0;   // one bad speed would put NaN into the clip time for the rest of the walk
 
             WalkCharacterModel.Clip target;
             double rate;
