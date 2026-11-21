@@ -103,7 +103,7 @@ namespace HeronTools.Services.ModelWalk
                 switch (input.Pointer)
                 {
                     case WalkPointerMode.Select: ClickSelect(uidoc, position, forward, hud); break;
-                    case WalkPointerMode.Snag: ClickSnag(doc, view, position, forward, hud); break;
+                    case WalkPointerMode.Snag: ClickSnag(uidoc, doc, view, position, forward, input, hud); break;
                     case WalkPointerMode.Hide: ClickHide(doc, view, position, forward, hud); break;
                 }
             }
@@ -133,7 +133,7 @@ namespace HeronTools.Services.ModelWalk
                 hud.Toast(line ?? "No snag colours to clear", line != null && line.EndsWith("back.", StringComparison.Ordinal) ? WalkToastKind.Done : WalkToastKind.Info);
             }
 
-            hud.SnagCount = _report.Count;
+            hud.SnagCount = _session.Report.Count;
             return position;
         }
 
@@ -312,14 +312,13 @@ namespace HeronTools.Services.ModelWalk
             }
         }
 
-        private void ClickSnag(Document doc, View3D view, XYZ position, XYZ forward, WalkHudState hud)
+        private void ClickSnag(UIDocument uidoc, Document doc, View3D view, XYZ position, XYZ forward, WalkInput input, WalkHudState hud)
         {
             WalkRayHit hit = ClickTarget(position, forward, hud);
             if (hit == null)
                 return;
 
             string what = WalkCollision.DescribeLine1(hit);
-            string where = WalkCollision.DescribeLine2(hit);
             SnagColourMemory memory = SnagColourMemory.Find(doc, view);
             if (!hit.FromLink && memory != null && memory.IsColoured(hit.Element.Id))
             {
@@ -327,9 +326,26 @@ namespace HeronTools.Services.ModelWalk
                 return;
             }
 
-            WalkSnag snag = _report.Add(what, where, hit.Element.UniqueId, hit.Point, position);
+            Element element = hit.Element;
+            WalkSnag snag = _session.Report.Add(new WalkSnag
+            {
+                Category = WalkCollision.CategoryName(element),
+                FamilyType = WalkCollision.FamilyTypeName(element),
+                Size = WalkCollision.SizeText(element),
+                ElementIdValue = element.Id.LongValue(),
+                UniqueId = element.UniqueId ?? "",
+                Level = WalkCollision.LevelName(element),
+                System = WalkCollision.SystemText(element),
+                LinkName = hit.FromLink ? WalkCollision.LinkName(hit.Link) : "",
+                Room = hud.RoomText,
+                HostElementId = hit.FromLink ? null : element.Id,
+                HitPoint = hit.Point,
+                Eye = position,
+                YawDeg = input.YawDeg,
+                PitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, input.PitchDeg))
+            });
 
-            string whyNot = null;
+            string whyNot;
             if (hit.FromLink)
                 whyNot = "a linked element cannot be coloured on its own";
             else if (doc.IsReadOnly)
@@ -337,15 +353,23 @@ namespace HeronTools.Services.ModelWalk
             else if (doc.IsWorkshared && WorksharingUtils.GetCheckoutStatus(doc, view.Id) == CheckoutStatus.OwnedByOtherUser)
                 whyNot = "the walk view is being edited by someone else";
             else
-                whyNot = ColourSnag(doc, view, hit.Element.Id, snag.Number);
+                whyNot = ColourSnag(doc, view, element.Id, snag.Number);
 
             snag.Coloured = whyNot == null;
             snag.NotColouredWhy = whyNot;
-            hud.SnagCount = _report.Count;
-            hud.Toast(whyNot == null
-                ? "Snag " + snag.Number + " recorded: " + what
-                : "Snag " + snag.Number + " recorded (not coloured: " + whyNot + "): " + what,
-                WalkToastKind.Done);
+            if (snag.Coloured)
+                uidoc.RefreshActiveView();   // so the snag's picture shows it red
+
+            string problem = _session.Report.Save();
+            hud.SnagCount = _session.Report.Count;
+            hud.SnagAwaitingPicture = snag.Number;   // the HUD takes the picture, then opens the comment box
+            if (problem != null)
+                hud.Toast(problem, WalkToastKind.Refused);
+            else
+                hud.Toast(whyNot == null
+                    ? "Snag " + snag.Number + " recorded: " + what
+                    : "Snag " + snag.Number + " recorded (not coloured: " + whyNot + "): " + what,
+                    WalkToastKind.Done);
         }
 
         /// <summary>Colours one element as one named Undo step. Returns null, or why it was not coloured.</summary>

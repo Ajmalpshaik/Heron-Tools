@@ -5,10 +5,15 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Model Walk - the snag report and the snapshot folder. One folder per model under Documents\Heron Model Walk\.
-// The report is written exactly once per walk, however the walk ends; a failed write is said, never swallowed.
-// Positions are written in SHARED coordinates (east / north / elevation, mm), the numbers a coordinator sees in
-// Revit's Spot Coordinates, with the level - not Revit's internal coordinates.
+// Model Walk - the snag report: one folder per walk, with Snags.csv (opens in a spreadsheet) and one picture per
+// snag, plus any snapshots. The folder sits next to the model ("<model folder>\Model Walk - <model>\<date time>");
+// a model that is not saved, a cloud model, or a folder that cannot be written falls back to
+// Documents\Heron Model Walk\<model>\<date time>.
+//
+// The CSV is written again after every snag, comment and picture, so nothing is lost if Revit stops; the end of the
+// walk writes it one last time and says where it is (exactly once, however the walk ends). A failed write is said,
+// never swallowed. Positions are in SHARED coordinates (east / north / elevation, mm) - the numbers Revit's Spot
+// Coordinates show - not Revit's internal coordinates. Element ids are the full 64-bit value.
 
 using System;
 using System.Collections.Generic;
@@ -24,58 +29,125 @@ namespace HeronTools.Services.ModelWalk
     {
         public int Number;
         public DateTime Time;
-        public string What;        // category - family : type - ID
-        public string Where;       // level - system - link
-        public string UniqueId;
-        public XYZ HitPoint;       // internal feet
-        public XYZ Eye;            // internal feet
+        public string Comment = "";
+
+        // What was hit
+        public string Category = "";
+        public string FamilyType = "";
+        public string Size = "";
+        public long ElementIdValue;       // full 64-bit id, in the element's own model (the link's, for a linked element)
+        public string UniqueId = "";
+        public string Level = "";
+        public string System = "";
+        public string LinkName = "";      // empty for this model's own elements
+        public string Room = "";          // where the coordinator stood
+
+        /// <summary>This model's element, for Open snag; null for a linked element (it cannot be selected).</summary>
+        public ElementId HostElementId;
+
+        // Where, in Revit internal feet, and how the camera looked
+        public XYZ HitPoint;
+        public XYZ Eye;
+        public double YawDeg;
+        public double PitchDeg;
+
+        public string PictureFile = "";   // file name inside the walk folder
         public bool Coloured;
         public string NotColouredWhy;
+
+        /// <summary>"Ducts - Rectangular Duct : Supply" - for the pause menu's snag list.</summary>
+        public string Summary => Category + (string.IsNullOrEmpty(FamilyType) ? "" : " - " + FamilyType);
     }
 
     internal sealed class WalkReport
     {
+        private const string CsvName = "Snags.csv";
+
         private readonly List<WalkSnag> _snags = new List<WalkSnag>();
+        private readonly Transform _toShared;
+        private readonly string _modelFolder;   // next to the model, or null
+        private readonly DateTime _started = DateTime.Now;
+        private string _folder;
+        private string _lastProblem;
         private bool _written;
 
+        /// <summary>Call on Revit's thread (the command): the report may be written after the model closed.</summary>
         public WalkReport(Document doc)
         {
             ModelTitle = doc.Title;
             Author = doc.Application?.Username ?? "";
-            // Read once, on Revit's thread: the report may be written from the HUD after the model closed.
             try { _toShared = doc.ActiveProjectLocation?.GetTotalTransform()?.Inverse; }
             catch (Autodesk.Revit.Exceptions.ApplicationException) { _toShared = null; }
+            _modelFolder = FolderNextToModel(doc);
         }
-
-        private readonly Transform _toShared;
 
         public string ModelTitle { get; }
         public string Author { get; }
         public int Count => _snags.Count;
+        public IReadOnlyList<WalkSnag> Snags => _snags;
 
-        public WalkSnag Add(string what, string where, string uniqueId, XYZ hit, XYZ eye)
+        /// <summary>The walk folder once something was saved in it, for the end message and the pause menu; else null.</summary>
+        public string FolderPath => _folder;
+
+        public WalkSnag Add(WalkSnag snag)
         {
-            var snag = new WalkSnag
-            {
-                Number = _snags.Count + 1,
-                Time = DateTime.Now,
-                What = what,
-                Where = where,
-                UniqueId = uniqueId,
-                HitPoint = hit,
-                Eye = eye
-            };
+            snag.Number = _snags.Count + 1;
+            snag.Time = DateTime.Now;
             _snags.Add(snag);
             return snag;
         }
 
-        /// <summary>Documents\Heron Model Walk\&lt;model&gt; - made if missing. Throws IOException / UnauthorizedAccessException.</summary>
-        public static string Folder(string modelTitle)
+        public WalkSnag Find(int number) => number >= 1 && number <= _snags.Count ? _snags[number - 1] : null;
+
+        // ------------------------------------------------------------------ the folder
+
+        private static string FolderNextToModel(Document doc)
         {
-            string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Heron Model Walk");
-            string folder = Path.Combine(root, SafeName(modelTitle));
-            Directory.CreateDirectory(folder);
-            return folder;
+            try
+            {
+                string path = doc.PathName;
+                if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path))
+                    return null;   // not saved yet, or a cloud model
+                string dir = Path.GetDirectoryName(path);
+                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+                    return null;
+                return Path.Combine(dir, "Model Walk - " + SafeName(doc.Title));
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is IOException ||
+                                       ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                return null;   // a path Windows cannot read (a cloud path): use Documents
+            }
+        }
+
+        /// <summary>
+        /// This walk's folder - made the first time something is saved. Next to the model when it can be written there,
+        /// else under Documents. Throws IOException / UnauthorizedAccessException when neither can be made.
+        /// </summary>
+        public string EnsureFolder()
+        {
+            if (_folder != null)
+                return _folder;
+            string stamp = _started.ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture);
+            if (_modelFolder != null)
+            {
+                try
+                {
+                    string next = Path.Combine(_modelFolder, stamp);
+                    Directory.CreateDirectory(next);
+                    _folder = next;
+                    return _folder;
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+                {
+                    // A read-only model folder (a server share): fall back to Documents below.
+                }
+            }
+            string documents = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Heron Model Walk",
+                                            SafeName(ModelTitle), stamp);
+            Directory.CreateDirectory(documents);
+            _folder = documents;
+            return _folder;
         }
 
         public static string SafeName(string text)
@@ -88,10 +160,41 @@ namespace HeronTools.Services.ModelWalk
             return sb.ToString();
         }
 
+        // ------------------------------------------------------------------ writing
+
         /// <summary>
-        /// Writes the report (only the first time it is called, and only when something was snagged). Returns the line
-        /// for the end message: where it went, why it could not be written, or null when there is nothing to say.
-        /// Never throws: the walk must always end cleanly.
+        /// Writes Snags.csv now (after each snag, comment or picture). Returns null, or why it could not be written.
+        /// Never throws: a walk must never stop for a file.
+        /// </summary>
+        public string Save()
+        {
+            if (_snags.Count == 0)
+                return null;
+            try
+            {
+                string folder = EnsureFolder();
+                string file = Path.Combine(folder, CsvName);
+                string temp = file + ".tmp";
+                // UTF-8 with the byte-order mark, so a spreadsheet shows accents and non-English names correctly.
+                File.WriteAllText(temp, BuildCsv(), new UTF8Encoding(true));
+                if (File.Exists(file))
+                    File.Replace(temp, file, null);
+                else
+                    File.Move(temp, file);
+                _lastProblem = null;
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // Excel holding the file open is the usual cause: say so, and try again on the next change.
+                _lastProblem = ex.Message;
+                return "The snag report could not be written (" + ex.Message + "). Close it if a spreadsheet has it open - it is tried again.";
+            }
+        }
+
+        /// <summary>
+        /// The end of the walk: writes the report one last time (only the first time it is called, and only when
+        /// something was snagged). Returns the line for the end message, or null when there is nothing to say.
         /// </summary>
         public string WriteOnce()
         {
@@ -100,53 +203,83 @@ namespace HeronTools.Services.ModelWalk
             _written = true;
             if (_snags.Count == 0)
                 return null;
-
-            try
-            {
-                string folder = Folder(ModelTitle);
-                string file = Path.Combine(folder, "Snags_" + DateTime.Now.ToString("yyyyMMdd_HHmmss_fff", CultureInfo.InvariantCulture) + ".txt");
-                File.WriteAllText(file, Build(), Encoding.UTF8);
-                return "Snag report saved: Documents\\Heron Model Walk\\" + SafeName(ModelTitle) + "\\" + Path.GetFileName(file);
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
-            {
-                return "The snag report could NOT be saved (" + ex.Message + "). Nothing in the model was lost.";
-            }
+            string problem = Save();
+            if (problem != null)
+                return "The snag report could NOT be saved (" + (_lastProblem ?? problem) + "). Nothing in the model was lost.";
+            return "Snag report (" + _snags.Count + (_snags.Count == 1 ? " snag" : " snags") + "): " + Path.Combine(_folder, CsvName);
         }
 
-        private string Build()
+        private string BuildCsv()
         {
+            bool shared = _toShared != null;
+            string axes = shared ? " (mm, shared)" : " (mm, internal)";
             var r = new StringBuilder();
-            r.AppendLine("Heron Model Walk - snag report");
-            r.AppendLine("Model:  " + ModelTitle);
-            r.AppendLine("Date:   " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
-            if (!string.IsNullOrWhiteSpace(Author))
-                r.AppendLine("By:     " + Author);
-            r.AppendLine(_toShared != null
-                ? "Points: shared coordinates, mm (East / North / Elevation), as Revit's Spot Coordinates show them."
-                : "Points: Revit internal coordinates, mm (the shared coordinates could not be read).");
-            r.AppendLine(new string('-', 78));
+            Row(r, "No.", "Time", "Author", "Comment", "Category", "Family : Type", "Size", "Element ID", "Unique ID",
+                "Level", "System", "Link", "Room", "East" + axes, "North" + axes, "Elevation" + axes, "Camera", "Picture",
+                "Snag colour");
             foreach (WalkSnag s in _snags)
             {
-                r.AppendLine(s.Number + ".  " + s.What);
-                if (!string.IsNullOrWhiteSpace(s.Where))
-                    r.AppendLine("    " + s.Where);
-                r.AppendLine("    Point " + Point(s.HitPoint) + "    Eye " + Point(s.Eye));
-                if (!string.IsNullOrWhiteSpace(s.UniqueId))
-                    r.AppendLine("    Unique ID " + s.UniqueId);
-                r.AppendLine("    " + s.Time.ToString("HH:mm:ss", CultureInfo.InvariantCulture) +
-                             (s.Coloured ? "    coloured in the walk view" : "    not coloured: " + s.NotColouredWhy));
+                XYZ p = ToReport(s.HitPoint);
+                Row(r,
+                    s.Number.ToString(CultureInfo.InvariantCulture),
+                    s.Time.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    Author,
+                    s.Comment,
+                    s.Category,
+                    s.FamilyType,
+                    s.Size,
+                    s.ElementIdValue.ToString(CultureInfo.InvariantCulture),
+                    s.UniqueId,
+                    s.Level,
+                    s.System,
+                    s.LinkName,
+                    s.Room,
+                    Mm(p?.X), Mm(p?.Y), Mm(p?.Z),
+                    Camera(s),
+                    s.PictureFile,
+                    s.Coloured ? "coloured in the walk view" : "not coloured: " + s.NotColouredWhy);
             }
             return r.ToString();
         }
 
-        private string Point(XYZ p)
+        private XYZ ToReport(XYZ p) => p == null ? null : (_toShared != null ? _toShared.OfPoint(p) : p);
+
+        private static string Mm(double? feet) =>
+            feet.HasValue ? Math.Round(WalkTuning.FtToMm(feet.Value)).ToString("0", CultureInfo.InvariantCulture) : "";
+
+        /// <summary>"E 1234 N 5678 Z 9012 - facing 45 deg, 10 deg down" (eye in the report's coordinates).</summary>
+        private string Camera(WalkSnag s)
         {
-            if (p == null)
-                return "-";
-            XYZ q = _toShared != null ? _toShared.OfPoint(p) : p;
-            return string.Format(CultureInfo.InvariantCulture, "E {0:N0}  N {1:N0}  Z {2:N0}",
-                WalkTuning.FtToMm(q.X), WalkTuning.FtToMm(q.Y), WalkTuning.FtToMm(q.Z));
+            XYZ eye = ToReport(s.Eye);
+            if (eye == null)
+                return "";
+            double pitch = Math.Round(s.PitchDeg);
+            string tilt = pitch > 0 ? pitch.ToString("0", CultureInfo.InvariantCulture) + " deg up"
+                        : pitch < 0 ? (-pitch).ToString("0", CultureInfo.InvariantCulture) + " deg down" : "level";
+            double yaw = ((s.YawDeg % 360.0) + 360.0) % 360.0;
+            return "E " + Mm(eye.X) + " N " + Mm(eye.Y) + " Z " + Mm(eye.Z) + " - facing " +
+                   Math.Round(yaw).ToString("0", CultureInfo.InvariantCulture) + " deg from project east, " + tilt;
+        }
+
+        private static void Row(StringBuilder r, params string[] cells)
+        {
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (i > 0) r.Append(',');
+                r.Append(Cell(cells[i]));
+            }
+            r.Append("\r\n");
+        }
+
+        /// <summary>Quoted when it holds a comma, quote or line break; a leading = + - @ is made plain text (no formulas).</summary>
+        private static string Cell(string text)
+        {
+            text = text ?? "";
+            if (text.Length > 0 && "=+-@".IndexOf(text[0]) >= 0 && !double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                text = "'" + text;
+            if (text.IndexOfAny(new[] { ',', '"', '\r', '\n' }) < 0)
+                return text;
+            return "\"" + text.Replace("\"", "\"\"") + "\"";
         }
     }
 }

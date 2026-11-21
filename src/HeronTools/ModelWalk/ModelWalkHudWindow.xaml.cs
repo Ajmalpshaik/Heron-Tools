@@ -183,6 +183,7 @@ namespace HeronTools.UI.ModelWalk
         {
             if (_closedDown)
                 return;
+            CloseEntry(save: true);
             ReleaseLook();
             ClearHeldKeys();
             _ending = true;
@@ -255,6 +256,14 @@ namespace HeronTools.UI.ModelWalk
             if (_paused)
                 return;
 
+            // A snag was just recorded: its picture (HUD hidden), then its comment box.
+            if (hud.SnagAwaitingPicture > 0 && !_snapshotBusy && !EntryOpen)
+            {
+                int number = hud.SnagAwaitingPicture;
+                hud.SnagAwaitingPicture = 0;
+                FinishSnagRecord(number);
+            }
+
             // Follow the Revit view window if it moved or changed size.
             if (hud.RectValid && (hud.RectLeft != _fullLeft || hud.RectTop != _fullTop || hud.RectRight != _fullRight || hud.RectBottom != _fullBottom))
                 ApplyPixelRect(hud.RectLeft, hud.RectTop, hud.RectRight, hud.RectBottom, true);
@@ -324,6 +333,8 @@ namespace HeronTools.UI.ModelWalk
         {
             if (_paused || _ending || _closedDown)
                 return;
+            CloseEntry(save: true);                 // keep what was typed
+            _session.Hud.SnagAwaitingPicture = 0;   // the view may change while paused: no picture of the wrong place
             _paused = true;
             ReleaseLook();
             ClearHeldKeys();

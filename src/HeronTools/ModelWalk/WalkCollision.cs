@@ -186,19 +186,15 @@ namespace HeronTools.Services.ModelWalk
 
         // ------------------------------------------------------------------ plain words for the HUD and the report
 
-        /// <summary>"Ducts - Rectangular Duct : Supply - ID 1234567" (the full 64-bit id).</summary>
+        /// <summary>"Ducts - Rectangular Duct : Supply - 600x400 - ID 1234567" (the full 64-bit id).</summary>
         public static string DescribeLine1(WalkRayHit hit)
         {
             if (hit?.Element == null)
                 return hit == null ? "" : "Something Revit could not name";
 
             Element element = hit.Element;
-            string category = element.Category != null ? element.Category.Name : "Element";
-            string name = element is FamilyInstance fi && fi.Symbol != null
-                ? fi.Symbol.FamilyName + " : " + element.Name
-                : element.Name;
-            string size = ReadText(element, BuiltInParameter.RBS_CALCULATED_SIZE);
-            return category + " - " + name + (string.IsNullOrWhiteSpace(size) ? "" : " - " + size.Trim()) +
+            string size = SizeText(element);
+            return CategoryName(element) + " - " + FamilyTypeName(element) + (string.IsNullOrWhiteSpace(size) ? "" : " - " + size) +
                    " - ID " + element.Id.LongValue();
         }
 
@@ -210,12 +206,40 @@ namespace HeronTools.Services.ModelWalk
             var parts = new List<string>();
             string level = LevelName(hit.Element);
             if (!string.IsNullOrWhiteSpace(level)) parts.Add(level);
-            string system = ReadText(hit.Element, BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
-            if (string.IsNullOrWhiteSpace(system))
-                system = ReadText(hit.Element, BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
-            if (!string.IsNullOrWhiteSpace(system)) parts.Add(system.Trim());
+            string system = SystemText(hit.Element);
+            if (!string.IsNullOrWhiteSpace(system)) parts.Add(system);
             if (hit.FromLink) parts.Add("Link: " + LinkName(hit.Link));
             return string.Join("  -  ", parts);
+        }
+
+        public static string CategoryName(Element element) =>
+            element?.Category != null ? element.Category.Name : "Element";
+
+        /// <summary>"Family : Type" for a family instance, the type name for a system family (walls, ducts, pipes).</summary>
+        public static string FamilyTypeName(Element element)
+        {
+            if (element == null)
+                return "";
+            try
+            {
+                if (element is FamilyInstance fi && fi.Symbol != null)
+                    return fi.Symbol.FamilyName + " : " + element.Name;
+                if (element.Document?.GetElement(element.GetTypeId()) is ElementType type && !string.IsNullOrWhiteSpace(type.FamilyName))
+                    return type.FamilyName + " : " + element.Name;
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException) { /* fall back to the name */ }
+            return element.Name ?? "";
+        }
+
+        public static string SizeText(Element element) => (ReadText(element, BuiltInParameter.RBS_CALCULATED_SIZE) ?? "").Trim();
+
+        /// <summary>The MEP system name, else its classification; empty for elements with none.</summary>
+        public static string SystemText(Element element)
+        {
+            string system = ReadText(element, BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
+            if (string.IsNullOrWhiteSpace(system))
+                system = ReadText(element, BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
+            return (system ?? "").Trim();
         }
 
         public static string LinkName(RevitLinkInstance link)
@@ -232,6 +256,13 @@ namespace HeronTools.Services.ModelWalk
         }
 
         private static string ReadText(Element element, BuiltInParameter which)
+        {
+            if (element == null)
+                return null;
+            return ReadTextOf(element, which);
+        }
+
+        private static string ReadTextOf(Element element, BuiltInParameter which)
         {
             try
             {

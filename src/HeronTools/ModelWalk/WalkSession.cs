@@ -171,6 +171,12 @@ namespace HeronTools.Services.ModelWalk
 
         public int SnagCount;
         public int HiddenCount;
+
+        // Engine to HUD: a snag was just recorded - take its picture (HUD hidden), then ask for its comment.
+        public int SnagAwaitingPicture;
+
+        // The room the eye is in ("Room 3.12 Plant Room"), empty when none; filled by the engine a few times a second.
+        public string RoomText = "";
         public bool PlayingViewpoints;
 
         // Engine to HUD: take this look direction on the next tick (viewpoints, Play viewpoints).
@@ -230,6 +236,7 @@ namespace HeronTools.Services.ModelWalk
                            double startYawDeg, double startPitchDeg, WalkKeyBindings keys, WalkSettings settings)
         {
             Settings = settings;
+            Report = new WalkReport(doc);   // here, on Revit's thread: it reads the model's path and shared coordinates
             Document = doc;
             WalkViewId = walkViewId;
             StartViewId = startViewId;
@@ -270,6 +277,9 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>This walk's keys - one instance shared by the HUD, the Key Settings window and the engine's messages.</summary>
         public WalkKeyBindings Keys { get; }
+
+        /// <summary>This walk's snags, their pictures and the CSV.</summary>
+        public WalkReport Report { get; }
 
         /// <summary>The modeller's settings. Replaced as a whole when Settings is saved (the HUD's thread, the same as Revit's).</summary>
         public WalkSettings Settings { get; set; }

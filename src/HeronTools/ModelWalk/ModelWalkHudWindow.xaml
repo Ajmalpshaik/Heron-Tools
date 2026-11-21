@@ -165,6 +165,18 @@
                 </StackPanel>
             </Grid>
 
+            <!-- Comment / name box: a snag's comment or a viewpoint's name, typed on the spot. Enter saves, Esc skips. -->
+            <Border x:Name="EntryCard" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderStrong}"
+                    BorderThickness="1" CornerRadius="12" Padding="16,12" Width="480" HorizontalAlignment="Center"
+                    VerticalAlignment="Center" Margin="0,220,0,0" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="EntryTitle" Foreground="{StaticResource TextPrimary}" FontSize="13" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBox x:Name="EntryBox" Style="{StaticResource ModernTextBox}" Margin="0,8,0,0" MaxLength="500"/>
+                    <TextBlock x:Name="EntryHint" Style="{StaticResource HudHint}" Margin="0,6,0,0" Text="Enter saves  -  Esc skips"/>
+                </StackPanel>
+            </Border>
+
             <!-- Short messages, top-centre (always shown, also on a clean screen) -->
             <Border x:Name="ToastCard" Style="{StaticResource HudPlate}" HorizontalAlignment="Center" VerticalAlignment="Top"
                     Margin="0,14,0,0" MaxWidth="760" Visibility="Collapsed">

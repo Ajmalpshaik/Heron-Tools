@@ -59,6 +59,14 @@ namespace HeronTools.UI.ModelWalk
             if (dx == 0 && dy == 0)
                 return;
 
+            // Typing a comment or a name: the view holds still (the pointer stays parked on the centre).
+            if (EntryOpen)
+            {
+                WalkNative.SetCursorPos(centreX, centreY);
+                e.Handled = true;
+                return;
+            }
+
             // Backstop: one step this large is not aiming - something moved the centre under the pointer (the view
             // resized, the display scaling changed, a remote session moved the pointer). Re-centre and drop it.
             if (Math.Abs(dx) > MaxLookStepPx || Math.Abs(dy) > MaxLookStepPx || _session.Hud.PlayingViewpoints)
@@ -100,6 +108,14 @@ namespace HeronTools.UI.ModelWalk
             if (!_mouseLookActive)
                 StartLook();
 
+            if (EntryOpen)
+            {
+                if (e.ChangedButton == MouseButton.Left)
+                    CloseEntry(save: true);   // a click saves what was typed
+                e.Handled = true;
+                return;
+            }
+
             if (e.ChangedButton == MouseButton.Left)
             {
                 if (_session.Input.Pointer == WalkPointerMode.Inspect)
@@ -117,7 +133,7 @@ namespace HeronTools.UI.ModelWalk
 
         private void OnWalkMouseWheel(MouseWheelEventArgs e)
         {
-            if (_paused || _ending || _closedDown)
+            if (_paused || _ending || _closedDown || EntryOpen)
                 return;
             StepSpeed(e.Delta > 0 ? +1 : -1);
             e.Handled = true;
@@ -189,6 +205,10 @@ namespace HeronTools.UI.ModelWalk
                 return;
             }
 
+            // The comment / name box takes every key while it is open (Enter saves, Esc skips).
+            if (EntryKeyDown(e, key))
+                return;
+
             // Fixed keys
             if (key == Key.Escape) { PauseWalk(); e.Handled = true; return; }
             if (key == Key.Tab)
@@ -247,6 +267,8 @@ namespace HeronTools.UI.ModelWalk
         {
             Key key = e.Key == Key.System ? e.SystemKey : e.Key;
             WalkInput input = _session.Input;
+            if (EntryOpen)
+                return;   // typing: the box has the keys (held moves were cleared when it opened)
 
             if (key == Key.Up) { input.MoveForward = false; e.Handled = true; return; }
             if (key == Key.Down) { input.MoveBack = false; e.Handled = true; return; }

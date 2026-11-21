@@ -26,7 +26,6 @@ namespace HeronTools.Services.ModelWalk
     internal sealed partial class WalkEngine : IExternalEventHandler
     {
         private readonly WalkSession _session;
-        private readonly WalkReport _report;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private double _lastFrameSeconds = -1.0;
         private double _lastWorldRefresh;
@@ -56,7 +55,6 @@ namespace HeronTools.Services.ModelWalk
         public WalkEngine(WalkSession session)
         {
             _session = session;
-            _report = new WalkReport(session.Document);
         }
 
         public string GetName() => "Heron Tools - Model Walk";
@@ -458,7 +456,7 @@ namespace HeronTools.Services.ModelWalk
                 }
             }
 
-            string report = _report.WriteOnce();
+            string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);
 
             _session.Running = false;
@@ -477,7 +475,7 @@ namespace HeronTools.Services.ModelWalk
             _ended = true;
             _session.Running = false;
             var notes = new List<string>();
-            string report = _report.WriteOnce();
+            string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);
             if (_session.Document.IsValidObject && _session.Document.GetElement(_session.WalkViewId) is View view &&
                 SnagColourMemory.Find(_session.Document, view)?.Count > 0)
