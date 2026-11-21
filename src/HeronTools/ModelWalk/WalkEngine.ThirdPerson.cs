@@ -12,7 +12,8 @@
 // What stays with the PLAYER (not the camera): collision, gravity, step-up, the door hint, the floor and room checks,
 // viewpoints and the snag's "where you stood". What starts at the CAMERA: the crosshair ray (readout, Select, Snag,
 // Hide, Measure, Go to point), so every click lands on what is under the crosshair. Distances shown are measured from
-// the player. The camera's wall slide costs one ray, only when the camera moved, inside the frame's ray budget.
+// the player. The camera's wall slide costs one cast (up to 2 rays: the model and near links), only when the camera
+// moved, and only when both rays fit in the frame's ray budget.
 
 using System;
 using Autodesk.Revit.DB;
@@ -130,7 +131,8 @@ namespace HeronTools.Services.ModelWalk
             // closest camera, if there is none yet) - never a guess that could put the camera inside a wall.
             bool moved = _slidePivot == null || _slideAllowedFt < 0 || !_slidePivot.IsAlmostEqualTo(pivot) ||
                          !_slideDirection.IsAlmostEqualTo(direction);
-            if (moved && !_collision.OverBudget)
+            // CastNear is up to 2 rays (the model and the near links): cast only when both fit in the frame's budget.
+            if (moved && _collision.RaysThisFrame <= WalkTuning.RayBudgetPerFrame - 2)
             {
                 double allowed = length;
                 if (_session.Mode != WalkMoveMode.PassThrough)
