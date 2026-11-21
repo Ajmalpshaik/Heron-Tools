@@ -140,6 +140,7 @@ namespace HeronTools.Services.ModelWalk
         public bool PlayViewpointsQueued;
         public bool ResyncViewQueued;      // re-fit the picture to the window (aim and picture in step)
         public bool SettingsChangedQueued; // eye height or step-up changed: find the floor again
+        public int OpenSnag;               // pause menu: go back to snag N and select its element, 0 = none
 
         /// <summary>True while any held key asks for movement.</summary>
         public bool AnyMoveHeld => MoveForward || MoveBack || StrafeLeft || StrafeRight || UpKey || DownKey;
@@ -148,7 +149,7 @@ namespace HeronTools.Services.ModelWalk
         public bool AnyQueued =>
             DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued ||
             GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || ShowHiddenQueued ||
-            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued;
+            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0;
     }
 
     /// <summary>What the engine tells the HUD after each frame.</summary>
@@ -174,6 +175,16 @@ namespace HeronTools.Services.ModelWalk
 
         // Engine to HUD: a snag was just recorded - take its picture (HUD hidden), then ask for its comment.
         public int SnagAwaitingPicture;
+
+        // While paused: the engine's answer to a pause-menu action, and a counter the HUD watches.
+        public string PauseStatus = "";
+        public int PauseStatusVersion;
+
+        public void SayInPause(string text)
+        {
+            PauseStatus = text ?? "";
+            PauseStatusVersion++;
+        }
 
         // The room the eye is in ("Room 3.12 Plant Room"), empty when none; filled by the engine a few times a second.
         public string RoomText = "";
@@ -264,6 +275,12 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>False once the walk is ending; the engine then does nothing but the clean-up.</summary>
         public bool Running = true;
+
+        /// <summary>
+        /// Set by the HUD while the walk is paused: a frame then runs only the pause menu's queued actions and never
+        /// ends the walk because Revit shows another view (the modeller is free to use Revit while paused).
+        /// </summary>
+        public bool Paused;
 
         /// <summary>Set by the HUD when the modeller ends the walk; the next engine frame cleans up (it needs Revit's API).</summary>
         public bool StopRequested;

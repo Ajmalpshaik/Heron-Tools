@@ -101,8 +101,13 @@ namespace HeronTools.UI.ModelWalk
             }
             if (_paused)
             {
-                EnterPlay();
-                e.Handled = true;
+                // The pause menu has its own buttons ("Carry on walking"); a click anywhere else on it does nothing,
+                // so scrolling the snag list never throws you back into the walk.
+                if (!_pauseMenuShown)
+                {
+                    EnterPlay();
+                    e.Handled = true;
+                }
                 return;
             }
             if (!_mouseLookActive)
@@ -187,7 +192,12 @@ namespace HeronTools.UI.ModelWalk
 
             if (_paused)
             {
-                if (key == Key.Escape)
+                if (key == Key.Enter)
+                {
+                    EnterPlay();
+                    e.Handled = true;
+                }
+                else if (key == Key.Escape)
                 {
                     RequestStop("You ended the walk.");
                     e.Handled = true;

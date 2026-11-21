@@ -83,6 +83,11 @@ namespace HeronTools.Services.ModelWalk
                     End(app, _session.StopRequestReason, touchModel: true, returnToStart: true);
                     return;
                 }
+                if (_session.Paused)
+                {
+                    PausedFrame(uidoc, doc);
+                    return;
+                }
                 if (uidoc == null || !uidoc.Document.Equals(doc))
                 {
                     End(app, "You switched to another model, so Model Walk ended.", touchModel: true, returnToStart: false);
@@ -282,6 +287,11 @@ namespace HeronTools.Services.ModelWalk
         {
             Look(yawDeg, pitchDeg, out XYZ forward, out _, out _, out XYZ up);
             return new ViewOrientation3D(eye, up, forward);
+        }
+
+        /// <summary>Stops any move still running (a jump, a pause).</summary>
+        private void StopMotion()
+        {
         }
 
         private void RefreshWorld()

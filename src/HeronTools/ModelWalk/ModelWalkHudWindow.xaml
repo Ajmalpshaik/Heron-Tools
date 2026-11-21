@@ -184,17 +184,62 @@
             </Border>
         </Grid>
 
-        <!-- ==================== PAUSED / ENDED pill ==================== -->
+        <!-- ==================== PAUSED menu / ENDED message ==================== -->
+        <!-- While paused the overlay shrinks to this card at the top of the view, so Revit is free to use. The one
+             orange thing here is "Carry on walking" (the walk layer, with its orange mode chip, is hidden). -->
         <Border x:Name="PauseLayer" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderStrong}"
-                BorderThickness="1" CornerRadius="12" Visibility="Collapsed" Cursor="Hand">
-            <StackPanel x:Name="PausePanel" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,12" MaxWidth="420">
+                BorderThickness="1" CornerRadius="12" Visibility="Collapsed">
+            <StackPanel x:Name="PausePanel" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="20,14">
                 <TextBlock x:Name="PauseTitle" Text="Paused" Foreground="{StaticResource TextPrimary}" FontSize="15"
                            FontWeight="Bold" HorizontalAlignment="Center"/>
-                <TextBlock x:Name="PauseLine1" Text="Click here to carry on walking" Foreground="{StaticResource TextPrimary}"
+                <TextBlock x:Name="PauseLine1" Foreground="{StaticResource TextPrimary}" MaxWidth="540"
                            FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
                 <TextBlock x:Name="PauseLine2" Foreground="{StaticResource TextSecondary}" FontSize="11.5" HorizontalAlignment="Center"
-                           Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center"
-                           Text="Revit is free to use - change Visibility/Graphics, filters, anything. S = settings, K = keys, Esc = end the walk."/>
+                           Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="540"/>
+
+                <StackPanel x:Name="PauseMenu" Visibility="Collapsed" Margin="0,12,0,0" Width="540">
+                    <Button x:Name="ResumeButton" Content="Carry on walking" Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Center" MinWidth="220" Click="OnResumeClick"
+                            ToolTip="Back to the walk (Enter)"/>
+                    <WrapPanel HorizontalAlignment="Center" Margin="0,10,0,0">
+                        <Button Content="Settings" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnSettingsClick"
+                                ToolTip="Mouse, speeds, eye height, step-up, snag colours (S)"/>
+                        <Button Content="Keys" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnKeysClick"
+                                ToolTip="Give any action another key (K)"/>
+                        <Button x:Name="ClearSnagsButton" Content="Clear snag colours" Style="{StaticResource CompactSecondaryButton}"
+                                Margin="3" Click="OnClearSnagsClick" ToolTip="Give every snagged element its own colours back (one Undo step)"/>
+                        <Button Content="Open report folder" Style="{StaticResource CompactSecondaryButton}" Margin="3"
+                                Click="OnOpenFolderClick" ToolTip="The snag report, the snag pictures and the snapshots of this walk"/>
+                        <Button Content="End walk" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnEndClick"
+                                ToolTip="End Model Walk and go back to your view (Esc)"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="PauseStatus" Style="{StaticResource HudHint}" Foreground="{StaticResource TextSecondary}"
+                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Visibility="Collapsed"/>
+
+                    <!-- Snags: click one to go back to it -->
+                    <StackPanel x:Name="SnagSection" Margin="0,14,0,0" Visibility="Collapsed">
+                        <TextBlock Text="Snags - click one to go back to it and select the element" Style="{StaticResource HudHint}"
+                                   Foreground="{StaticResource TextSecondary}" Margin="2,0,0,4"/>
+                        <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="SnagMenuList"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Viewpoints: go, save as a Revit 3D view, delete -->
+                    <StackPanel x:Name="ViewpointSection" Margin="0,14,0,0" Visibility="Collapsed">
+                        <DockPanel Margin="2,0,0,4">
+                            <Button x:Name="PlayViewpointsButton" DockPanel.Dock="Right" Content="Play viewpoints"
+                                    Style="{StaticResource CompactSecondaryButton}" Click="OnPlayViewpointsClick"
+                                    ToolTip="Move smoothly through every viewpoint; any move key stops"/>
+                            <TextBlock Text="Viewpoints - kept for this model" Style="{StaticResource HudHint}"
+                                       Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="168" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="ViewpointMenuList"/>
+                        </ScrollViewer>
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>

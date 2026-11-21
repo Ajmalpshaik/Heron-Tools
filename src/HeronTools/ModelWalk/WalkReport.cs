@@ -50,6 +50,7 @@ namespace HeronTools.Services.ModelWalk
         public XYZ Eye;
         public double YawDeg;
         public double PitchDeg;
+        public WalkMoveMode MoveMode;     // Open snag flies back if the snag was recorded in Fly
 
         public string PictureFile = "";   // file name inside the walk folder
         public bool Coloured;

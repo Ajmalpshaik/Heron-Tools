@@ -129,12 +129,85 @@ namespace HeronTools.Services.ModelWalk
             if (input.ClearSnagsQueued)
             {
                 input.ClearSnagsQueued = false;
-                string line = SnagColourMemory.GiveBack(doc, view, "Model Walk: clear snag colours");
+                string line = ClearSnagColours(doc, view);
                 hud.Toast(line ?? "No snag colours to clear", line != null && line.EndsWith("back.", StringComparison.Ordinal) ? WalkToastKind.Done : WalkToastKind.Info);
+            }
+
+            if (input.OpenSnag > 0)
+            {
+                int number = input.OpenSnag;
+                input.OpenSnag = 0;
+                position = OpenSnag(uidoc, doc, number, position, hud);
             }
 
             hud.SnagCount = _session.Report.Count;
             return position;
+        }
+
+        private static string ClearSnagColours(Document doc, View3D view) =>
+            SnagColourMemory.GiveBack(doc, view, "Model Walk: clear snag colours");
+
+        /// <summary>
+        /// Open snag: the camera goes back where the snag was recorded (Fly again if it was recorded flying) and the
+        /// element becomes Revit's selection - no transaction. A linked element cannot be selected on its own.
+        /// </summary>
+        private XYZ OpenSnag(UIDocument uidoc, Document doc, int number, XYZ position, WalkHudState hud)
+        {
+            WalkSnag snag = _session.Report.Find(number);
+            if (snag?.Eye == null)
+                return position;
+
+            if (snag.MoveMode != WalkMoveMode.Walk)
+                _session.Mode = snag.MoveMode;
+            LookAt(hud, snag.YawDeg, snag.PitchDeg);
+            _session.VerticalSpeedFtPerSec = 0;
+            _session.Grounded = false;
+            _forceFloorCheck = true;
+            StopMotion();
+
+            string selected;
+            if (snag.HostElementId == null)
+                selected = "the element is in a linked model, so it is not selected";
+            else if (doc.GetElement(snag.HostElementId) == null)
+                selected = "the element is no longer in the model";
+            else
+            {
+                uidoc.Selection.SetElementIds(new List<ElementId> { snag.HostElementId });
+                selected = "the element is selected";
+            }
+            hud.Toast("Snag " + number + ": back where it was recorded - " + selected, WalkToastKind.Done);
+            return snag.Eye;
+        }
+
+        /// <summary>
+        /// A frame while the walk is paused: only the pause menu's actions, nothing moves. The walk does not end
+        /// because Revit shows another view - the modeller may be using Revit; the walk ends on resume as before.
+        /// </summary>
+        private void PausedFrame(UIDocument uidoc, Document doc)
+        {
+            WalkInput input = _session.Input;
+            WalkHudState hud = _session.Hud;
+            StopMotion();
+            if (!input.ClearSnagsQueued)
+                return;
+
+            if (uidoc == null || !uidoc.Document.Equals(doc))
+            {
+                input.ClearSnagsQueued = false;
+                hud.SayInPause("Go back to the walk's model first, then try again.");
+                return;
+            }
+            if (!(doc.GetElement(_session.WalkViewId) is View3D view))
+            {
+                End(uidoc.Application, "The walk view was deleted, so Model Walk ended.", touchModel: true, returnToStart: false);
+                return;
+            }
+
+            if (input.ClearSnagsQueued)
+            {
+                input.ClearSnagsQueued = false;
+                hud.SayInPause(ClearSnagColours(doc, view) ?? "No snag colours to clear.");
+            }
         }
 
         private void LookAt(WalkHudState hud, double yawDeg, double pitchDeg)
@@ -342,7 +415,8 @@ namespace HeronTools.Services.ModelWalk
                 HitPoint = hit.Point,
                 Eye = position,
                 YawDeg = input.YawDeg,
-                PitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, input.PitchDeg))
+                PitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, input.PitchDeg)),
+                MoveMode = _session.Mode
             });
 
             string whyNot;

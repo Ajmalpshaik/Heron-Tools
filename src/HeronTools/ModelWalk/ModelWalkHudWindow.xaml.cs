@@ -188,6 +188,8 @@ namespace HeronTools.UI.ModelWalk
             ClearHeldKeys();
             _ending = true;
             _paused = true;
+            _session.Paused = true;
+            HidePauseMenu();
             _endTicks = _waitingForEngine ? EndWaitTicks : EndShowTicks;
             ShowPill(title, string.IsNullOrWhiteSpace(text) ? "The walk view stays in the project - run Model Walk again to carry on." : text, "");
         }
@@ -254,7 +256,10 @@ namespace HeronTools.UI.ModelWalk
             }
 
             if (_paused)
+            {
+                UpdatePausedFromEngine(hud);
                 return;
+            }
 
             // A snag was just recorded: its picture (HUD hidden), then its comment box.
             if (hud.SnagAwaitingPicture > 0 && !_snapshotBusy && !EntryOpen)
@@ -311,6 +316,8 @@ namespace HeronTools.UI.ModelWalk
                 return;
 
             _paused = false;
+            _session.Paused = false;
+            HidePauseMenu();
             PauseLayer.Visibility = Visibility.Collapsed;
             PlayLayer.Visibility = Visibility.Visible;
 
@@ -336,10 +343,12 @@ namespace HeronTools.UI.ModelWalk
             CloseEntry(save: true);                 // keep what was typed
             _session.Hud.SnagAwaitingPicture = 0;   // the view may change while paused: no picture of the wrong place
             _paused = true;
+            _session.Paused = true;
             ReleaseLook();
             ClearHeldKeys();
-            ShowPill("Paused", "Click here to carry on walking",
-                "Revit is free to use - change Visibility/Graphics, filters, anything. S = settings, K = keys, Esc = end the walk.");
+            ShowPauseMenu();
+            ShowPill("Paused", "Revit is free to use - change Visibility/Graphics, filters, anything, then carry on.",
+                "Enter = carry on    S = settings    K = keys    Esc = end the walk");
         }
 
         private void ShowPill(string title, string line1, string line2)
@@ -354,18 +363,19 @@ namespace HeronTools.UI.ModelWalk
         }
 
         /// <summary>
-        /// The pill is sized to its text, in device pixels from the window's own DPI - at 150 % or 200 % display
-        /// scaling the old fixed 400 x 160 px pill cut the text off.
+        /// The pause card is sized to its content, in device pixels from the window's own DPI - at 150 % or 200 %
+        /// display scaling the old fixed 400 x 160 px pill cut the text off. Never taller than the view.
         /// </summary>
         private void ShrinkToPill()
         {
             if (!_haveFullRect)
                 return;
             DpiScale dpi = VisualTreeHelper.GetDpi(this);
-            PauseLayer.Measure(new Size(460, double.PositiveInfinity));
+            PauseLayer.Measure(new Size(_pauseMenuShown ? 600 : 460, double.PositiveInfinity));
             Size wanted = PauseLayer.DesiredSize;
+            double maxHeight = Math.Max(120, ((_fullBottom - _fullTop) / dpi.DpiScaleY) - 20);
             int width = (int)Math.Ceiling(Math.Max(300, wanted.Width) * dpi.DpiScaleX);
-            int height = (int)Math.Ceiling(Math.Max(90, wanted.Height) * dpi.DpiScaleY);
+            int height = (int)Math.Ceiling(Math.Min(maxHeight, Math.Max(90, wanted.Height)) * dpi.DpiScaleY);
             int centreX = (_fullLeft + _fullRight) / 2;
             MoveWindowPixels(centreX - (width / 2), _fullTop + (int)(10 * dpi.DpiScaleY), width, height);
         }
