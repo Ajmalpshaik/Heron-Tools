@@ -51,7 +51,7 @@ namespace HeronTools.Services.ModelWalk
     /// </summary>
     internal static class WalkTuning
     {
-        private const double FtPerMm = 1.0 / Constants.FEET_TO_MM;
+        private const double FtPerMm = Constants.MM_TO_FEET;
 
         // --- Body. Eye height, low eye and step-up height are the modeller's own (WalkSettings, standard 1700 /
         //     1000 / 350 mm). ---
