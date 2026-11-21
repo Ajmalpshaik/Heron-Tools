@@ -15,7 +15,8 @@
     2. Packs each year's HeronTools.dll (+ HeronTools.deps.json for 2025 and later) and its manifest into
        installer\payload\HeronTools-payload.zip, with payload.txt listing every file and its SHA-256 - the
        installer checks each file it writes against that list.
-    3. Builds installer\HeronTools.Installer with that zip inside, and copies the result to
+    3. Builds installer\HeronTools.Installer with that zip inside - and with the add-in's own version, read
+       from the packed HeronTools.dll, so the two never drift - and copies the result to
        dist\HeronToolsInstaller-<version>.exe (and dist\HeronToolsInstaller.exe).
     Nothing is installed on this PC. installer\payload\ and dist\ are not committed.
 
@@ -93,12 +94,14 @@ finally { $zip.Dispose() }
 Remove-Item -LiteralPath $stage -Recurse -Force
 
 # ---- build the installer with the payload inside
-& dotnet build $project -c Release -nologo -v:minimal
+# Its version is the add-in's (read from the HeronTools.dll packed above), never typed in a second time.
+$plain = ($version -split '\+')[0]
+if (-not ($plain -match '^\d+(\.\d+){1,3}(-[0-9A-Za-z.-]+)?$')) { throw "HeronTools.dll has no usable version ('$version')." }
+& dotnet build $project -c Release -nologo -v:minimal "-p:Version=$plain"
 if ($LASTEXITCODE -ne 0) { Write-Host "Installer not made: it did not compile (see above)." -ForegroundColor Red; exit 1 }
 
 $exe = Join-Path $repoRoot 'installer\HeronTools.Installer\bin\Release\net48\HeronToolsInstaller.exe'
 New-Item -ItemType Directory -Force -Path $distDir | Out-Null
-$plain = ($version -split '\+')[0]
 $named = Join-Path $distDir "HeronToolsInstaller-$plain.exe"
 Copy-Item -LiteralPath $exe -Destination $named -Force
 Copy-Item -LiteralPath $exe -Destination (Join-Path $distDir 'HeronToolsInstaller.exe') -Force

@@ -31,6 +31,8 @@
     <Nullable>disable</Nullable>
     <ApplicationIcon>Resources\HeronTools.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Only for a plain "dotnet build". build\build-installer.ps1 passes -p:Version with the version read from
+         the HeronTools.dll it packs, so the installer always carries the add-in's version. -->
     <Version>1.1.0</Version>
     <Product>Heron Tools Installer</Product>
     <Company>Ajmal PS</Company>

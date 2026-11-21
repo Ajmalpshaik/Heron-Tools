@@ -88,8 +88,8 @@ it does not know.
 ## Install (for modellers)
 
 Run **`HeronToolsInstaller.exe`** - one file, nothing else to install first (it runs on the .NET Framework
-that every Windows 10 and 11 already has). It finds every Revit 2020 to 2027 on the PC, and installs Heron
-Tools into the ones you tick, for your Windows user only - no administrator needed.
+that every Windows 10 and 11 already has). It finds every Revit 2020 to 2027 on the PC (also Revit installed on
+another drive, such as `D:\Autodesk\Revit 2024`), and installs Heron Tools into the ones you tick, for your Windows user only - no administrator needed.
 
 <p align="center">
   <img src="docs/installer/installer-window.png" alt="The Heron Tools installer window" width="560">
@@ -97,12 +97,13 @@ Tools into the ones you tick, for your Windows user only - no administrator need
 
 - **Install** puts Heron Tools in the ticked versions (or replaces it - there is no separate Update or
   Repair). It never removes anything.
-- **Remove Heron Tools** (shown only while it is installed) takes it out of every Revit it is in. It asks
+- **Remove Heron Tools** (shown only while it is installed - also when only a leftover `.addin` or
+  `HeronTools` folder is there) takes it out of every Revit it is in. It asks
   first, with No already picked. To take it out of one version only: `/uninstall /years 2024` (below).
 - If one of those Revit versions is open, it **waits** and says so, and carries on by itself once Revit is
   closed. It never closes Revit.
 - It keeps the install it replaces (`%LocalAppData%\HeronTools\install-backup\<year>`), puts it back by
-  itself if a copy fails, and checks every file it writes against the build it carries.
+  itself if a copy fails (on a first install it takes out what it copied), and checks every file it writes against the build it carries.
 
 For an office rolling it out to many PCs, the same file runs without a window:
 
