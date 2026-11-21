@@ -92,7 +92,7 @@ for fun.
 | 18 | Professional mode (N) | **DROP** | The tool is always professional - nothing left to hide. |
 | 19 | Flashlight night mode (V) | **DROP** | Fake darkness tells nothing about the model. |
 | 20 | Laser | **CHANGE** | Becomes the default mode "Inspect": live readout of what is under the crosshair (category, family : type, id, level, system, link name) and distance from the eye. |
-| 21 | Cleaner + U | **CHANGE** | Rename "Hide" / "Show hidden". Keep Temporary Hide (never permanent). Remember what this session hid, so "Show hidden" brings back only those, not the modeller's own temporary hide. |
+| 21 | Cleaner + U | **CHANGE** | Rename "Hide" / "Show hidden". Keep Temporary Hide (never permanent). The API cannot un-hide single elements from a temporary hide - it can only end the whole Temporary Hide/Isolate (`DisableTemporaryViewMode`). So "Show hidden" ends it in the Model Walk view only (Model Walk's own view, so the modeller's working views are never touched), and says so first if a hide was already on when the walk started (`IsTemporaryHideIsolateActive`). |
 | 22 | Snag (red override) | **CHANGE** | Rename "Snag". Before colouring, remember the element's own override and give it back on "Clear snags" and on exit (option to keep). One Undo step per snag. Never paint a linked element (it cannot be overridden alone) - record it only. |
 | 23 | J resets every override in the view | **DROP** | Breaks the rule "never overwrite a modeller's overrides without a way back". "Clear snags" (item 22) replaces it. |
 | 24 | Selector | **KEEP** | Rename "Select". Carries elements straight back into Revit for editing - strong for coordination. |
@@ -189,14 +189,15 @@ A "Clean screen" key (default Z) hides everything except the crosshair; Snapshot
 |---|---|---|
 | 1 | **Frame rate in big models.** Each frame is a `SetOrientation` + `RefreshActiveView` + several rays. Redraw time grows with the model; 30 frames a second may not hold. | Raise the `ExternalEvent` only when the camera must move (no raise while standing still); count rays per frame; show frames per second in a debug key; test on a real large MEP model. NEEDS REAL REVIT. |
 | 2 | **`ExternalEvent` waits when Revit is busy.** The API note says events run only when no command or edit mode is active, at Revit's next idle cycle. | Treat a late frame as normal: move by real elapsed time, never by frame count, so the speed stays right. Never call the API from the timer itself. |
-| 3 | **Camera position is not saved.** `SetOrientation` is temporary. `SaveOrientation` exists but **locks** the view. | Store the last camera and the viewpoints in Heron Tools' own user file (per model), not by locking the view. |
-| 4 | **Overriding the modeller's graphics.** Old Snag + J could wipe their colours. | Remember and give back (item 22), the same way Highlight and Quick Clash do; reset before Save and Sync like Quick Clash. |
-| 5 | **Element ids.** Report and selection must use 64-bit ids (Revit 2024 and later) and unique ids; linked elements need link instance + linked id. | Use the existing Heron id helpers; never `int`. |
-| 6 | **Overlay window and mouse capture.** Moving the pointer back to the centre each frame (`SetCursorPos`) and a top-most window can trap the user, fight Alt+Tab, or sit wrong on mixed-DPI screens. | Esc always frees the mouse; losing focus pauses at once; place by device pixels (today's approach works); test on two screens with different scaling. NEEDS REAL REVIT. |
-| 7 | **Field of view** has no direct API. | Do not promise it until a real test changes the crop box and the picture still lines up with the crosshair. |
-| 8 | **Both add-ins installed.** AJ-Tools Game Mode and Heron Model Walk could run at once in one Revit. | Different view name, different settings folder; Model Walk refuses to start if another walk overlay owns the view. Removing Game Mode from AJ-Tools needs the owner's typed "yes". |
-| 9 | **Workshared models.** Creating the walk view is a model change that others see after sync. | Say so the first time; one Undo step "Heron Tools - Model Walk view". |
-| 10 | **Rays through links on 2020-2022.** Link handling differs by year (Quick Clash already found this). | Test Inspect, collision and Snag on a linked model in 2020 and 2024+. |
+| 3 | **Temporary hide is all-or-nothing.** `HideElementsTemporary` adds to the hide; only `DisableTemporaryViewMode` ends it, for every element at once. | Keep all hides in Model Walk's own view (item 21); never run Hide in a modeller's working view. |
+| 4 | **Camera position is not saved.** `SetOrientation` is temporary. `SaveOrientation` exists but **locks** the view. | Store the last camera and the viewpoints in Heron Tools' own user file (per model), not by locking the view. |
+| 5 | **Overriding the modeller's graphics.** Old Snag + J could wipe their colours. | Remember and give back (item 22), the same way Highlight and Quick Clash do; reset before Save and Sync like Quick Clash. |
+| 6 | **Element ids.** Report and selection must use 64-bit ids (Revit 2024 and later) and unique ids; linked elements need link instance + linked id. | Use the existing Heron id helpers; never `int`. |
+| 7 | **Overlay window and mouse capture.** Moving the pointer back to the centre each frame (`SetCursorPos`) and a top-most window can trap the user, fight Alt+Tab, or sit wrong on mixed-DPI screens. | Esc always frees the mouse; losing focus pauses at once; place by device pixels (today's approach works); test on two screens with different scaling. NEEDS REAL REVIT. |
+| 8 | **Field of view** has no direct API. | Do not promise it until a real test changes the crop box and the picture still lines up with the crosshair. |
+| 9 | **Both add-ins installed.** AJ-Tools Game Mode and Heron Model Walk could run at once in one Revit. | Different view name, different settings folder; Model Walk refuses to start if another walk overlay owns the view. Removing Game Mode from AJ-Tools needs the owner's typed "yes". |
+| 10 | **Workshared models.** Creating the walk view is a model change that others see after sync. | Say so the first time; one Undo step "Heron Tools - Model Walk view". |
+| 11 | **Rays through links on 2020-2022.** Link handling differs by year (Quick Clash already found this). | Test Inspect, collision and Snag on a linked model in 2020 and 2024+. |
 
 **State today:** inventory and API notes - PASS (read from source and the API XML notes).
 Every behaviour in section B - NOT RUN (no code yet). Frame rate, mouse capture, field of view,

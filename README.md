@@ -261,6 +261,7 @@ Directory.Build.props    Revit year -> .NET runtime, output folders, compile sym
 
 Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
 [Panels move notes](docs/panels-move-notes.md) · [Model Walk move notes](docs/model-walk-move-notes.md) · [Model Walk guide](docs/model-walk-guide.md) ·
+[Model Walk spec](docs/game-mode-spec.md) · [Game Mode audit](docs/game-mode-audit.md) ·
 [Metadata standard](docs/metadata-standard.md) · [Ideas for Heron AI](docs/ideas-for-heron-ai.md)
 
 ## Licence
