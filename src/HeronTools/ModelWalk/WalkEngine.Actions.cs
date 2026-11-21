@@ -599,13 +599,15 @@ namespace HeronTools.Services.ModelWalk
 
             string problem = _session.Report.Save();
             hud.SnagCount = _session.Report.Count;
-            hud.SnagAwaitingPicture = snag.Number;   // the HUD takes the picture, then opens the comment box
+            hud.SnagAwaitingPicture = snag.Number;   // the HUD takes the picture, then (if asked for) opens the comment box
+            // Quick snagging (standard): no comment box - the comment is written later in the pause menu's snag list.
+            string later = _session.Settings.AskSnagComment ? "" : " - add a comment in the pause menu (Esc)";
             if (problem != null)
                 hud.Toast(problem, WalkToastKind.Refused);
             else
                 hud.Toast(whyNot == null
-                    ? "Snag " + snag.Number + " recorded: " + what
-                    : "Snag " + snag.Number + " recorded (not coloured: " + whyNot + "): " + what,
+                    ? "Snag " + snag.Number + " recorded: " + what + later
+                    : "Snag " + snag.Number + " recorded (not coloured: " + whyNot + "): " + what + later,
                     WalkToastKind.Done);
         }
 

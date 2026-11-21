@@ -130,7 +130,11 @@
                 <!-- Snags -->
                 <Border Style="{StaticResource StepCard}">
                     <StackPanel>
-                        <TextBlock Text="Snag colours" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Snags" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                        <CheckBox x:Name="AskSnagCommentBox" Content="Ask for a comment at each snag" Style="{StaticResource ModernCheckBox}"
+                                  ToolTip="On: a comment box opens after each snag. Off (standard): snag after snag, write the comments in the pause menu"/>
+                        <TextBlock Style="{StaticResource HelpText}" Margin="0,4,0,12"
+                                   Text="Off (standard): click snag after snag - each one is recorded, coloured and pictured, and you keep walking. Press Esc and write the comments in the pause menu's snag list. On: a comment box opens after each snag."/>
                         <CheckBox x:Name="KeepSnagColoursBox" Content="Keep snag colours after the walk" Style="{StaticResource ModernCheckBox}"
                                   ToolTip="On (standard): the red stays after the walk. Off: each element gets its own colours back when the walk ends"/>
                         <TextBlock Style="{StaticResource HelpText}" Margin="0,4,0,0"

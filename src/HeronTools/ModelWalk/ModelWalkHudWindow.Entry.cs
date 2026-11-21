@@ -5,7 +5,8 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Model Walk HUD - the small box for typing on the spot: a snag's comment (right after its picture) and a viewpoint's
+// Model Walk HUD - the small box for typing on the spot: a snag's comment (right after its picture, only when the
+// setting "Ask for a comment at each snag" is on - quick snagging writes comments in the pause menu) and a viewpoint's
 // name. Enter saves, Esc skips, a left click saves. While it is open the walk stands still: the keys type into the
 // box, the mouse does not turn the view. Pausing (or the walk ending) keeps what was typed. No Revit API here.
 
@@ -94,7 +95,10 @@ namespace HeronTools.UI.ModelWalk
             return true;            // every other key types into the box
         }
 
-        /// <summary>A snag was recorded: its picture first (HUD hidden), then the comment box.</summary>
+        /// <summary>
+        /// A snag was recorded: its picture first (HUD hidden), then the comment box - or, with quick snagging (the
+        /// standard), nothing more: the walk carries on and the comment is written in the pause menu.
+        /// </summary>
         private void FinishSnagRecord(int number)
         {
             WalkSnag snag = _session.Report.Find(number);
@@ -139,7 +143,7 @@ namespace HeronTools.UI.ModelWalk
 
         private void AskSnagComment(WalkSnag snag)
         {
-            if (_paused || _ending || _closedDown)
+            if (_paused || _ending || _closedDown || !_session.Settings.AskSnagComment)
                 return;
             OpenEntry(EntryKind.SnagComment, snag.Number, "Snag " + snag.Number + " - " + snag.Summary, "",
                 "Type a comment  -  Enter saves  -  Esc skips");

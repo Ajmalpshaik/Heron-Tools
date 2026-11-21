@@ -69,9 +69,21 @@ Linked elements: Select and Hide refuse them (they cannot be picked alone). Snag
 
 ## Snags and the snag report
 
-1. Pick **Snag** mode, aim, left click.
-2. A picture of the view is taken (the HUD is hidden for it).
-3. A small box asks for a comment. Type it, **Enter** saves, **Esc** skips (the snag is kept without one).
+**Quick snagging (standard).** Pick **Snag** mode, aim, left click - and again, and again. Each click records the
+element, colours it red and takes a picture of the view (the HUD is hidden for it, about a tenth of a second). No box
+opens: a short message says "Snag n recorded ... - add a comment in the pause menu (Esc)" and you keep walking. A click
+while the last picture is still being taken is refused with "One moment"; click again.
+
+**Write the comments afterwards.** Press **Esc**. The pause menu lists every snag (newest first): its number, category,
+family : type and comment - **No comment yet** (in the warning colour) where there is none, and how many still have
+none. Click a snag: a comment box opens under the list. Type, then **Enter** (or **Save comment**) - it is saved and the
+box goes straight on to the next snag with no comment. **Esc** closes the box without saving (the next Esc ends the
+walk, as usual). Empty the box and save to remove a comment. While you type, no walk or menu key acts (S, K, W ... are
+just letters). Carry on walking, Open or End walk keep what you typed. **Open** on a row goes back to that snag.
+
+**Comment at each snag instead.** Tick **Ask for a comment at each snag** in Settings: after each snag's picture a
+small box asks for the comment, **Enter** saves, **Esc** skips (the snag is kept without one). You can still change any
+comment in the pause menu.
 
 Everything goes in one folder per walk, **next to the model**:
 `<model folder>\Model Walk - <model name>\<date time>\`. If the model is not saved, is a cloud model, or that folder
@@ -88,7 +100,8 @@ The folder holds:
 - **Snag 001.png**, **Snag 002.png**... - one picture per snag.
 - **Snapshot ....png** - pictures taken with K.
 
-The CSV is saved again after every snag and comment, so nothing is lost if Revit stops. If Excel has it open, close
+The CSV is saved again after every snag and every comment (also each one saved in the pause menu), so nothing is lost
+if Revit stops. If Excel has it open, close
 it - the next change saves it again. **Open report folder** in the pause menu opens the folder.
 
 **Snag colours:** the red stays in the walk view after the walk (standard), until J or **Clear snag colours** in the
@@ -100,7 +113,8 @@ changed yourself after snagging is left as you set it. To get the colours back a
 
 - **Carry on walking** (or Enter).
 - **Settings** (S), **Keys** (K), **Clear snag colours**, **Open report folder**, **End walk** (Esc).
-- **Snags** - newest first. Click one: the camera goes back where it was recorded and the element is added to Revit's
+- **Snags** - newest first, with the comment or **No comment yet**. Click one to write or change its comment (see
+  above). **Open** on a row: the camera goes back where it was recorded and the element is added to Revit's
   selection - what you already selected stays (a linked element is not selected).
 - **Viewpoints** - click one to go there; **Save as 3D view**; **Delete**; **Play viewpoints**.
 
@@ -131,6 +145,7 @@ Nothing is drawn on the model. M again starts a new measure.
 | Eye height | 1700 mm | 1000 - 2000 mm (low eye = 1000 mm, or 300 mm under the eye) |
 | Step-up height | 350 mm | 100 - 450 mm - the highest stair or step you walk up |
 | Keep snag colours after the walk | on | |
+| Ask for a comment at each snag | off | off = quick snagging, comments in the pause menu; on = a box after each snag |
 
 Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). Save applies them at once.
 

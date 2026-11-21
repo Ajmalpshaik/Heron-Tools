@@ -372,6 +372,10 @@ from AJ-Tools.
 | 27 Shared coordinates (GM-A22) | | | | |
 | 28 Snapshot is clean (GM-A30) | | | | |
 | 29 J clears only snag colours | | | | |
+| 30 Quick snags | | | | |
+| 31 Comments in the pause menu | | | | |
+| 32 Change and remove a comment | | | | |
+| 33 Ask for a comment at each snag (on) | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -400,3 +404,39 @@ next to each, with the Revit year.
 29. **J clears only snag colours.** Give a pipe your own colour override first. Snag two other elements, then
     change one of them by hand in Override Graphics in View. Press J. Expect: the one you changed keeps your change,
     the other snag gets its own colours back, and the pipe you coloured first is untouched.
+
+---
+
+# Quick snags and third-person view (2026-11-21)
+
+Two owner requests after the merge. Nothing here has run in Revit yet: builds only.
+
+## Quick snags
+
+The owner wants to click snag after snag without a box popping up, and write the comments later.
+
+| What | How |
+|---|---|
+| Setting | **Ask for a comment at each snag** (Settings, Snags card), `AskSnagComment` in `ModelWalkSettings.txt`, **off** by default. On = the first behaviour (comment box after each snag's picture). A file without the line reads as off. |
+| Snag click, setting off | Same record, colour (one Undo step) and picture (HUD hidden) as before; the engine's toast ends "- add a comment in the pause menu (Esc)"; the HUD opens no box, takes no focus, the walk carries on at once. |
+| Two snags in a row | One picture at a time. A Snag click while the last snag's picture is still waiting or being taken (about 0.1 s) is refused with "One moment - the last snag's picture is being taken. Click again." - before, the second number overwrote the first in `SnagAwaitingPicture` and the first snag lost its picture. The check runs in the HUD before the click is queued; the HUD and the ExternalEvent share Revit's UI thread, so there is no race. |
+| Pause menu snag list | Each row: number, category, family : type, and the comment - or **No comment yet** in `AccentWarning` (Warning = needs attention). The header says how many have no comment yet. Click a row = one comment box under the list (title "Snag n - ..."). **Open** (right of each row) = the old Open snag: camera back, element added to Revit's selection. |
+| Saving | Enter or **Save comment** writes the comment, rewrites `Snags.csv` through the temp file (same `WalkReport.Save`, so the Windows list separator from #41 is kept) and moves to the next snag (newest first) with no comment. An emptied box clears the comment. Carry on walking, Open, End walk and the end sequence save what was typed (`HidePauseMenu`). Esc drops it. |
+| Keys while typing | While the comment box has the keys, the paused key handler gives them to the box first: Enter saves, Esc closes the box only, every other key types - S and K do not open Settings / Keys, repeats are allowed (Backspace held). Key-up is ignored for the box too. Once the box is closed the old rules come back: repeats ignored while paused (held-Esc fix), Esc ends the walk, Enter carries on. |
+| Help, ribbon tooltip, Snag mode message | Say "click snag after snag, write the comments in the pause menu" when the setting is off. The ribbon tooltip also no longer says the colours come back when the walk ends (they stay by default since the owner's decision; J, Save and Sync give them back). |
+
+**Owner decision:** "Esc ... closes the box first, then resumes" was read as: the first Esc closes the comment box,
+the next Esc does what Esc does in the pause menu today (ends the walk). If the owner wants the second Esc to carry on
+walking instead, that is a one-line change in `OnWalkKeyDown`.
+
+### Revit test steps (quick snags)
+
+30. **Quick snags.** Settings: "Ask for a comment at each snag" is off. Snag mode, click five elements quickly. Expect
+    five red elements, five messages "Snag n recorded ... - add a comment in the pause menu (Esc)", no box, the walk
+    never stops. Click twice very fast: the second may say "One moment"; no snag may be left without a picture.
+31. **Comments in the pause menu.** Esc. Expect five rows, each "No comment yet", "5 with no comment yet". Click the
+    newest, type "Clash with tray" (try S, K, W in the text), Enter: saved, the box moves to the next one. Esc closes the
+    box; a second Esc ends the walk. Open the report folder: `Snags.csv` has the comment, 5 pictures.
+32. **Change and remove.** Pause, click a snag with a comment, change it, click Carry on walking: kept. Pause again,
+    empty another one, Enter: "comment removed", the row says "No comment yet" again.
+33. **Old way still there.** Tick "Ask for a comment at each snag", Save. Snag: the comment box opens as before.

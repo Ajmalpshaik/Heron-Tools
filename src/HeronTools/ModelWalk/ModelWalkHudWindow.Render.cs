@@ -195,7 +195,9 @@ namespace HeronTools.UI.ModelWalk
                 "Door\t" + k(WalkKeyBindings.Door) + " when the door hint shows",
                 "Go to point\thold " + k(WalkKeyBindings.GoToPoint) + ", aim at a floor, let go",
                 "Modes\tright-click or Tab (Shift+Tab back): Inspect, Select, Snag, Hide - left click acts",
-                "Snag\tin Snag mode, click: a picture is taken, then type a comment (Enter saves, Esc skips)",
+                _session.Settings.AskSnagComment
+                    ? "Snag\tin Snag mode, click: a picture is taken, then type a comment (Enter saves, Esc skips)"
+                    : "Snag\tin Snag mode, click snag after snag (each gets a picture)  -  write the comments in the pause menu (Esc)",
                 "Snag colours\t" + k(WalkKeyBindings.ClearSnags) + " gives every snagged element its own colours back",
                 "Show hidden\t" + k(WalkKeyBindings.ShowHidden) + " shows again what this walk hid",
                 "Measure\t" + k(WalkKeyBindings.Measure) + " at point 1, " + k(WalkKeyBindings.Measure) + " at point 2 - distance in mm",

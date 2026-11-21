@@ -4,6 +4,13 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Quick snags** (standard): in Snag mode click snag after snag - each one is recorded, coloured red and pictured,
+  with a short message and no comment box, so the walk carries on at once. Press Esc and write each snag's comment in
+  the pause menu's snag list (one comment box; Enter saves and goes to the next snag with no comment; "No comment yet"
+  shows which are missing). `Snags.csv` is saved again after each comment. The old box after each snag is the new
+  setting **Ask for a comment at each snag** (off by default). Open on a row still goes back to the snag.
+
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
   sub-transaction, never left with no bubble at either end while the rest commit.

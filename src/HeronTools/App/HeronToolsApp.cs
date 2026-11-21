@@ -265,8 +265,9 @@ namespace HeronTools.App
                 "meeting. Uses the view \"Heron Model Walk\" (made once with Revit's first 3D view type and no template; one per " +
                 "person in a workshared model) and starts where your 3D view looks. Only what the view shows blocks you - hide a " +
                 "category or use a section box to walk through it. Right-click or Tab changes the mode: Inspect, Select, Snag (a " +
-                "picture, your comment and a red colour; the report goes in a folder next to the model), Hide. Snag colours come " +
-                "back when the walk ends and before every Save and Sync. Pause (Esc) for snags, viewpoints and settings. Camera " +
+                "picture and a red colour, click after click; write the comments in the pause menu; the report goes in a folder next " +
+                "to the model), Hide. Snag colours are given back by J and before every Save and Sync - no red is saved in the " +
+                "model. Pause (Esc) for snags, viewpoints and settings. Camera " +
                 "moves make no Undo entries; each snag is one Undo step."));
 
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")

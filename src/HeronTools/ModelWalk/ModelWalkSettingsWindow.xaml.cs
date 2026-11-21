@@ -49,6 +49,7 @@ namespace HeronTools.UI.ModelWalk
             for (int i = 0; i < _speedBoxes.Length; i++)
                 _speedBoxes[i].Text = i < s.SpeedsMetresPerSec.Length ? s.SpeedsMetresPerSec[i].ToString("0.0##", CultureInfo.CurrentCulture) : "";
             KeepSnagColoursBox.IsChecked = s.KeepSnagColours;
+            AskSnagCommentBox.IsChecked = s.AskSnagComment;
             UpdateLowEyeNote();
         }
 
@@ -119,6 +120,7 @@ namespace HeronTools.UI.ModelWalk
             }
             s.SpeedsMetresPerSec = speeds;
             s.KeepSnagColours = KeepSnagColoursBox.IsChecked == true;
+            s.AskSnagComment = AskSnagCommentBox.IsChecked == true;
             return s;
         }
 
