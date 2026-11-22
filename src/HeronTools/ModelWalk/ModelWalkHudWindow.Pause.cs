@@ -31,10 +31,12 @@ namespace HeronTools.UI.ModelWalk
         {
             _pauseMenuShown = true;
             PauseMenu.Visibility = Visibility.Visible;
-            ClearSnagsButton.Content = "Clear snag colours (" + _keys.Label(WalkKeyBindings.ClearSnags) + ")";
+            ClearSnagsButton.Content = ClearSnagsLabel();
             SetPauseStatus("");
             RebuildPauseLists();
         }
+
+        private string ClearSnagsLabel() => "Clear snag colours (" + _keys.Label(WalkKeyBindings.ClearSnags) + ")";
 
         private void HidePauseMenu()
         {

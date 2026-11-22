@@ -185,7 +185,8 @@ Nothing is drawn on the model. M again starts a new measure.
 
 Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). Save applies them at once (ticking
 or clearing Third-person view switches the view now too). **Reset to standard settings** fills in the standard values;
-Save keeps them. Cancel changes nothing.
+Save keeps them. Cancel changes nothing. The pause card says "Settings saved." (or why they could not be saved:
+they still work for this walk).
 
 ## What goes in the Undo list
 

@@ -232,7 +232,22 @@ namespace HeronTools.UI.ModelWalk
 
         private void OnColoursGivenBack(string line)
         {
-            Guard(() => _session.Hud.Toast(line, WalkToastKind.Done));
+            Guard(() => Report(line, ok: true));
+        }
+
+        /// <summary>
+        /// A short answer to the modeller. While paused the walk layer (and its messages) is hidden and the frame
+        /// loop draws no HUD, so the answer goes in the pause card's status line instead - otherwise a toast.
+        /// </summary>
+        private void Report(string text, bool ok)
+        {
+            if (_paused && _pauseMenuShown)
+            {
+                SetPauseStatus(text);
+                ShrinkToPill();
+                return;
+            }
+            _session.Hud.Toast(text, ok ? WalkToastKind.Done : WalkToastKind.Refused);
         }
 
         // ------------------------------------------------------------------ frame timer
@@ -343,6 +358,7 @@ namespace HeronTools.UI.ModelWalk
 
             _paused = false;
             _session.Paused = false;
+            _deniedSince = null;   // a refusal from before the pause must not count towards the 5 s
             HidePauseMenu();
             PauseLayer.Visibility = Visibility.Collapsed;
             PlayLayer.Visibility = Visibility.Visible;
@@ -371,6 +387,7 @@ namespace HeronTools.UI.ModelWalk
             _session.Hud.ViewpointAwaitingName = 0; // it keeps its own name; rename it by saving again
             _paused = true;
             _session.Paused = true;
+            _deniedSince = null;   // the 5 s of refusals start again from here
             ReleaseLook();
             ClearHeldKeys();
             ShowPauseMenu();
