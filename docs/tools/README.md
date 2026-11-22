@@ -66,6 +66,6 @@ little less in older Revit versions, its page says so in **Limits**.
 
 ## Help
 
-- Install, update and remove: see the [README](../../README.md#install-for-modellers).
+- Install, update and remove: see the [install guide](../install.md).
 - A problem or an idea: [open an issue](https://github.com/Ajmalpshaik/Heron-Tools/issues/new/choose). Say which
   tool, which Revit version, which view, what you did and what happened. Never attach a client model.

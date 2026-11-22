@@ -8,6 +8,12 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - **Tool catalogue** (`docs/tools/`): one page per ribbon panel - what each tool does, when to use it, step by
   step, what it changes in the model, how to undo it, and its limits - with a picture of the ribbon.
 
+### Changed - Docs
+- **README** rewritten for a modeller first: what Heron Tools is, who it is for, a picture of the ribbon, every tool in
+  one line with a link to its catalogue page, install in four steps, where to get help.
+- **Install guide** (`docs/install.md`): download, install, check it loaded, where the files go, update, remove,
+  office install without a window, common problems, and building from source.
+
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
 - **Model Walk docs:** the spec (`docs/game-mode-spec.md`) now says what was built, item by item; the Revit test
   script in `docs/model-walk-move-notes.md` is one numbered list, steps 1-62, each with a results row.
