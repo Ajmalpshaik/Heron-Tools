@@ -414,6 +414,7 @@ namespace HeronTools.Services.ModelWalk
             _levels = null;
             _forceFloorCheck = true;
             _roomSourcesDirty = true;   // a link loaded or a room placed during a pause
+            ForgetCameraSlide();        // the wall behind the camera may have come or gone
         }
 
         private void HandleModeToggles(WalkInput input, WalkHudState hud)
@@ -432,6 +433,7 @@ namespace HeronTools.Services.ModelWalk
                 input.PassThroughToggleQueued = false;
                 _session.Mode = _session.Mode == WalkMoveMode.PassThrough ? WalkMoveMode.Walk : WalkMoveMode.PassThrough;
                 _forceFloorCheck = true;
+                ForgetCameraSlide();   // Pass-through kept the camera's full distance, even through a wall
                 hud.Toast(_session.Mode == WalkMoveMode.PassThrough ? "Pass-through on - nothing blocks you" : "Walk");
             }
             if (input.LowEyeToggleQueued)

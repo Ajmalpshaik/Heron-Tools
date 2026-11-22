@@ -193,5 +193,15 @@ namespace HeronTools.Services.ModelWalk
             _thirdForward = forward;
             return _thirdEye;
         }
+
+        /// <summary>
+        /// Makes the next third-person frame cast the camera's wall check again, even standing still. Called when what
+        /// blocks the camera changed while the pivot did not: Pass-through on / off (Pass-through keeps the full
+        /// distance), an element hidden or shown again, or the world refreshed (a link or Visibility/Graphics change).
+        /// </summary>
+        private void ForgetCameraSlide()
+        {
+            _slideAllowedFt = -1;
+        }
     }
 }
