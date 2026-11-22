@@ -42,7 +42,8 @@ with Revit terms, answer first.
 | Which .NET for which Revit | `Directory.Build.props` |
 | What a ribbon button does and when it is enabled | `src/HeronTools/App/HeronToolsApp.cs` |
 | Brand colours | `src/HeronTools/UI/HeronStyles.xaml` (from the Heron brand kit) |
-| What was fixed and why | `docs/filter-pro-move-notes.md`, git history |
+| What was fixed and why | `docs/filter-pro-move-notes.md`, the other `docs/*-move-notes.md`, git history |
+| What a release says, how it is published | `CHANGELOG.md`, `docs/releases/<version>.md`, `.github/workflows/release.yml` (tag `vX.Y.Z` = pre-release) |
 
 ## If two sources disagree
 

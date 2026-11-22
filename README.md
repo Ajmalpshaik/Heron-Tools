@@ -289,7 +289,7 @@ Directory.Build.props    Revit year -> .NET runtime, output folders, compile sym
 [CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) · [CODE OF CONDUCT](CODE_OF_CONDUCT.md) ·
 [DISCLAIMER](DISCLAIMER.md) · [CHANGELOG](CHANGELOG.md) · [AGENTS](AGENTS.md) (for AI agents working on the code)
 
-For modellers: [Install](docs/install.md) · [Tool catalogue](docs/tools/README.md) · [Model Walk guide](docs/model-walk-guide.md)
+For modellers: [Install](docs/install.md) · [Tool catalogue](docs/tools/README.md) · [Model Walk guide](docs/model-walk-guide.md) · [Release notes](docs/releases/)
 
 Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
 [Panels move notes](docs/panels-move-notes.md) · [Model Walk move notes](docs/model-walk-move-notes.md) · [Model Walk guide](docs/model-walk-guide.md) ·
