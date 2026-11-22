@@ -413,6 +413,7 @@ from AJ-Tools.
 | 61 Busy end in third person | | | | |
 | 62 Click while turning (third person) | | | | |
 | 63 Viewpoint named "#..." kept | | | | |
+| 65 Linked element snagged once; CSV snag colour | | | | |
 
 ## Extra Revit checks (steps 19-29)
 
@@ -951,3 +952,22 @@ After #74, #75, #76, #78, #80, #87 and #88 merged, the Revit test script was mad
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 63 | NEEDS REAL REVIT |
+
+# Snags: linked element twice, CSV colour column (2026-11-22, issue #84)
+
+| What was wrong | Now |
+|---|---|
+| "Already snag N in this walk" was checked only for this model's own elements, so clicking the same linked duct twice gave two report rows. | A linked element is the same snag when it is the same element (Unique ID) in the same link instance. The same link placed twice (a repeated floor) puts the element in two places: those stay two snags. |
+| The CSV "Snag colour" column said "coloured in the walk view" even after J, a Save or a Sync gave the colour back during the walk. | It says "coloured when recorded" - always true. What is red now is in the walk view itself. |
+
+### Revit test step
+
+65. **Linked element snagged once.** In a model with a link, Snag a linked duct, then click it again: "Already snag n in
+    this walk", no second row in `Snags.csv`. Snag a host duct, press J, end the walk: its "Snag colour" cell says
+    "coloured when recorded".
+
+| Check (#84) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 65 | NEEDS REAL REVIT |
