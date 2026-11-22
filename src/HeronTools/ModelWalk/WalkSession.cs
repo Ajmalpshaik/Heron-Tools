@@ -94,7 +94,8 @@ namespace HeronTools.Services.ModelWalk
         public const double InspectRefreshSec = 0.1;  // the readout ray at most 10 times a second
         public const double ClearHeightRefreshSec = 0.25;
         public const double WorldRefreshSec = 4.0;    // pick up VG / filter / level changes
-        public const int RayBudgetPerFrame = 24;      // more than this in one frame and the move is refused, not guessed
+        public const int RayBudgetPerFrame = 24;      // the move's budget: past it the move is refused, not guessed (the readout, door hint and landing checks come on top)
+        public const int FloorRayReserve = 2;         // of those, kept for the floor under you (one near cast), so a slide is never thrown away
 
         // Third person (from AJ-Tools Game Mode v1.60.0): the camera behind and right of the player's head.
         public const double ThirdPersonBackMm = 3000.0;     // camera distance behind the player
