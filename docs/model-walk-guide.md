@@ -20,6 +20,10 @@ you walk through it. Change these while paused, then carry on.
 switches the walk view's section box off, so the building is whole - one Undo step, and the walk tells you. A section box
 you start inside stays. Far clipping is always switched off in the walk view. Your own 3D views are never changed.
 
+**No annotation:** the walk view hides levels, grids, scope boxes, reference planes, section marks, tags, dimensions and
+text at every start (and takes a view template off it). Linked models' annotation is hidden too while the link is "By
+host view". To see one, show it in the walk view's Visibility/Graphics while paused.
+
 **On a roof?** The location line says "on a roof (outside)" and the walk tells you how to get in: hold **T**, aim at a
 floor inside and let go (Go to point), or **F** to fly down - or start the walk from a 3D view that looks inside.
 

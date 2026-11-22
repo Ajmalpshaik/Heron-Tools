@@ -255,9 +255,6 @@ namespace HeronTools.Commands.ModelWalk
                     t.Start();
                     View3D view = View3D.CreatePerspective(doc, type.Id);
                     view.Name = free;
-                    // A 3D view type can carry a default template (Visibility/Graphics, far clipping): the walk view has none.
-                    if (ElementIdHelper.IsValid(view.ViewTemplateId))
-                        view.ViewTemplateId = ElementId.InvalidElementId;
                     if (view.CanModifyDisplayStyle())
                         view.DisplayStyle = DisplayStyle.Shading;
                     Parameter farClip = view.get_Parameter(BuiltInParameter.VIEWER_BOUND_ACTIVE_FAR);
@@ -284,59 +281,97 @@ namespace HeronTools.Commands.ModelWalk
         }
 
         /// <summary>
-        /// At every start, on the walk view only (one Undo step "Model Walk: walk view settings", only when something is
-        /// on): the section box is switched off when the start eye is OUTSIDE it (standing outside the box the building
-        /// is cut away and the character is clipped - a box you are inside of is kept, it is how you walk through what
-        /// it cuts), and far clipping is switched off. Turn a section box on again while paused if you want one.
+        /// At every start, on the walk view only, in one Undo step "Model Walk: walk view settings" (none when nothing
+        /// needs changing):
+        /// - a view template is taken off the walk view (it would lock Visibility/Graphics and far clipping);
+        /// - every annotation category is hidden (levels, grids, section and elevation marks, tags, dimensions, text...),
+        ///   plus scope boxes and reference planes - a walk is about the model. Linked models' annotation follows the
+        ///   walk view when the link is "By host view" (Revit's default);
+        /// - the section box is switched off when the start eye is OUTSIDE it (standing outside the box the building is
+        ///   cut away and the character is clipped - a box you are inside of is kept, it is how you walk through what it
+        ///   cuts);
+        /// - far clipping is switched off.
+        /// Turn any of these on again while paused if you want them for that walk. The modeller's own views never change.
         /// </summary>
-        /// <returns>Null, or one plain line saying what was switched off (or why it could not be).</returns>
+        /// <returns>Null, or one plain line saying what was changed (or why it could not be).</returns>
         private static string TidyWalkView(Document doc, View3D view, XYZ eye)
         {
-            bool boxOff = false, farOff = false;
+            bool templateOff, boxOff = false, farOff;
             Parameter farClip;
+            var hide = new List<ElementId>();
             try
             {
+                templateOff = ElementIdHelper.IsValid(view.ViewTemplateId);
                 if (view.IsSectionBoxActive)
-                {
-                    BoundingBoxXYZ box = view.GetSectionBox();
-                    boxOff = !WalkTuning.InsideBox(box, eye);
-                }
+                    boxOff = !WalkTuning.InsideBox(view.GetSectionBox(), eye);
                 farClip = view.get_Parameter(BuiltInParameter.VIEWER_BOUND_ACTIVE_FAR);
-                farOff = farClip != null && !farClip.IsReadOnly && farClip.StorageType == StorageType.Integer && farClip.AsInteger() != 0;
+                farOff = farClip != null && farClip.StorageType == StorageType.Integer && farClip.AsInteger() != 0;
+                foreach (Category category in doc.Settings.Categories)
+                {
+                    if (category == null || !IsAnnotationForWalk(category))
+                        continue;
+                    // Read while a template may still be on: a template-locked category is changed once it is off.
+                    if (templateOff || (view.CanCategoryBeHidden(category.Id) && !view.GetCategoryHidden(category.Id)))
+                        hide.Add(category.Id);
+                }
             }
             catch (Autodesk.Revit.Exceptions.ApplicationException)
             {
                 return null;   // reading the settings failed: leave the view as it is
             }
-            if (!boxOff && !farOff)
+            if (!templateOff && !boxOff && !farOff && hide.Count == 0)
                 return null;
             if (doc.IsReadOnly)
-                return "The walk view's section box or far clipping is on, but the model is read-only, so it stays.";
+                return "The model is read-only, so the walk view keeps its settings (annotation, section box, far clipping).";
 
+            int hidden = 0;
             using (var t = new Transaction(doc, "Model Walk: walk view settings"))
             {
                 try
                 {
                     t.Start();
+                    if (templateOff)
+                        view.ViewTemplateId = ElementId.InvalidElementId;
                     if (boxOff)
                         view.IsSectionBoxActive = false;
-                    if (farOff)
+                    if (farOff && farClip != null && !farClip.IsReadOnly)
                         farClip.Set(0);
+                    foreach (ElementId id in hide)
+                    {
+                        if (view.CanCategoryBeHidden(id) && !view.GetCategoryHidden(id))
+                        {
+                            view.SetCategoryHidden(id, true);
+                            hidden++;
+                        }
+                    }
                     if (t.Commit() != TransactionStatus.Committed)
-                        return "Revit did not let Model Walk switch off the walk view's section box / far clipping, so they stay.";
+                        return "Revit did not let Model Walk tidy the walk view (annotation, section box, far clipping), so it is as it was.";
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException ex)
                 {
                     if (t.HasStarted() && !t.HasEnded())
                         t.RollBack();
-                    return "The walk view's section box / far clipping stays on (Revit said: " + ex.Message + ").";
+                    return "The walk view keeps its settings (Revit said: " + ex.Message + ").";
                 }
             }
-            if (boxOff && farOff)
-                return "You started outside the walk view's section box, so it and far clipping were switched off (one Undo step).";
-            return boxOff
-                ? "You started outside the walk view's section box, so it was switched off - the building is whole again (one Undo step)."
-                : "Far clipping was switched off in the walk view (one Undo step).";
+
+            var said = new List<string>();
+            if (templateOff) said.Add("its view template was taken off");
+            if (hidden > 0) said.Add("annotation (levels, grids, tags...) hidden");
+            if (boxOff) said.Add("its section box switched off - you started outside it");
+            if (farOff) said.Add("far clipping switched off");
+            if (said.Count == 0)
+                return null;
+            return "Walk view: " + string.Join(", ", said) + " (one Undo step, this view only).";
+        }
+
+        /// <summary>Annotation categories, plus scope boxes and reference planes (shown in 3D, of no use in a walk).</summary>
+        private static bool IsAnnotationForWalk(Category category)
+        {
+            if (category.CategoryType == CategoryType.Annotation)
+                return true;
+            return ElementIdHelper.IsCategory(category.Id, BuiltInCategory.OST_VolumeOfInterest) ||
+                   ElementIdHelper.IsCategory(category.Id, BuiltInCategory.OST_CLines);
         }
 
         /// <summary>Snag colours an earlier walk in this model could not give back (Revit was busy) - given back now, one Undo step.</summary>
