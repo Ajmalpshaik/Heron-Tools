@@ -23,6 +23,13 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   Collision, steps and doors stay with you; clicks, Measure and the readout aim from the camera so they land on the
   crosshair. The status line says First person / Third person. Snag pictures hide the character; snapshots show him.
 
+### Fixed - Model Walk walk engine (NEEDS A REAL REVIT TEST)
+- The first step after standing still no longer jumps about 0.8 m forward.
+- Closing the walk's model, or closing Revit, now ends the walk at once and writes Snags.csv.
+- Hiding the floor you stand on (or showing it again) now finds the floor again straight away.
+- E (door) while looking down at the door lands 900 mm past it, as when looking straight at it.
+- The walk view is found again by number ("(2)" before "(10)").
+
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
   sub-transaction, never left with no bubble at either end while the rest commit.

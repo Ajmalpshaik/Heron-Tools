@@ -66,6 +66,7 @@ namespace HeronTools.Commands.ModelWalk
             try
             {
                 SnagColourMemory.Watch(uiapp);
+                WalkEngine.WatchModelClosing(uiapp);   // the walk ends the moment its model starts to close (once)
                 WalkCharacterServer.Prepare(uiapp);   // the third-person character's switch-off event and model-close watch (once)
                 WalkSettings settings = WalkSettings.Load();
                 if (!settings.KeepSnagColours)
@@ -184,15 +185,17 @@ namespace HeronTools.Commands.ModelWalk
             View3D exact = views.FirstOrDefault(v => string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
             if (exact != null)
                 return exact;
-            return views.Where(v => IsNumberedName(v.Name, name)).OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            // By number, not by text: as text "(10)" comes before "(2)", and the walk would jump to another view.
+            return views.Where(v => NameNumber(v.Name, name) > 1).OrderBy(v => NameNumber(v.Name, name)).FirstOrDefault();
         }
 
-        private static bool IsNumberedName(string candidate, string name)
+        /// <summary>N for "name (N)", else 0.</summary>
+        private static int NameNumber(string candidate, string name)
         {
             if (candidate == null || !candidate.StartsWith(name + " (", StringComparison.OrdinalIgnoreCase) || !candidate.EndsWith(")", StringComparison.Ordinal))
-                return false;
+                return 0;
             string number = candidate.Substring(name.Length + 2, candidate.Length - name.Length - 3);
-            return int.TryParse(number, out int n) && n > 1;
+            return int.TryParse(number, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n) ? n : 0;
         }
 
         /// <summary>
