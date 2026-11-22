@@ -5,6 +5,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ## [Unreleased]
 
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Third-person camera:** a walk that ended while Revit was busy no longer starts the next walk 3 m behind you, and
+  a click while turning fast now acts on what was under the crosshair.
 - **Third person now shows a real character** (from AJ-Tools Game Mode v1.61.0): a site worker in a yellow hard hat,
   1850 mm tall, in place of the blocky figure, which is removed. He stands when you stop, walks when you move and runs
   with Shift, blending smoothly between them; his legs speed up with you up to a limit, so at the faster speed steps
