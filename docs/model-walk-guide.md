@@ -37,7 +37,7 @@ floor inside and let go (Go to point), or **F** to fly down - or start the walk 
 | C | Low eye on / off (1000 mm, or 300 mm under your eye height if that is lower) - look under ducts and into ceiling voids. In Fly and Pass-through: hold to sink |
 | F | Fly on / off. Space (hold) rises, C (hold) sinks. Walls and slabs still stop you |
 | G | Pass-through on / off - nothing stops you (past a locked room or a clash). Space rises, C sinks, as in Fly |
-| E | Go through the door you look at (when the door hint shows) |
+| E | Go through the door you look at (when the door hint shows) - doors in linked models too |
 | T (hold, aim, let go) | Go to point - aim at a floor; a ring shows where you land |
 | R | Back to start |
 | Right-click, Tab (Shift+Tab back) | Change the mode: Inspect, Select, Snag, Hide |

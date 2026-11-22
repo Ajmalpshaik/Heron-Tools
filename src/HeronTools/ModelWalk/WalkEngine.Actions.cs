@@ -420,6 +420,10 @@ namespace HeronTools.Services.ModelWalk
             if (_session.Mode == WalkMoveMode.PassThrough)
                 return position;   // nothing blocks in Pass-through - just walk
             WalkRayHit door = _collision.CastNear(position, forward, WalkTuning.DoorReachFt);
+            // Not found by the near ray: once more against the whole view (host and every link) - a key press, not a
+            // frame cost - as the old tool's door check did.
+            if ((door == null || !door.IsDoor) && !_collision.OverBudget)
+                door = _collision.CastFull(position, forward, WalkTuning.DoorReachFt);
             if (door == null || !door.IsDoor)
             {
                 hud.Toast("Look at a door within " + (WalkTuning.DoorReachMm / 1000.0).ToString("0.0") + " m, then press " +

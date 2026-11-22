@@ -32,6 +32,7 @@ namespace HeronTools.Services.ModelWalk
         private double _lastInspect = -10;
         private double _lastClearHeight = -10;
         private double _lastCharacterCheck = -10;
+        private WalkRayHit _lastAim;   // the readout's last whole-view hit (the door hint reuses it - no extra ray)
         private WalkCollision _collision;
         private bool _ended;
 
@@ -296,7 +297,11 @@ namespace HeronTools.Services.ModelWalk
             if (_session.Mode != WalkMoveMode.PassThrough && now - _lastInspect >= WalkTuning.InspectRefreshSec)
             {
                 WalkRayHit look = _collision.CastNear(position, forward, WalkTuning.DoorReachFt);
-                hud.DoorHint = look != null && look.IsDoor;
+                // Also the readout's last whole-view hit (no extra ray): in first person it is this same ray, and it
+                // sees a linked door the near ray can miss.
+                WalkRayHit aim = _lastAim;
+                hud.DoorHint = (look != null && look.IsDoor) ||
+                               (_thirdEye == null && aim != null && aim.IsDoor && aim.DistanceFt <= WalkTuning.DoorReachFt);
             }
             else if (_session.Mode == WalkMoveMode.PassThrough)
             {
@@ -361,6 +366,7 @@ namespace HeronTools.Services.ModelWalk
                 _lastInspect = now;
                 // The crosshair ray starts at the camera (the player's eye in first person); the distance is the player's.
                 WalkRayHit aim = _collision.CastFull(AimFrom(position), AimAlong(forward), WalkTuning.AimRangeFt);
+                _lastAim = aim;
                 hud.AimHasHit = aim != null;
                 hud.AimDistanceMm = aim != null ? WalkTuning.FtToMm(PlayerDistanceFt(aim, position)) : 0;
                 hud.AimLine1 = aim != null ? WalkCollision.DescribeLine1(aim) : "";

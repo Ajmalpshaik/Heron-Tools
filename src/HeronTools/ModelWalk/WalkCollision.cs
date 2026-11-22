@@ -184,13 +184,29 @@ namespace HeronTools.Services.ModelWalk
                     hit.UnnamedId = reference.ElementId.LongValue().ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
-            Category category = hit.Element?.Category;
-            if (category != null)
-            {
-                hit.IsDoor = ElementIdHelper.IsCategory(category.Id, BuiltInCategory.OST_Doors);
-                hit.IsWindow = ElementIdHelper.IsCategory(category.Id, BuiltInCategory.OST_Windows);
-            }
+            hit.IsDoor = IsOrInside(hit.Element, BuiltInCategory.OST_Doors);
+            hit.IsWindow = !hit.IsDoor && IsOrInside(hit.Element, BuiltInCategory.OST_Windows);
             return hit;
+        }
+
+        /// <summary>
+        /// The element is of the category, or is a nested part of a family that is (a door panel or frame made as a
+        /// shared nested family - common in real architectural door families, host or linked: the ray hits the part,
+        /// whose own category may be Generic Models). Up to 5 levels. Never throws.
+        /// </summary>
+        private static bool IsOrInside(Element element, BuiltInCategory builtIn)
+        {
+            try
+            {
+                for (int depth = 0; element != null && depth < 5; depth++)
+                {
+                    if (element.Category != null && ElementIdHelper.IsCategory(element.Category.Id, builtIn))
+                        return true;
+                    element = (element as FamilyInstance)?.SuperComponent;
+                }
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException) { /* not a door, then */ }
+            return false;
         }
 
         // ------------------------------------------------------------------ plain words for the HUD and the report
