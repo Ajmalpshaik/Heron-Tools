@@ -102,7 +102,8 @@ it does not know.
 
 Full guide - update, remove, where the files go, common problems: **[docs/install.md](docs/install.md)**.
 
-1. Download **`HeronToolsInstaller.exe`** from the [latest release](https://github.com/Ajmalpshaik/Heron-Tools/releases/latest).
+1. Download **`HeronToolsInstaller.exe`** from the newest release on the [Releases page](https://github.com/Ajmalpshaik/Heron-Tools/releases)
+   (the top one; a **Pre-release** badge means it is not yet tested in Revit).
 2. Run it (Windows may say it is not signed: **More info > Run anyway**). No administrator rights needed.
 3. Tick your Revit versions (2020 to 2027) and press **Install**. If that Revit is open, it waits until you close it.
 4. Start Revit and look for the **Heron** tab. **About Heron** shows the version.
