@@ -1203,3 +1203,31 @@ API checked in the `Nice3point.Revit.Api` 2020-2027 XML (and compiled in all eig
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Steps 76-77 | NEEDS REAL REVIT |
+
+## Doors in linked models (owner's request C)
+
+The owner: at a door in the linked architecture model the door hint did not show and the door key did nothing.
+
+Compared with AJ-Tools Game Mode (read only, `src/GameMode/GameCollisionService.cs` `CastNearest`,
+`GameMotionEngine.cs` door block): both resolve a link hit the same way (link instance -> `GetLinkDocument` ->
+`GetElement(LinkedElementId)`, category `OST_Doors`), and the door step goes along the look direction, so no link
+transform is needed. Two differences explain it:
+
+| Cause | Fix |
+|---|---|
+| Real architectural door families build the panel and frame as **shared nested families**. The ray hits the nested part, whose own category is often Generic Models, so it was "not a door". (A new small model's default doors have no nested parts - why it worked there.) | A hit counts as a door (or window) when the element **or the family it is nested in** (`FamilyInstance.SuperComponent`, up to 5 levels) is a door. Host and linked alike. |
+| Heron's door ray is the "near" ray (this model inside a box round you, links pre-chosen by their box); AJ-Tools used the whole view. | The door hint also takes the readout's last whole-view hit (in first person the same ray - no extra ray per frame); the door key, when the near ray finds no door, casts once more against the whole view (one ray, on a key press only). |
+
+API: `FamilyInstance.SuperComponent` (2020-2027).
+
+### Revit test steps
+
+78. **Linked door.** MEP model with the architecture linked. Walk up to a door in the link (within 1.5 m), look at it:
+    the door hint shows; press E: you are on the other side. Same with a door whose panel is a nested family.
+79. **Host door still works.** In a model with its own doors, the same as before.
+
+| Check (linked doors) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 78-79 | NEEDS REAL REVIT |
