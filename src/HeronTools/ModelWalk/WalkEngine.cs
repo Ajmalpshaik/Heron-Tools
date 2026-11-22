@@ -34,6 +34,11 @@ namespace HeronTools.Services.ModelWalk
         private WalkCollision _collision;
         private bool _ended;
 
+        // The previous frame stood still (no move, no fall): the HUD then raises only four frames a second, so the
+        // time since it can be 250 ms. The first moving frame after that must not use the whole gap, or the eased
+        // move takes almost full speed for a quarter second at once - a jump of about 0.8 m on the first key press.
+        private bool _wasStill = true;
+
         // The camera last sent to Revit: no SetOrientation / redraw while nothing changed.
         private XYZ _lastEye;
 
@@ -93,6 +98,40 @@ namespace HeronTools.Services.ModelWalk
         public WalkEngine(WalkSession session)
         {
             _session = session;
+            _current = this;
+        }
+
+        // ------------------------------------------------------------------ the walk's model closing
+
+        private static WalkEngine _current;   // the latest walk (at most one runs at a time)
+        private static bool _watchingClose;
+
+        /// <summary>
+        /// Once per Revit session, from the command (a valid API context): end the walk the moment its own model starts
+        /// to close - Close, closing the last view, or Revit itself shutting down. Frames stop while Revit closes a model
+        /// (and on exit they never come again), so without this the end waited for a frame that might not run.
+        /// </summary>
+        internal static void WatchModelClosing(UIApplication uiApp)
+        {
+            if (_watchingClose || uiApp == null)
+                return;
+            _watchingClose = true;
+            uiApp.Application.DocumentClosing += (s, e) =>
+            {
+                WalkEngine engine = _current;
+                if (engine == null || engine._ended || e.Document == null || !e.Document.Equals(engine._session.Document))
+                    return;
+                try
+                {
+                    // touchModel false: no transaction while Revit is closing the model. A Temporary Hide is not saved
+                    // with the model, and the snag colours are given back before any save Revit asks for now.
+                    engine.End(null, "The model is closing, so Model Walk ended.", touchModel: false, returnToStart: false);
+                }
+                catch (Exception)
+                {
+                    // Broad on purpose: an exception here would reach Revit's close. The overlay still ends on its own.
+                }
+            };
         }
 
         public string GetName() => "Heron Tools - Model Walk";
@@ -178,6 +217,8 @@ namespace HeronTools.Services.ModelWalk
             // very slow frame cannot throw the eye through a wall.
             if (dt < 0.005) dt = 0.005;
             if (dt > 0.25) dt = 0.25;
+            if (_wasStill && dt > WalkTuning.FrameIntervalMs / 1000.0)
+                dt = WalkTuning.FrameIntervalMs / 1000.0;   // after standing still: start from one normal frame
 
             // Pick up Visibility/Graphics, filter, link and level changes made during a pause.
             if (now - _lastWorldRefresh > WalkTuning.WorldRefreshSec)
@@ -340,6 +381,8 @@ namespace HeronTools.Services.ModelWalk
 
             hud.NeedsFrames = playing || input.GoToPointAimHold || _velocity.GetLength() > 0 || characterAnimating ||
                               (_session.Mode == WalkMoveMode.Walk && !_session.Grounded && !hud.Hovering);
+            _wasStill = _velocity.GetLength() <= 0 && !playing &&
+                        !(_session.Mode == WalkMoveMode.Walk && !_session.Grounded && !hud.Hovering);
         }
 
         private static void Look(double yawDeg, double pitchDeg, out XYZ forward, out XYZ flatForward, out XYZ right, out XYZ up)
@@ -564,6 +607,25 @@ namespace HeronTools.Services.ModelWalk
 
             string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);
+            if (!touchModel && doc.IsValidObject)
+            {
+                // The model is closing: nothing in it was touched. In third person the walk view's camera stays 3 m
+                // behind the player - if the close is cancelled, the next walk in this model puts it right.
+                if (_thirdEye != null && _lastEye != null && _session.Position != null)
+                {
+                    _leftDoc = doc;
+                    _leftViewId = _session.WalkViewId;
+                    _leftCameraEye = _lastEye;
+                    _leftPlayerEye = _session.Position;
+                    _leftYawDeg = _session.Input.YawDeg;
+                    _leftPitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, _session.Input.PitchDeg));
+                }
+                // If the close is cancelled, say what is still on.
+                if (_snagMemory != null && _snagMemory.Count > 0 && !_session.Settings.KeepSnagColours)
+                    notes.Add("If the model stays open, its snag colours are still on - they are given back before the next save, or when Model Walk starts again.");
+                if (_hiddenByWalk.Count > 0)
+                    notes.Add("If the model stays open, what this walk hid is still hidden - use Revit's Reset Temporary Hide/Isolate to show it.");
+            }
 
             _session.Running = false;
             _session.Hud.Alive = false;
