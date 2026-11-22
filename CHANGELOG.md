@@ -11,6 +11,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   his feet slide a little. Drawn in the walk view only, walls still hide him, nothing is added to the model. The
   character is built into HeronTools.dll (CC0, see NOTICE). If it cannot be read, third person still works without
   him and the walk says so once. The setting and the key now say "show a character".
+- **Third person starts standing**: a new walk or Q again shows the character standing at once, not finishing the
+  run he was in last time; when he stops he always ends fully in the standing pose.
 - **Quick snags** (standard): in Snag mode click snag after snag - each one is recorded, coloured red and pictured,
   with a short message and no comment box, so the walk carries on at once. Press Esc and write each snag's comment in
   the pause menu's snag list (one comment box; Enter saves and goes to the next snag with no comment; "No comment yet"
