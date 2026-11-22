@@ -324,8 +324,10 @@ packages (2020, 2021). The docs were read after the code and checked against it.
 | R1 and R2 in Revit (close the overlay mid-walk; close the model with kept colours and press Cancel, then Save - the red must go) | NEEDS REAL REVIT - add to the test script below |
 | Everything in the owner's test script | NEEDS REAL REVIT |
 
-Add to the owner's test script: **15. Cancelled close.** With Keep snag colours on (standard), snag something, end the
-walk. Close the model, press **Cancel** at Revit's question. Save. Expect: the red goes before saving.
+Added to the owner's test script:
+
+15. **Cancelled close.** With Keep snag colours on (standard), snag something, end the walk. Close the model, press
+    **Cancel** at Revit's question. Save. Expect: the red goes before saving.
 
 ## Second review round (2026-11-21, after the owner's answers)
 
@@ -346,9 +348,12 @@ Seven more defects found by the review session; all checked against the code; al
 
 Issues opened by the review session for later work: #40, #41, #42.
 
-Add to the owner's test script: **16. Held Esc.** Walk, hold Esc for two seconds: paused, not ended. **17. Alt+F4.**
-Hide something, Alt+F4 on the walk: the walk ends, the element shows again, back in your 3D view. **18. Kept red,
-snag again.** With colours kept from an earlier walk, snag the same element: a new report row, still red.
+Added to the owner's test script:
+
+16. **Held Esc.** Walk, hold Esc for two seconds: paused, not ended.
+17. **Alt+F4.** Hide something, Alt+F4 on the walk: the walk ends, the element shows again, back in your 3D view.
+18. **Kept red, snag again.** With colours kept from an earlier walk, snag the same element: a new report row, still
+    red.
 
 ## Revit test results (issue #42)
 
@@ -392,14 +397,35 @@ from AJ-Tools.
 | 45 Standing still costs no redraws | | | | |
 | 46 Big model speed with the character (F12) | | | | |
 | 47 Colours, walls and pictures with the character | | | | |
-| 56 Esc right after a snag keeps its picture | | | | |
-| 57 Snag click during a Snapshot (K) | | | | |
-| 58 No pause / end card in a picture | | | | |
+| 48 Long walk, many redraws (buffer reuse) | | | | |
+| 49 Character starts standing | | | | |
+| 50 Keys left without a key | | | | |
+| 51 First step is smooth | | | | |
+| 52 Model closed while walking or paused | | | | |
+| 53 Hide the floor | | | | |
+| 54 Door while looking down | | | | |
+| 55 Odd user name | | | | |
+| 56 Key Settings (Cancel, Save, labels) | | | | |
+| 57 Save messages while paused | | | | |
+| 58 Esc right after a snag keeps its picture | | | | |
+| 59 Snag click during a Snapshot (K) | | | | |
+| 60 No pause / end card in a picture | | | | |
+| 61 Busy end in third person | | | | |
+| 62 Click while turning (third person) | | | | |
 
-## Extra Revit checks (steps 21-29, from the audit)
+## Extra Revit checks (steps 19-29)
 
-The audit fixes below are in the code but can only be proven in Revit. Do them after steps 1-20. Write PASS / FAIL
-next to each, with the Revit year.
+Steps 19 and 20 check issues #41 and #40; steps 21-29 the audit fixes that only Revit can prove. Do them after steps
+1-18. Write PASS / FAIL next to each, with the Revit year. **Every step from 1 to 62 has one row in the results table
+above**; steps 30 and later are in the sections that added them, below.
+
+19. **Snags.csv on a ";" Windows region (issue #41).** In Windows Settings, Region, pick a format whose list
+    separator is ";" (for example German), restart Revit. Walk, snag two elements (one with a comment holding a comma),
+    end. Open `Snags.csv` by double-click in Excel. Expect one value per column, the comment whole in its column,
+    accents right. Set the region back.
+20. **View Crop unchanged (issue #40).** On a plan with a crop region, run View Crop with a margin (for example 300 mm)
+    and an annotation offset, as before the `MM_TO_FEET` change. Expect the crop and annotation crop in the same place
+    as before (the change is under 0.001 mm).
 
 21. **Big model speed (GM-A05).** Open the largest federated model you have (MEP + links). Start Model Walk, press F12,
     walk for one minute. Expect the frame time to stay under about 100 ms and Revit to stay usable. Write down the
@@ -681,16 +707,16 @@ not the character drawing.
 
 Extra Revit test steps (camera session):
 
-- **Camera-1. Busy end in third person.** In third person, stand near a wall with a room behind you. Start a Revit
-  command that keeps Revit busy for more than 3 s (or close the overlay with Alt+F4 while a modal dialog is open) so the
-  walk ends with "Revit was busy". Click Model Walk again: you start where the character stood, not 3 m back. Repeat,
-  but orbit the walk view by hand before starting again: the walk starts from your orbited camera.
-- **Camera-2. Click while turning.** In third person, aim at the edge of a thin pipe, then turn the mouse fast and
-  click while turning, in Select mode. The pipe that was under the crosshair at the click is selected.
+61. **Busy end in third person.** In third person, stand near a wall with a room behind you. Start a Revit
+    command that keeps Revit busy for more than 3 s (or close the overlay with Alt+F4 while a modal dialog is open) so
+    the walk ends with "Revit was busy". Click Model Walk again: you start where the character stood, not 3 m back.
+    Repeat, but orbit the walk view by hand before starting again: the walk starts from your orbited camera.
+62. **Click while turning.** In third person, aim at the edge of a thin pipe, then turn the mouse fast and click while
+    turning, in Select mode. The pipe that was under the crosshair at the click is selected.
 
 | Check (camera session) | State |
 |---|---|
-| Camera-1, Camera-2 | NEEDS REAL REVIT |
+| Steps 61-62 | NEEDS REAL REVIT |
 | Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
 
@@ -730,12 +756,16 @@ A read of every Model Walk file reader and writer: `ModelWalkSettings.txt` (`Wal
 | F3 | Checked, no defect | All three files: numbers written and read in the invariant culture (de-DE writes `1650.5`, a hand-typed `1,7` is refused, not read as 17); NaN, `1e999`, out-of-range and unknown lines keep the standard value with one plain note; missing file = standard, no note; read refusal (locked, no access) caught; every save goes through a `.tmp` file then `File.Replace` / `File.Move`, and an I/O or access error comes back as a plain message, never an exception. Viewpoints round-trip exactly (`R`), names with tabs / line breaks cleaned, empty names become "Viewpoint", pitch over 90 degrees refused. Swapped keys (W / S) round-trip with no note. | - |
 | F4 | Note, not changed | A viewpoint file name is the model name + a 16-character hash. On Revit 2020-2024 (.NET Framework, 260-character paths) a model name over about 170 characters makes the path too long: the viewpoints cannot be saved, and the walk says so plainly ("could not be saved (... too long ...)"). Shortening the name would move existing viewpoints of long-named models to a new file, so it is left. Revit 2025+ has no such limit. | Left - told here. |
 
+Revit test step:
+
+50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back).
+
 | Check (file readers) | State |
 |---|---|
 | Build Revit 2020-2027 after the fixes | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
 | Settings / keys / viewpoints outside Revit, de-DE, missing + damaged files (F1, F2 failed before their fixes) | PASS |
-| 50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |
+| Step 50 in Revit | NEEDS REAL REVIT |
 
 ## Walk engine review (2026-11-22)
 
@@ -842,13 +872,13 @@ Small defects found - each checked against the code, each in code another sessio
 
 | Issue | Area | Findings |
 |---|---|---|
-| #79 | HUD, Settings, Key Settings windows | Settings save failure shown as a toast while paused (never seen); an old refused frame can end the walk at once; pause-menu "Clear snag colours (J)" keeps the old key; Settings window names fixed keys; Key Settings text contradicts itself; ribbon tooltip silent on kept colours |
+| #79 | HUD, Settings, Key Settings windows | Settings save failure shown as a toast while paused (never seen); an old refused frame can end the walk at once; pause-menu "Clear snag colours (J)" keeps the old key; Settings window names fixed keys; Key Settings text contradicts itself; ribbon tooltip silent on kept colours - **all fixed in #87** |
 | #81 | Viewpoint file | A viewpoint named "#..." is lost on the next walk (the keyless-action warning found at the same time was fixed meanwhile in #78, F1) |
 | #82 | Engine, command | Wall slide refused near a linked model (ray budget); clean-up after a failed overlay open is cancelled; 24 rays is a move budget, not a frame cap; end paths redraw only the active view; two wording / silent-failure points |
-| #83 | Third-person camera | Stale wall-slide answer when over budget (camera in the wall for a frame) and after a mode / world change |
+| #83 | Third-person camera | Stale wall-slide answer when over budget (camera in the wall for a frame) and after a mode / world change - **the over-budget case fixed in #88**; the mode / world change still open |
 | #84 | Snags | The same linked element can be snagged twice; the CSV "Snag colour" column after a give-back |
 | #85 | Character server | A second walk does not cancel a pending switch-off; a failed buffer remake leaves a disposed object |
-| PR #74 comment | Snag pictures | A picture taken after a forced pause, during a Snapshot + Esc, or at the end can show the pause / end card |
+| PR #74 comment | Snag pictures | A picture taken after a forced pause, during a Snapshot + Esc, or at the end can show the pause / end card - **fixed in #74** (step 60) |
 | #77 | Spec item 31 | The optional "one saved 3D view per snag" is not built (owner decision) |
 
 Spec: `docs/game-mode-spec.md` now has section F, "What was built", item by item against the code; issue #44 updated.
@@ -874,11 +904,32 @@ The two notes the stage 6 / stage 8 reviews left (R6 above).
 
 ### Revit test steps
 
-56. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
+58. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
     Expect the walk to pause a blink later, and `Snag nnn.png` to show the red duct with no pause card in it. Then
     snag, and Alt+Tab away at once: the pause menu says "Snag n was recorded without a picture".
-57. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
+59. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
     taken. Click again."; click again: recorded with its picture.
-58. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
+60. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
     Snag, then make Revit take the focus at once (Alt+Tab): no snag picture with the pause card in it; the pause menu
     says the snag was recorded without a picture.
+
+## Last read of the test script (2026-11-22, final-review session)
+
+After #74, #75, #76, #78, #80, #87 and #88 merged, the Revit test script was made one numbered list: **steps 1 to
+62, each number once, no gaps, and one row each in "Revit test results (issue #42)"**.
+
+| Was | Now |
+|---|---|
+| Steps 15-18 written inline in a paragraph | A numbered list (same words) |
+| Steps 19 and 20 had a results row but no step text | Written out under "Extra Revit checks (steps 19-29)" (issues #41 and #40) |
+| Step 50 written inside a results-table cell | A numbered step above the table; the cell says "Step 50 in Revit" |
+| Two steps numbered 56 and 57 (#87's and #74's), plus #74's 58 | #87 keeps 56-57; #74's are now 58-60 |
+| "Camera-1" / "Camera-2" (no number) | Steps 61 and 62 |
+| Results rows missing for 48-57, 61, 62 | Added |
+
+| Check (last read) | State |
+|---|---|
+| Steps 1-62 numbered once, no gap, each with a results row (checked with a script over the file) | PASS |
+| Build Revit 2020-2027 on `main` after the last merges | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Every step | NEEDS REAL REVIT - the owner's test, issue #42 |

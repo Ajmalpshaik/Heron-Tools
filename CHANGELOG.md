@@ -5,6 +5,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ## [Unreleased]
 
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Model Walk docs:** the spec (`docs/game-mode-spec.md`) now says what was built, item by item; the Revit test
+  script in `docs/model-walk-move-notes.md` is one numbered list, steps 1-62, each with a results row.
 - **Snag pictures and pause:** Esc right after a quick snag now waits for that snag's picture (about 0.1 s) instead of
   dropping it; a pause Revit forces says in the pause menu if a snag was left without its picture. A snag click during
   a Snapshot (K) now says the snapshot is being taken. Esc waits for a Snapshot too, and a picture is never taken with
