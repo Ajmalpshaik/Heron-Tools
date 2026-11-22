@@ -212,7 +212,7 @@
                             ToolTip="Back to the walk (Enter)"/>
                     <WrapPanel HorizontalAlignment="Center" Margin="0,10,0,0">
                         <Button Content="Settings" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnSettingsClick"
-                                ToolTip="Mouse, speeds, eye height, step-up, snag colours (S)"/>
+                                ToolTip="Mouse, third person, speeds, eye height, step-up, snag comments and colours (S)"/>
                         <Button Content="Keys" Style="{StaticResource CompactSecondaryButton}" Margin="3" Click="OnKeysClick"
                                 ToolTip="Give any action another key (K)"/>
                         <Button x:Name="ClearSnagsButton" Content="Clear snag colours" Style="{StaticResource CompactSecondaryButton}"

@@ -6,7 +6,7 @@
   Heron-Layer:  revit
   See docs/metadata-standard.md
 
-  Model Walk - Key Settings (pause the walk, press S). Click a key, then press the key you want. A key another
+  Model Walk - Key Settings (pause the walk, press K). Click a key, then press the key you want. A key another
   action has is swapped with it (and the window says so). Reset to standard keys puts every key back.
   Heron brand (UI/HeronStyles.xaml): header with the mark, rows on Surface, footer status on the left, then ONE
   Accent button (Save) and Cancel, as in every Heron Tools window.
@@ -64,7 +64,7 @@
         <!-- Rows -->
         <DockPanel Grid.Row="1" Margin="24,14,24,10">
             <TextBlock DockPanel.Dock="Top" Style="{StaticResource HelpText}" TextWrapping="Wrap" Margin="0,0,0,10"
-                       Text="Fixed, not changeable: Esc, Tab, the mouse, the number keys 1-9 and the arrow keys. Left and right Shift, Ctrl and Alt count as one."/>
+                       Text="Fixed, not changeable: Esc, Enter, Tab, the mouse, the number keys 1-9 and the arrow keys. A key another action has is swapped with it. Left and right Shift, Ctrl and Alt count as one."/>
             <Border Style="{StaticResource PanelCard}" Padding="4">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="RowsPanel" Margin="10,6,10,8"/>
@@ -82,7 +82,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
                     <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}"
-                               Text="Changes apply now; Save keeps them for your next walks."/>
+                               Text="Save uses the new keys now and keeps them for your next walks. Cancel puts the old keys back."/>
                     <Button x:Name="ResetButton" Content="Reset to standard keys" Style="{StaticResource LinkButton}"
                             HorizontalAlignment="Left" Margin="0,4,0,0" Click="OnResetClick"/>
                 </StackPanel>

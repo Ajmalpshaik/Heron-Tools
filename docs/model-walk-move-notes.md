@@ -776,6 +776,52 @@ Revit refusing frames for 5 s still ends the walk; Alt+F4 still ends the walk th
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
 | Steps 51-55 | NEEDS REAL REVIT |
 
+## Windows and words review (2026-11-22)
+
+Every key and setting in the HUD help card, pause menu, Settings window, Key Settings window, ribbon tooltip and
+`model-walk-guide.md` checked against `WalkKeyBindings`, `WalkSettings` and the engine. What did not match:
+
+| # | What was wrong | Fix |
+|---|---|---|
+| W1 | Key Settings said "Changes apply now; Save keeps them", but Cancel or the close box put the old keys back - nothing applied without Save. | Footer: "Save uses the new keys now and keeps them for your next walks. Cancel puts the old keys back." |
+| W2 | Key Settings: a key file that could not be written kept the window open, while the message said "They still work until the walk ends" - and Cancel then took them away. | As in Settings: Save always uses the new keys for this walk; a save problem shows as a message in the walk. A good save says "Keys saved". |
+| W3 | Key Settings' fixed-key line left out Enter (it is fixed in the code). | Enter added; the line also says a taken key is swapped. |
+| W4 | Help card and guide did not say Space / C rise and sink in Pass-through too, and Fly speed (x2) applies to Pass-through. Help said Pass-through "walls and slabs do not stop you" - nothing stops you. Fly did not say walls still stop you. | Help card, guide key table, guide settings table and Settings window speed note fixed. |
+| W5 | Settings window named "+ / -", "Shift" and "C" as if fixed; they can be remapped. | "Faster / Slower keys (standard + and -)", "Run (standard Shift)", "standard key C". |
+| W6 | Pause menu Settings tooltip listed only mouse, speeds, eye height, step-up, snag colours. | Adds third person and snag comments. |
+| W7 | The guide did not say how to change a key, or what Reset / Cancel do in either window. | A short "Change a key" paragraph and a line under the Settings table. |
+| W8 | Ribbon tooltip: "Pause (Esc) for snags, viewpoints and settings". | "... settings and keys". |
+| W9 | Key Settings XAML header comment said "press S"; it is K. | Fixed. |
+| W10 | (#79 item 1, PR review) "Settings saved", "Keys saved" or why they could not be saved, and the "colours given back" line after a Save / Sync while paused, were toasts - but while paused the walk layer is hidden and no HUD is drawn, so nobody saw them. | While paused they go in the pause card's status line (as a snag comment does); in the walk they stay toasts. |
+| W11 | (#79 item 2) The 5 s "Revit stopped taking frames" clock was only reset by an accepted frame: one refusal before a pause and one more on resume could end the walk at once. | The clock starts again at every pause and every resume. |
+| W12 | (#79 item 3) The pause menu's "Clear snag colours (J)" kept the old key after Key Settings. | Set again when Key Settings closes. |
+| W13 | (#79 item 4) The Settings window named + / -, Shift, C and J even when they were remapped (W5 only said "standard"). | The window gets the key map and names the keys actually bound. |
+| W14 | (#79 item 6) The ribbon tooltip did not say snag colours stay after the walk (Keep snag colours is on by default). | "Snag colours stay in the walk view after the walk (standard; a setting) until J, or the next Save or Sync." |
+
+Checked and right: the five speeds, the start step (3), eye / step-up / sensitivity limits, low eye
+(min of 1000 mm and eye - 300 mm), third-person offsets (3000 mm back, 500 mm right), J, F12, M, B / 1-9 / O, Q, quick
+snags and "Ask for a comment at each snag", the pause-menu keys (Enter, S, K, Esc). One orange button per window
+(Carry on walking, Save, Save). No colour outside `HeronStyles.xaml`. No game wording.
+
+Revit test step:
+
+56. **Key Settings.** Pause, K, give Measure the key N, Cancel: M still measures. K again: N for Measure, and
+    Clear snag colours the key L, Save: the pause card says "Keys saved." and its button says "Clear snag colours (L)".
+    Carry on: N measures, the help card (H) and the bottom-right hint say N. Pause, S: the Snags note says "(L, or the
+    pause menu)". Next walk: N still measures. Reset to standard keys, Save.
+57. **Save messages while paused.** Pause, S, Save: the pause card says "Settings saved.". With a snag coloured and
+    the walk paused, press Ctrl+S in Revit: the pause card says the snag colours were given back. Make
+    `%AppData%\HeronTools\ModelWalkKeys.txt` read-only, pause, K, change a key, Save: the pause card says the keys could
+    not be saved, and the new key still works in this walk. Clear read-only.
+
+| Check (windows and words) | State |
+|---|---|
+| Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS (214 files) |
+| The three Model Walk XAML files parse; every StaticResource / DynamicResource and every key named in code exists in `UI/*.xaml` | PASS |
+| Render the windows outside Revit | NOT RUN - WPF cannot render on this Linux build machine |
+| Steps 56-57 in Revit | NEEDS REAL REVIT |
+
 ---
 
 # Full audit after quick snags, third person and the character (2026-11-22, final-review session)

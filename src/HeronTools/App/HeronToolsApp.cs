@@ -268,9 +268,9 @@ namespace HeronTools.App
                 "person in a workshared model) and starts where your 3D view looks. Only what the view shows blocks you - hide a " +
                 "category or use a section box to walk through it. Right-click or Tab changes the mode: Inspect, Select, Snag (a " +
                 "picture and a red colour, click after click; write the comments in the pause menu; the report goes in a folder next " +
-                "to the model), Hide. Snag colours are given back by J and before every Save and Sync - no red is saved in the " +
-                "model. Q (standard key) switches to third person: a site worker drawn on screen where you stand, nothing added to the model. Pause (Esc) for snags, " +
-                "viewpoints and settings. Camera " +
+                "to the model), Hide. Snag colours stay in the walk view after the walk (standard; a setting) until J, or the next " +
+                "Save or Sync - no red is saved in the model. Q (standard key) switches to third person: a site worker drawn on screen where you stand, nothing added to the model. Pause (Esc) for snags, " +
+                "viewpoints, settings and keys. Camera " +
                 "moves make no Undo entries; each snag is one Undo step."));
 
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")

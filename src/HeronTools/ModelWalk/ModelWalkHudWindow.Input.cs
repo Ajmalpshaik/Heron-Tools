@@ -340,7 +340,7 @@ namespace HeronTools.UI.ModelWalk
         /// <summary>Settings - only while paused. Save applies them to this walk at once; Cancel changes nothing.</summary>
         private void OpenSettings()
         {
-            var window = new ModelWalkSettingsWindow(_session.Settings) { Owner = this };
+            var window = new ModelWalkSettingsWindow(_session.Settings, _keys) { Owner = this };
             if (window.ShowDialog() != true || window.Result == null)
                 return;
             bool thirdPersonChanged = window.Result.ThirdPerson != _session.Settings.ThirdPerson;
@@ -349,17 +349,20 @@ namespace HeronTools.UI.ModelWalk
                 _session.Input.ThirdPerson = window.Result.ThirdPerson;   // the new setting applies to this walk at once
             _session.Input.SettingsChangedQueued = true;   // the engine finds the floor again at the new eye height
             HelpText.Text = BuildHelpText();
-            _session.Hud.Toast(window.SaveProblem ?? "Settings saved", window.SaveProblem == null ? WalkToastKind.Done : WalkToastKind.Refused);
+            Report(window.SaveProblem ?? "Settings saved.", window.SaveProblem == null);
         }
 
-        /// <summary>Key Settings - only while paused. Cancel (or closing it) puts the old keys back.</summary>
+        /// <summary>Key Settings - only while paused. Save uses the new keys at once; Cancel (or closing it) puts the old keys back.</summary>
         private void OpenKeySettings()
         {
             var window = new ModelWalkKeysWindow(_keys) { Owner = this };
-            window.ShowDialog();
+            bool saved = window.ShowDialog() == true;
             HelpText.Text = BuildHelpText();
             UpdateKeyHints();
             UpdateModeChips();
+            ClearSnagsButton.Content = ClearSnagsLabel();   // the pause menu names the key too
+            if (saved)
+                Report(window.SaveProblem ?? "Keys saved.", window.SaveProblem == null);
         }
     }
 }

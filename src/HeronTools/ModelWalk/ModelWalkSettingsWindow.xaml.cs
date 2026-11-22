@@ -21,15 +21,25 @@ namespace HeronTools.UI.ModelWalk
     public partial class ModelWalkSettingsWindow : Window
     {
         private TextBox[] _speedBoxes;
+        private readonly WalkKeyBindings _keys;
 
-        internal ModelWalkSettingsWindow(WalkSettings current)
+        internal ModelWalkSettingsWindow(WalkSettings current, WalkKeyBindings keys)
         {
+            _keys = keys;
             InitializeComponent();
             Icon = BrandImages.Load(BrandImages.AppIcon);
             WindowMotionHelper.AttachStandardEntrance(this);
             WindowMotionHelper.AttachStandardExit(this);
 
             _speedBoxes = new[] { Speed1Box, Speed2Box, Speed3Box, Speed4Box, Speed5Box };
+            // The notes name the keys actually bound (they follow Key Settings).
+            SpeedNote.Text = _keys.Label(WalkKeyBindings.SpeedUp) + " / " + _keys.Label(WalkKeyBindings.SpeedDown) +
+                             " or the mouse wheel change the step during the walk. Fly and Pass-through are twice as fast; holding " +
+                             _keys.Label(WalkKeyBindings.Run) + " is three times.";
+            SnagColoursNote.Text = "On (standard): the red stays in the walk view after the walk, for your meeting. Off: every snagged " +
+                                   "element gets its own colours back when the walk ends. Either way, Clear snag colours (" +
+                                   _keys.Label(WalkKeyBindings.ClearSnags) + ", or the pause menu) gives them back, and so does every " +
+                                   "Save and Sync with Central - no snag colour is saved in the model.";
             Fill(current);
             EyeHeightBox.TextChanged += (s, e) => UpdateLowEyeNote();
         }
@@ -61,7 +71,7 @@ namespace HeronTools.UI.ModelWalk
             var probe = new WalkSettings();
             if (TryRead(EyeHeightBox.Text, out double eye) && WalkSettings.InRange(eye, WalkSettings.MinEyeHeightMm, WalkSettings.MaxEyeHeightMm))
                 probe.EyeHeightMm = eye;
-            LowEyeNote.Text = "Low eye (C in Walk) is then " + probe.LowEyeHeightMm.ToString("N0", CultureInfo.CurrentCulture) +
+            LowEyeNote.Text = "Low eye (" + _keys.Label(WalkKeyBindings.DownOrLowEye) + " in Walk) is then " + probe.LowEyeHeightMm.ToString("N0", CultureInfo.CurrentCulture) +
                               " mm - for looking under ducts and into ceiling voids.";
         }
 
