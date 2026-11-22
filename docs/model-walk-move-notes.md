@@ -107,7 +107,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | GM-A36 | Low | Teleport into a ceiling void | Fixed: Go to point lands on the floor below the aimed point and needs head room and body room; refused with a reason. |
 | GM-A37 | Low | `Raise()` result ignored | Fixed: Denied / TimedOut for more than 5 s ends the walk with a plain message. |
 | GM-A38 | Low | Toggle after view validation | Fixed with GM-A13. |
-| GM-A39 | Low | `MM_TO_FEET` rounded | Fixed in Model Walk (`1 / 304.8` from `FEET_TO_MM`). Heron's shared `Constants.MM_TO_FEET` made exact too, in its own change (issue #40, `19b2a12`); only View Crop uses it, moving by less than 0.001 mm. |
+| GM-A39 | Low | `MM_TO_FEET` rounded | Fixed in Model Walk (`1 / 304.8` from `FEET_TO_MM`). Heron's shared `Constants.MM_TO_FEET` made exact too, in its own change (issue #40, `21e571c`). View Crop is the only tool whose numbers moved (by less than 0.001 mm); Quick Clash and 3D Snapshot use it too, but already worked with 1 / 304.8. |
 | GM-A40 | Low | Frame ms shown to everyone | Fixed: hidden behind F12. |
 | GM-A41 | Low | First 3D view type, no template | Kept; now said in the tooltip. |
 | GM-A42 | Low | AJ credit lines and names | Fixed: Heron names; no credit lines (About Heron covers it). |
@@ -135,8 +135,8 @@ distances in mm in `WalkTuning` (19).
    2026-11-21: "Keep snag colours after walk"); Clear snag colours, Save and Sync still give them back.
 3. **One walk view per person** in workshared models - kept.
 4. **J** clears snag colours - kept.
-5. Heron's shared `Constants.MM_TO_FEET` - made exactly `1 / 304.8` in its own change (issue #40). View Crop is its
-   only user; its margins and offsets move by less than 0.001 mm. View Crop still needs a Revit look.
+5. Heron's shared `Constants.MM_TO_FEET` - made exactly `1 / 304.8` in its own change (issue #40). View Crop is the
+   only tool whose numbers moved: its margins and offsets by less than 0.001 mm. View Crop still needs a Revit look.
 6. Removing Game Mode from AJ-Tools - only on Ajmal's typed "yes", after the Revit test.
 
 ## Results
@@ -392,9 +392,9 @@ from AJ-Tools.
 | 45 Standing still costs no redraws | | | | |
 | 46 Big model speed with the character (F12) | | | | |
 | 47 Colours, walls and pictures with the character | | | | |
-| 51 Esc right after a snag keeps its picture | | | | |
-| 52 Snag click during a Snapshot (K) | | | | |
-| 53 No pause / end card in a picture | | | | |
+| 56 Esc right after a snag keeps its picture | | | | |
+| 57 Snag click during a Snapshot (K) | | | | |
+| 58 No pause / end card in a picture | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -468,7 +468,7 @@ the diffs in the HUD, keys and session). AJ-Tools was read only, never changed.
 | What | How |
 |---|---|
 | Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a character)"; Q was free) and the setting **Third-person view (show a character)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
-| Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** cast (`CastNear`, host + near links - up to 2 rays, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm - unless the surface is closer than 550 mm, then half way to it (always in front of it; stage 6 review). Cast only when the pivot or direction changed and both rays fit in the 24-ray budget; otherwise the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
+| Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** cast (`CastNear`, host + near links - up to 2 rays, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm - unless the surface is closer than 550 mm, then half way to it (always in front of it; stage 6 review). Cast only when the pivot or direction changed and both rays fit in the 24-ray budget; otherwise the camera stays where it was for that frame (on the pivot if there is none yet) - never an old distance from a new place (camera session, C4). No ray in Pass-through. |
 | Character | Was: about 17 shaded boxes in the Heron colours. **Replaced** by the real character - see "The real character (2026-11-21, stage 8)" at the end. Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
 | Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera **and the look it was sent with**, which is the picture the modeller aimed at (camera session). |
 | Rays | Third person adds at most **1** cast (2 rays with near links) a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
@@ -677,6 +677,7 @@ not the character drawing.
 | C1 | A walk ended in third person **without** Revit's thread (Revit busy 3 s, overlay fault) left the walk view's camera 3 m back, and the next walk started there (stage 6 R1, the case left). | **Fixed** - `EndWithoutRevit` (no Revit API) remembers the model, the walk view, the camera it left and the player's eye and look. `CmdModelWalk` starts the next walk in that model and view from the player when the walk view's camera is still within 5 mm of where it was left; a camera the modeller moved since is kept. A walk in another model keeps the note for its own model. |
 | C2 | In third person a click (handled before this frame's camera move) used the previous camera with this frame's newer look - a few cm off when turning fast (stage 6 R6). | **Fixed** - clicks, Measure and Go to point use the look that camera was sent with (`AimAlong`), so they go through the crosshair of the picture on screen. The readout already used this frame's camera and look. First person unchanged. |
 | C3 | Q mid-move and during Play viewpoints: the first third-person frame always casts the wall slide (`_slideAllowedFt` reset to -1 by first person); Play viewpoints moves the player, the camera follows with the slide cast when it moved (Play uses no movement rays). Every end path on Revit's thread puts the camera back (`End`), the rest now C1. | Checked, no defect |
+| C4 | Past the 24-ray budget with the camera moved, the old slide distance was used from the new pivot and direction - for that frame the camera could go through a wall (turning or walking backwards into it on a frame that used all its rays). | **Fixed** - the camera stays where it was for that frame (on the pivot above the head if there is none yet); the slide is cast the next frame. |
 
 Extra Revit test steps (camera session):
 
@@ -735,6 +736,48 @@ A read of every Model Walk file reader and writer: `ModelWalkSettings.txt` (`Wal
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
 | Settings / keys / viewpoints outside Revit, de-DE, missing + damaged files (F1, F2 failed before their fixes) | PASS |
 | 50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |
+
+## Walk engine review (2026-11-22)
+
+A read of the core walk - movement, gravity, collision, doors, the frame loop and every way a walk ends. Six fixes,
+each built for Revit 2020-2027. **Nothing here has run in Revit.**
+
+| # | What was wrong | Now |
+|---|---|---|
+| E1 | The first step after standing still jumped about 0.8 m. Standing still, the overlay asks for only four frames a second, so the first moving frame saw up to 250 ms gone and the eased move used almost full speed for all of it. | After a still frame, the first moving frame counts as one normal frame (33 ms). Slow frames while moving are still clamped at 250 ms as before. |
+| E2 | Closing the walk's model (Close, closing its last view, or closing Revit) did not end the walk at once: the end waited for a frame, and Revit sends none while it closes a model - on exit, never. The report then relied on the overlay's own close. | The walk ends the moment its model starts to close (`DocumentClosing`, watched once per Revit session): the report is written, the character switched off, and the overlay shows the end message. No transaction while the model closes; if the close is cancelled, the message says the snag colours and the hidden elements are still on and how to get them back, and a walk that ended in third person starts the next walk where the player stood (the camera session's C-fix, used here too). |
+| E3 | Hide (click), Show hidden (U) and Revit's own Reset Temporary Hide/Isolate did not look for the floor again: hide the floor you stand on and you stayed in the air until you moved. | Each of them looks for the floor again on the next frame. |
+| E4 | E (door) measured the door's distance along the slanted look. Looking down at a door, the step landed further past it than meant. | The distance is measured across the floor; you land 900 mm past the door face as meant. |
+| E5 | The walk view found again as "Heron Model Walk (10)" before "(2)" (sorted as text). | Sorted by number: "(2)" comes first. |
+| E6 | In a workshared model the walk view is named after the Revit user name. A user name with a character Revit refuses in a view name (`\`, `:`, `;` ...) meant the walk view could never be made. | Those characters become "-" in the view name. A name with one could never be made before, so no existing walk view is lost. |
+
+Checked and left as is: ids are compared as `ElementId` or `LongValue()` (no `int`); levels by `ProjectElevation`;
+every transaction is named and its `Commit()` checked; no transaction outside the frame's ExternalEvent or the command;
+Revit refusing frames for 5 s still ends the walk; Alt+F4 still ends the walk the normal way first.
+
+### Revit test steps (walk engine review)
+
+51. **First step is smooth.** Stand still for 2 s, then press W once briefly. Expect a short, smooth step - no jump.
+    Then hold W: speeds up as before.
+52. **Model closed while walking or paused.** (a) Start a walk, Esc (pause), close the model with the X on its last
+    view, answer No to saving. Expect the overlay to say "The model is closing, so Model Walk ended." and the walk
+    folder to have Snags.csv. (b) Same, but answer Cancel to the save question: the model stays open, the message also
+    says the snag colours / hidden elements are still on; start Model Walk again - it starts normally. (c) With a walk
+    running, close Revit: no error, and Snags.csv is in the walk folder.
+53. **Hide the floor.** In Hide mode, look down and click the floor you stand on. Expect to drop to whatever is below
+    (or "no floor below"). Press U: back on the floor.
+54. **Door while looking down.** Stand 1 m from a door, look down at about 30 degrees at it, press E. Expect to land
+    about 900 mm past the door, the same as looking straight at it.
+55. **Odd user name.** In Options > General set the user name to `test:user`, open a workshared model, start Model Walk.
+    Expect a walk view "Heron Model Walk - test-user" and a normal walk. Put the user name back.
+
+### Results (walk engine review)
+
+| Check | State |
+|---|---|
+| Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Steps 51-55 | NEEDS REAL REVIT |
 ---
 
 # Snag pictures and pause (2026-11-22, quick snags session)
@@ -749,11 +792,11 @@ The two notes the stage 6 / stage 8 reviews left (R6 above).
 
 ### Revit test steps
 
-51. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
+56. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
     Expect the walk to pause a blink later, and `Snag nnn.png` to show the red duct with no pause card in it. Then
     snag, and Alt+Tab away at once: the pause menu says "Snag n was recorded without a picture".
-52. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
+57. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
     taken. Click again."; click again: recorded with its picture.
-53. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
+58. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
     Snag, then make Revit take the focus at once (Alt+Tab): no snag picture with the pause card in it; the pause menu
     says the snag was recorded without a picture.
