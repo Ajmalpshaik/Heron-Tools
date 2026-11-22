@@ -10,6 +10,10 @@ Planned as 1.2.1: Model Walk fixes from the owner's first test on a big linked m
 - **Third-person character missing in a big model far from the origin:** where he stands is now set before Revit's
   drawing service is switched on (Revit could take his box at the internal origin, off screen). When Revit's own
   near cut in a very big model is farther than the character, the walk says so once instead of showing nothing.
+- **Building cut away:** a walk that starts outside the walk view's section box switches that section box off (the walk
+  view only, one Undo step, and the walk says so); far clipping is switched off. A box you start inside stays.
+- **Start on a roof:** the location line says "on a roof (outside)" and the walk says once how to get inside.
+- Long messages stay on screen long enough to read (up to 9 s).
 - **F12** shows a second line for the character: drawn or why not, Revit's near cut, the section box, and where his feet
   are (internal and shared).
 

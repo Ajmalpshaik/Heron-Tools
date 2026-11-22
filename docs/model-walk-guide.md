@@ -16,6 +16,13 @@ picture and a comment for the coordination meeting. Heron tab, **Coordination** 
 Only what the view **shows** blocks you. Hide a category in Visibility/Graphics, use a filter or a section box, and
 you walk through it. Change these while paused, then carry on.
 
+**Section box:** if you start a walk **outside** the walk view's section box (for example on top of the roof), Model Walk
+switches the walk view's section box off, so the building is whole - one Undo step, and the walk tells you. A section box
+you start inside stays. Far clipping is always switched off in the walk view. Your own 3D views are never changed.
+
+**On a roof?** The location line says "on a roof (outside)" and the walk tells you how to get in: hold **T**, aim at a
+floor inside and let go (Go to point), or **F** to fly down - or start the walk from a 3D view that looks inside.
+
 ## Keys (standard - change them in the pause menu, Keys)
 
 | Key | What it does |

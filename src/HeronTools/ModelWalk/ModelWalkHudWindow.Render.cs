@@ -46,7 +46,7 @@ namespace HeronTools.UI.ModelWalk
 
             // Messages
             long age = DateTimeOffset.Now.ToUnixTimeMilliseconds() - hud.ToastStampMs;
-            if (hud.ToastStampMs > 0 && age < 2600 && !string.IsNullOrEmpty(hud.ToastText))
+            if (hud.ToastStampMs > 0 && age < hud.ToastHoldMs && !string.IsNullOrEmpty(hud.ToastText))
             {
                 ToastText.Text = hud.ToastText;
                 ToastText.Foreground = B(hud.ToastKind == WalkToastKind.Done ? "AccentSuccess"

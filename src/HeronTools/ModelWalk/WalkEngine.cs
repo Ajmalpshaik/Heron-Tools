@@ -58,6 +58,10 @@ namespace HeronTools.Services.ModelWalk
         private bool _forceFloorCheck = true;
         private bool _hovering;
 
+        // The last floor ray landed on a roof (outside the building): shown on the location line, explained once a walk.
+        private bool _groundIsRoof;
+        private bool _roofToldThisWalk;
+
         // Levels for the location line, by project elevation (internal Z, whatever the level type's Elevation Base).
         private List<KeyValuePair<double, string>> _levels;
 
@@ -478,6 +482,19 @@ namespace HeronTools.Services.ModelWalk
                 if (level.Key <= feetZ + WalkTuning.MmToFt(150))
                     levelName = level.Value;
             string location = string.IsNullOrEmpty(levelName) ? "Below the lowest level" : levelName;
+            // Standing on a roof (this model's or a link's): outside the building - say it, and once how to get in.
+            bool onRoof = _session.Mode == WalkMoveMode.Walk && _session.Grounded && !_hovering && _groundIsRoof;
+            if (onRoof)
+            {
+                location += "  -  on a roof (outside)";
+                if (!_roofToldThisWalk)
+                {
+                    _roofToldThisWalk = true;
+                    hud.Toast("You are standing on a roof, outside the building. To get inside: hold " +
+                              _session.Keys.Label(WalkKeyBindings.GoToPoint) + ", aim at a floor inside and let go (Go to point), or " +
+                              _session.Keys.Label(WalkKeyBindings.Fly) + " to fly down. Or start the walk from a 3D view that looks inside.");
+                }
+            }
             hud.LocationLine = string.IsNullOrEmpty(hud.RoomText) ? location : location + "  -  " + hud.RoomText;
 
             // Yaw is measured from +X (east) towards +Y - project north, not true north.

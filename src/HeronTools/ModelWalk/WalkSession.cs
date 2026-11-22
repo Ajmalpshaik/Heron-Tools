@@ -250,15 +250,18 @@ namespace HeronTools.Services.ModelWalk
         /// <summary>True while the engine itself needs frames (falling, playing viewpoints) with no key held.</summary>
         public bool NeedsFrames;
 
-        // Short message for ~2.6 s. Kind picks the colour: info (Mist), done (Success), refused (Error).
+        // Short message for ~2.6 s - longer for a long one (about 15 characters a second, up to 9 s), so a sentence
+        // with advice can be read. Kind picks the colour: info (Mist), done (Success), refused (Error).
         public string ToastText = "";
         public long ToastStampMs;
+        public long ToastHoldMs = 2600;
         public WalkToastKind ToastKind;
 
         public void Toast(string text, WalkToastKind kind = WalkToastKind.Info)
         {
             ToastText = text;
             ToastKind = kind;
+            ToastHoldMs = System.Math.Max(2600, System.Math.Min(9000, (text?.Length ?? 0) * 66L));
             ToastStampMs = System.DateTimeOffset.Now.ToUnixTimeMilliseconds();
         }
 
