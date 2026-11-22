@@ -123,10 +123,9 @@ GitHub **Gates** check makes the same file on every change (download it from the
 
 To release: push a version tag that matches `<Version>` in `src/HeronTools/HeronTools.csproj`
 (`git tag v1.0.0`, then `git push origin v1.0.0`). The **Release** workflow builds every Revit year again,
-refuses a tag that does not match the built version, and makes a **draft** GitHub release with
+refuses a tag that does not match the built version, and publishes a GitHub **pre-release** with
 `HeronToolsInstaller.exe` and `SHA256SUMS.txt` attached; its text is `docs/releases/<version>.md` when that
-file exists. A draft is seen only by the owner; publish it after the Revit test.
-A tag with a hyphen (`v1.0.0-beta.1`) is marked pre-release.
+file exists. After the owner's Revit test, edit the release and set it as the latest (full) release.
 
 ## Build and install (for developers)
 

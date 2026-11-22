@@ -13,9 +13,11 @@
 # It runs the same steps as the Gates check (metadata, every Revit year, the installer), then refuses
 # if the tag does not match the version the DLL was built with (<Version> in HeronTools.csproj).
 #
-# THE RELEASE IS A DRAFT. Only the owner sees a draft; publishing it is a person's decision, after the
-# Revit test (CHANGELOG.md says what still needs one). A tag with a hyphen (v1.0.0-beta.1) is also
-# marked pre-release. Nothing here is code-signed yet, so Windows SmartScreen will warn on download.
+# THE RELEASE IS PUBLISHED AS A PRE-RELEASE. Nothing in it has been signed off in a real Revit yet
+# (CHANGELOG.md says what still needs a test), so GitHub shows it with a Pre-release badge and does not
+# make it "Latest". After the owner's Revit test, edit the release, untick "Set as a pre-release" and
+# tick "Set as the latest release" - no new tag needed. Nothing here is code-signed yet, so Windows
+# SmartScreen will warn on download.
 #
 # Rehearse without a tag: Actions > Release > Run workflow, leave the tag empty. It builds and keeps
 # the installer as a run artifact, and publishes nothing.
@@ -29,7 +31,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to make a draft release for (it must exist). Leave empty to build only.'
+        description: 'Tag to publish a pre-release for (it must exist). Leave empty to build only.'
         required: false
         default: ''
 
@@ -38,7 +40,7 @@ permissions:
 
 jobs:
   release:
-    name: Build the installer and make a draft release
+    name: Build the installer and publish a pre-release
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -88,14 +90,12 @@ jobs:
           path: dist/HeronToolsInstaller*.exe
           if-no-files-found: error
 
-      - name: Make the draft release
+      - name: Publish the pre-release
         if: env.TAG != ''
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          prerelease=""
-          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
           version="${TAG#v}"; version="${version%%-*}"
           # The checksum lets a modeller check the download (Get-FileHash in PowerShell).
           (cd dist && sha256sum HeronToolsInstaller.exe > SHA256SUMS.txt)
@@ -122,7 +122,7 @@ jobs:
           sed -i "s#](\.\./\.\./#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/#g; s#](\.\./#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/docs/#g" notes.md
           printf '\n---\n\nSHA-256 of HeronToolsInstaller.exe: `%s`\n\nBuilt by .github/workflows/release.yml from %s.\n' "$sha" "$GITHUB_SHA" >> notes.md
           gh release create "$TAG" dist/HeronToolsInstaller.exe dist/SHA256SUMS.txt \
-            --draft $prerelease \
+            --prerelease \
             --title "Heron Tools $TAG" \
             --notes-file notes.md \
             --verify-tag

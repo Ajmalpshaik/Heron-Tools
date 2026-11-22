@@ -57,6 +57,10 @@ still needs a real Revit test.
   bad speed or bone weight can no longer break the animation for the rest of the walk.
 
 ### Fixed - Model Walk walk engine (NEEDS A REAL REVIT TEST)
+- Third person: after Pass-through on/off, hiding or showing an element, or Revit's own Reset Temporary Hide, the
+  camera checks the wall behind you again at once, even standing still (#83).
+- Snag mode: an element in a link is snagged once per link instance ("Already snag N"), not again on each click;
+  the `Snags.csv` colour column now says "coloured when recorded", true even after J, Save or Sync (#84).
 - The first step after standing still no longer jumps about 0.8 m forward.
 - Closing the walk's model, or closing Revit, now ends the walk at once and writes Snags.csv.
 - Hiding the floor you stand on (or showing it again) now finds the floor again straight away.
