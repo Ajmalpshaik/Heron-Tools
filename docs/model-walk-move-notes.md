@@ -1231,3 +1231,42 @@ API: `FamilyInstance.SuperComponent` (2020-2027).
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Steps 78-79 | NEEDS REAL REVIT |
+
+## Snag, Hide and Select on a LINKED element (owner's request B)
+
+The owner: snag colouring does not work on linked elements.
+
+**The API, checked in the `Nice3point.Revit.Api` 2020-2027 XML:** `View.SetElementOverrides(ElementId, ...)` and
+`View.HideElements(ICollection<ElementId>)` take ids of the view's own model only, in every year. Revit 2024+ adds
+`View.SetLinkOverrides` / `GetLinkOverrides` / `RemoveLinkOverrides`, but they set a whole link's display
+(`RevitLinkGraphicsSettings`), never one element inside it. So no year can colour or hide a single linked element.
+`Selection.SetReferences` (select an element inside a link) exists from **Revit 2023** (`LinkSelection` helper, the one
+place that release difference lives).
+
+| Click on a linked element | Now |
+|---|---|
+| Snag | Recorded as before (report row, picture, link name) and **marked on screen with a red box** round the element: its own bounding box through the link instance's placement (`GetTotalTransform`), 50 mm outside it; a 600 mm cube at the hit point if Revit gives no box. Drawn by the same on-screen server as the character (DirectContext3D: nothing added to the model, no Undo step), in first and third person, **and in the snag picture** (the picture is a copy of the screen) - it is the linked snag's only mark. All of the walk's linked snags keep their box until the walk ends (switched off on every end path, with the character). The message: "Snag 4 recorded - linked element: marked on screen with a red box (Revit cannot colour single elements inside a link)". |
+| Hide | "Linked element: Revit cannot hide a single element inside a link. Hide its category for the link in Visibility/Graphics > Revit Links (while paused) instead." |
+| Select | Revit 2023 and later: selected in the link (`Selection.SetReferences`), kept beside this model's selection, a second click takes it out. Revit 2020-2022: "this Revit cannot select an element inside a link - Revit 2023 and later can. Snag it instead." |
+
+F12 adds "red boxes for linked snags N" when there are any.
+
+API: `DirectContext3D` lines (`VertexFormatBits.Position`, `VertexStreamPosition`, `IndexStreamLine`,
+`PrimitiveType.LineList`), `RevitLinkInstance.GetTotalTransform`, `Element.get_BoundingBox(null)`,
+`Selection.SetReferences` and `Reference.CreateLinkReference` (2023+) - compiled in all eight years.
+
+### Revit test steps
+
+80. **Snag a linked element.** MEP model with the architecture linked. Left click (Snag mode) on a linked wall: the
+    message "linked element: marked on screen with a red box ...", a red box round the wall, also in the snag picture
+    (open the report folder). Walk away and back: the box stays. End the walk: the box is gone, nothing in the Undo list.
+81. **Hide and Select a linked element.** Hide mode on a linked duct/wall: the plain "cannot hide a single element
+    inside a link" message. Select mode: Revit 2023+ selects it (it stays selected after the walk); Revit 2020-2022 says
+    it cannot.
+
+| Check (linked snags) | State |
+|---|---|
+| Revit API: no single-linked-element override / hide in any year; `SetReferences` from 2023 | PASS - checked in all eight XML files |
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 80-81 | NEEDS REAL REVIT |

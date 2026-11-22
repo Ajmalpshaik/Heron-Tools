@@ -559,24 +559,65 @@ namespace HeronTools.Services.ModelWalk
                 return;
             if (hit.FromLink)
             {
-                hud.Toast("That element is in a linked model - Select works on this model's elements only", WalkToastKind.Refused);
+                SelectLinked(uidoc, hit, hud);
                 return;
             }
 
             // No transaction: the selection is not a model change. It stays after the walk, ready to edit.
-            var ids = new List<ElementId>(uidoc.Selection.GetElementIds());
+            var ids = HostSelection(uidoc);
             ElementId id = hit.Element.Id;
             string what = WalkCollision.DescribeLine1(hit);
-            if (ids.Remove(id))
-            {
-                uidoc.Selection.SetElementIds(ids);
-                hud.Toast("Taken out of the selection: " + what + "  (" + ids.Count + " selected)");
-            }
-            else
-            {
+            bool taken = ids.Remove(id);
+            if (!taken)
                 ids.Add(id);
-                uidoc.Selection.SetElementIds(ids);
-                hud.Toast("Selected: " + what + "  (" + ids.Count + " selected - kept after the walk)", WalkToastKind.Done);
+            // The linked elements selected in this walk stay selected beside this model's (Revit 2023+).
+            int missed = LinkSelection.Select(uidoc, ids, _selectedLinked);
+            int count = ids.Count + _selectedLinked.Count - missed;
+            if (taken)
+                hud.Toast("Taken out of the selection: " + what + "  (" + count + " selected)");
+            else
+                hud.Toast("Selected: " + what + "  (" + count + " selected - kept after the walk)", WalkToastKind.Done);
+        }
+
+        // Linked elements selected in this walk (Revit 2023 and later can select inside a link): kept so a second click
+        // takes one out again and the host selection is kept beside them.
+        private readonly List<KeyValuePair<Element, RevitLinkInstance>> _selectedLinked = new List<KeyValuePair<Element, RevitLinkInstance>>();
+
+        /// <summary>This model's selected elements, without link instances (a selected linked element reads as its link).</summary>
+        private static List<ElementId> HostSelection(UIDocument uidoc)
+        {
+            var ids = new List<ElementId>(uidoc.Selection.GetElementIds());
+            ids.RemoveAll(i => uidoc.Document.GetElement(i) is RevitLinkInstance);
+            return ids;
+        }
+
+        private void SelectLinked(UIDocument uidoc, WalkRayHit hit, WalkHudState hud)
+        {
+            string what = WalkCollision.DescribeLine1(hit);
+            if (!LinkSelection.CanSelectLinked)
+            {
+                hud.Toast("Linked element: this Revit (2020-2022) cannot select an element inside a link - Revit 2023 and later can. " +
+                          "Snag it instead (it gets a red box).", WalkToastKind.Refused);
+                return;
+            }
+            int at = _selectedLinked.FindIndex(p => p.Value.Id == hit.Link.Id && p.Key.UniqueId == hit.Element.UniqueId);
+            bool taken = at >= 0;
+            if (taken)
+                _selectedLinked.RemoveAt(at);
+            else
+                _selectedLinked.Add(new KeyValuePair<Element, RevitLinkInstance>(hit.Element, hit.Link));
+            try
+            {
+                var hostIds = HostSelection(uidoc);
+                int missed = LinkSelection.Select(uidoc, hostIds, _selectedLinked);
+                int count = hostIds.Count + _selectedLinked.Count - missed;
+                hud.Toast(taken
+                    ? "Taken out of the selection: " + what + "  (" + count + " selected)"
+                    : "Selected in the link: " + what + "  (" + count + " selected - kept after the walk)", WalkToastKind.Done);
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException ex)
+            {
+                hud.Toast("Revit did not select the linked element (" + ex.Message + ")", WalkToastKind.Refused);
             }
         }
 
@@ -627,8 +668,13 @@ namespace HeronTools.Services.ModelWalk
             });
 
             string whyNot;
+            bool marked = false;
             if (hit.FromLink)
+            {
                 whyNot = "a linked element cannot be coloured on its own";
+                snag.MarkerCorners = LinkedBox(element, hit.Link, hit.Point);
+                marked = ShowLinkMarkers(doc, view);
+            }
             else if (doc.IsReadOnly)
                 whyNot = "the model is read-only";
             else if (doc.IsWorkshared && WorksharingUtils.GetCheckoutStatus(doc, view.Id) == CheckoutStatus.OwnedByOtherUser)
@@ -641,7 +687,7 @@ namespace HeronTools.Services.ModelWalk
             // The snag's picture is of the model: the third-person character is hidden until it is taken.
             bool characterWasShown = WalkCharacterServer.Pose.Visible;
             WalkCharacterServer.Pose.Visible = false;
-            if (snag.Coloured || characterWasShown)
+            if (snag.Coloured || characterWasShown || marked)
                 uidoc.RefreshActiveView();   // so the snag's picture shows it red, without the character
 
             string problem = _session.Report.Save();
@@ -651,6 +697,10 @@ namespace HeronTools.Services.ModelWalk
             string later = _session.Settings.AskSnagComment ? "" : " - add a comment in the pause menu (Esc)";
             if (problem != null)
                 hud.Toast(problem, WalkToastKind.Refused);
+            else if (hit.FromLink)
+                hud.Toast("Snag " + snag.Number + " recorded - linked element: " +
+                          (marked ? "marked on screen with a red box" : "not marked (Revit did not let Model Walk draw on screen)") +
+                          " (Revit cannot colour single elements inside a link): " + what + later, WalkToastKind.Done);
             else
                 hud.Toast(whyNot == null
                     ? "Snag " + snag.Number + " recorded: " + what + later
@@ -690,6 +740,54 @@ namespace HeronTools.Services.ModelWalk
             }
         }
 
+        /// <summary>
+        /// The linked element's box in this model's coordinates: its own box (in the link's coordinates) through the link
+        /// instance's placement, 8 corners, bottom 0-3 then top 4-7. No box from Revit: a 600 mm cube round the hit point.
+        /// </summary>
+        private static XYZ[] LinkedBox(Element linked, RevitLinkInstance link, XYZ hitPoint)
+        {
+            BoundingBoxXYZ box = null;
+            Transform place = null;
+            try
+            {
+                box = linked?.get_BoundingBox(null);
+                place = link?.GetTotalTransform();
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException) { box = null; }
+
+            XYZ min, max;
+            double pad = WalkTuning.MmToFt(50.0);   // a little outside the element, so the red lines are not hidden in its faces
+            if (box != null && place != null)
+            {
+                Transform full = place.Multiply(box.Transform ?? Transform.Identity);
+                min = box.Min - new XYZ(pad, pad, pad);
+                max = box.Max + new XYZ(pad, pad, pad);
+                return Corners(min, max, full);
+            }
+            double half = WalkTuning.MmToFt(300.0);
+            XYZ c = hitPoint ?? XYZ.Zero;
+            return Corners(new XYZ(c.X - half, c.Y - half, c.Z - half), new XYZ(c.X + half, c.Y + half, c.Z + half), Transform.Identity);
+        }
+
+        private static XYZ[] Corners(XYZ min, XYZ max, Transform t) => new[]
+        {
+            t.OfPoint(new XYZ(min.X, min.Y, min.Z)), t.OfPoint(new XYZ(max.X, min.Y, min.Z)),
+            t.OfPoint(new XYZ(max.X, max.Y, min.Z)), t.OfPoint(new XYZ(min.X, max.Y, min.Z)),
+            t.OfPoint(new XYZ(min.X, min.Y, max.Z)), t.OfPoint(new XYZ(max.X, min.Y, max.Z)),
+            t.OfPoint(new XYZ(max.X, max.Y, max.Z)), t.OfPoint(new XYZ(min.X, max.Y, max.Z))
+        };
+
+        /// <summary>Hands every linked snag's red box of this walk to the on-screen server and switches it on. True when drawn.</summary>
+        private bool ShowLinkMarkers(Document doc, View3D view)
+        {
+            var boxes = new List<XYZ[]>();
+            foreach (WalkSnag s in _session.Report.Snags)
+                if (s.MarkerCorners != null)
+                    boxes.Add(s.MarkerCorners);
+            WalkCharacterServer.SetMarkers(doc, view.Id, boxes);
+            return boxes.Count == 0 || WalkCharacterServer.InUse || WalkCharacterServer.SwitchOn();
+        }
+
         private void ClickHide(Document doc, View3D view, XYZ position, XYZ forward, WalkHudState hud)
         {
             WalkRayHit hit = ClickTarget(position, forward, hud);
@@ -697,7 +795,8 @@ namespace HeronTools.Services.ModelWalk
                 return;
             if (hit.FromLink)
             {
-                hud.Toast("That element is in a linked model - hide its category in Visibility/Graphics instead", WalkToastKind.Refused);
+                hud.Toast("Linked element: Revit cannot hide a single element inside a link. Hide its category for the link in " +
+                          "Visibility/Graphics > Revit Links (while paused) instead.", WalkToastKind.Refused);
                 return;
             }
             if (!_tempModeIsOurs && view.IsInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate))

@@ -58,6 +58,9 @@ namespace HeronTools.Services.ModelWalk
         public bool Coloured;
         public string NotColouredWhy;
 
+        /// <summary>A linked snag's red box on screen: its 8 corners in this model's coordinates (null for this model's own).</summary>
+        public XYZ[] MarkerCorners;
+
         /// <summary>"Ducts - Rectangular Duct : Supply" - for the pause menu's snag list.</summary>
         public string Summary => Category + (string.IsNullOrEmpty(FamilyType) ? "" : " - " + FamilyType);
     }

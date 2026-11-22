@@ -277,6 +277,8 @@ namespace HeronTools.Services.ModelWalk
             line.Append("  |  section box ").Append(SectionBoxState(view, feet));
             if (WalkCharacterServer.Diag.ClipPlanes >= 0)
                 line.Append(" (").Append(WalkCharacterServer.Diag.ClipPlanes).Append(" clip planes)");
+            if (WalkCharacterServer.MarkerCount > 0)
+                line.Append("  |  red boxes for linked snags ").Append(WalkCharacterServer.MarkerCount);
             hud.CharacterLine = line.ToString();
         }
 

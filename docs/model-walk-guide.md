@@ -84,7 +84,7 @@ Hide/Isolate of the walk view. So:
   it hid is visible again) and leaves your hide alone. An isolate of your own that happens to hide everything the walk
   hid cannot be told apart, and U would end it.
 
-Linked elements: Select and Hide refuse them (they cannot be picked alone). Snag records them, without a colour.
+Linked elements: Revit cannot colour or hide one element inside a link, in any version. **Snag** records them and draws a **red box** round them on screen (also in the snag picture) until the walk ends. **Hide** says so and points you to Visibility/Graphics > Revit Links. **Select** selects inside the link on Revit 2023 and later; Revit 2020-2022 cannot.
 
 ## Snags and the snag report
 

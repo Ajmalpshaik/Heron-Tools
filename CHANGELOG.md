@@ -15,6 +15,8 @@ Planned as 1.2.1: Model Walk fixes from the owner's first test on a big linked m
 - **No annotation in the walk view:** levels, grids, scope boxes, reference planes, marks, tags, dimensions and text are
   hidden in the walk view (only), and a view template is taken off it - in the same one Undo step.
 - **Doors in linked models** (and doors whose panel is a nested family): the door hint shows and E goes through.
+- **Snags on linked elements** get a red box on screen (and in the snag picture), since Revit cannot colour a single
+  element inside a link. Hide on a linked element says so plainly; Select works inside a link on Revit 2023 and later.
 - **Start on a roof:** the location line says "on a roof (outside)" and the walk says once how to get inside.
 - **"Something Revit could not name"** in the readout now names the link it is in (and the ID when Revit has one).
 - Long messages stay on screen long enough to read (up to 9 s).
