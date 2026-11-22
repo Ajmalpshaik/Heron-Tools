@@ -25,6 +25,11 @@ still needs a real Revit test.
 - **Release notes** for each version in `docs/releases/`; the release page shows them, with `SHA256SUMS.txt`
   to check the download.
 
+### Added - Model Walk (NEEDS A REAL REVIT TEST)
+- **Save a snag as a 3D view:** each snag row in the pause menu has **Save as 3D view** - a real Revit 3D view
+  "Model Walk - Snag 003 - <comment>" looking from where you stood, with the walk view's Visibility/Graphics, without
+  the snag red. One Undo step (#77).
+
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
 - **Model Walk docs:** the spec (`docs/game-mode-spec.md`) now says what was built, item by item; the Revit test
   script in `docs/model-walk-move-notes.md` is one numbered list, each step with a results row.
@@ -75,6 +80,7 @@ still needs a real Revit test.
   up after itself; ending the walk redraws every open view of the model (#82).
 - Third person: after Pass-through on/off, hiding or showing an element, or Revit's own Reset Temporary Hide, the
   camera checks the wall behind you again at once, even standing still (#83).
+- Viewpoints: a viewpoint whose name starts with "#" (for example "#2 riser") is no longer lost on the next walk (#81).
 - Snag mode: an element in a link is snagged once per link instance ("Already snag N"), not again on each click;
   the `Snags.csv` colour column now says "coloured when recorded", true even after J, Save or Sync (#84).
 - The first step after standing still no longer jumps about 0.8 m forward.

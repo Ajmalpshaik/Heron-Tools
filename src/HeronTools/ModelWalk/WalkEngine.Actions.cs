@@ -257,13 +257,14 @@ namespace HeronTools.Services.ModelWalk
             WalkInput input = _session.Input;
             WalkHudState hud = _session.Hud;
             StopMotion();
-            if (!input.ClearSnagsQueued && input.SaveViewpointAsView <= 0)
+            if (!input.ClearSnagsQueued && input.SaveViewpointAsView <= 0 && input.SaveSnagAsView <= 0)
                 return;
 
             if (uidoc == null || !uidoc.Document.Equals(doc))
             {
                 input.ClearSnagsQueued = false;
                 input.SaveViewpointAsView = 0;
+                input.SaveSnagAsView = 0;
                 hud.SayInPause("Go back to the walk's model first, then try again.");
                 return;
             }
@@ -283,25 +284,51 @@ namespace HeronTools.Services.ModelWalk
                 int number = input.SaveViewpointAsView;
                 input.SaveViewpointAsView = 0;
                 WalkViewpoint vp = _session.Viewpoints.Find(v => v.Number == number);
-                hud.SayInPause(vp == null ? "That viewpoint is no longer there." : SaveAsRevitView(doc, view, vp));
+                hud.SayInPause(vp == null ? "That viewpoint is no longer there." :
+                    SaveAsRevitView(doc, view, "Model Walk - " + vp.Name, vp.Eye, vp.YawDeg, vp.PitchDeg,
+                                    "Model Walk: save viewpoint as 3D view"));
+            }
+            if (input.SaveSnagAsView > 0)
+            {
+                int number = input.SaveSnagAsView;
+                input.SaveSnagAsView = 0;
+                WalkSnag snag = null;
+                foreach (WalkSnag s in _session.Report.Snags)
+                    if (s.Number == number)
+                        snag = s;
+                hud.SayInPause(snag == null || snag.Eye == null ? "That snag has no camera to save." :
+                    SaveAsRevitView(doc, view, SnagViewName(snag), snag.Eye, snag.YawDeg, snag.PitchDeg,
+                                    "Model Walk: save snag " + snag.Number + " as 3D view"));
             }
         }
 
+        /// <summary>"Model Walk - Snag 003 - Duct clashes with beam": the comment's first words, or the element's category.</summary>
+        private static string SnagViewName(WalkSnag snag)
+        {
+            string text = !string.IsNullOrWhiteSpace(snag.Comment) ? snag.Comment : snag.Category;
+            text = (text ?? "").Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ').Trim();
+            if (text.Length > 40)
+                text = text.Substring(0, 40).TrimEnd() + "...";
+            string name = "Model Walk - Snag " + snag.Number.ToString("000", System.Globalization.CultureInfo.InvariantCulture);
+            return text.Length > 0 ? name + " - " + text : name;
+        }
+
         /// <summary>
-        /// "Save as Revit 3D view": a copy of the walk view (same Visibility/Graphics, filters and section box) looking
-        /// from the viewpoint, with that camera saved in the model - one named transaction, one Undo step, a unique
-        /// view name. Snag colours are never carried into it: each snagged element gets its own colours in the new
-        /// view. Returns the plain line for the pause menu.
+        /// "Save as Revit 3D view" (a viewpoint or a snag): a copy of the walk view (same Visibility/Graphics, filters and
+        /// section box) looking from that eye, with that camera saved in the model - one named transaction, one Undo
+        /// step, a unique view name. Snag colours are never carried into it: each snagged element gets its own colours
+        /// in the new view. Returns the plain line for the pause menu.
         /// </summary>
-        private string SaveAsRevitView(Document doc, View3D walkView, WalkViewpoint vp)
+        private string SaveAsRevitView(Document doc, View3D walkView, string wantedName, XYZ eye, double yawDeg, double pitchDeg,
+                                       string undoName)
         {
             if (doc.IsReadOnly)
                 return "The model is read-only, so no view can be saved.";
             if (!walkView.CanViewBeDuplicated(ViewDuplicateOption.Duplicate))
                 return "Revit does not let the walk view be copied, so no view was saved.";
 
-            string name = UniqueViewName(doc, "Model Walk - " + vp.Name);
-            using (var t = new Transaction(doc, "Model Walk: save viewpoint as 3D view"))
+            string name = UniqueViewName(doc, wantedName);
+            using (var t = new Transaction(doc, undoName))
             {
                 try
                 {
@@ -314,7 +341,7 @@ namespace HeronTools.Services.ModelWalk
                     }
                     copy.Name = name;
                     SnagColourMemory.Find(doc, walkView)?.GiveOriginalsTo(doc, copy);
-                    copy.SetOrientation(Orientation(vp.Eye, vp.YawDeg, vp.PitchDeg));
+                    copy.SetOrientation(Orientation(eye, yawDeg, pitchDeg));
                     copy.SaveOrientation();   // the camera is kept in the model for this view (it does not lock it)
                     if (t.Commit() != TransactionStatus.Committed)
                         return "Revit did not keep the new view, so nothing was changed.";

@@ -418,11 +418,12 @@ from AJ-Tools.
 | 66 Character after a quick second walk | | | | |
 | 67 Slide past a door frame near a link | | | | |
 | 68 Walk view redrawn after switching view (tiled) | | | | |
+| 69 Save a snag as a 3D view | | | | |
 
 ## Extra Revit checks (steps 19-29)
 
 Steps 19 and 20 check issues #41 and #40; steps 21-29 the audit fixes that only Revit can prove. Do them after steps
-1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 68 now) has one row in the results table
+1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 69 now) has one row in the results table
 above**; steps 30 and later are in the sections that added them, below.
 
 19. **Snags.csv on a ";" Windows region (issue #41).** In Windows Settings, Region, pick a format whose list
@@ -887,7 +888,7 @@ Small defects found - each checked against the code, each in code another sessio
 | #84 | Snags | The same linked element can be snagged twice; the CSV "Snag colour" column after a give-back |
 | #85 | Character server | A second walk does not cancel a pending switch-off; a failed buffer remake leaves a disposed object |
 | PR #74 comment | Snag pictures | A picture taken after a forced pause, during a Snapshot + Esc, or at the end can show the pause / end card - **fixed in #74** (step 60) |
-| #77 | Spec item 31 | The optional "one saved 3D view per snag" is not built (owner decision) |
+| #77 | Spec item 31 | The optional "one saved 3D view per snag" - **built**, see "Save a snag as a 3D view" at the end |
 
 Spec: `docs/game-mode-spec.md` now has section F, "What was built", item by item against the code; issue #44 updated.
 
@@ -1047,3 +1048,28 @@ active, at the end.
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Steps 67-68; a failed overlay open (cannot be forced in a test) | NEEDS REAL REVIT |
+
+# Save a snag as a 3D view (2026-11-22, issue #77, spec item 31)
+
+The spec's optional "one saved 3D view per snag" for the issue meeting, built as #77 described.
+
+| What | How |
+|---|---|
+| Button | **Save as 3D view** on each snag row of the pause menu (next to **Open**). |
+| What it makes | The same code as the viewpoint's Save as 3D view: one transaction "Model Walk: save snag N as 3D view" (one Undo step), `Duplicate` of the walk view (its Visibility/Graphics, filters, section box), the camera from the snag's recorded eye and look (where you stood, not the third-person camera), `SaveOrientation` (does not lock). Runs in the ExternalEvent while paused. |
+| Name | "Model Walk - Snag 003 - <the comment's first 40 characters>", or the category when there is no comment yet; characters Revit refuses replaced, "(2)", "(3)" when taken. |
+| Snag colours | Not carried: every snagged element gets its own overrides in the copy, in the same transaction. |
+
+### Revit test step
+
+69. **Save a snag as a 3D view.** Record a snag, write the comment "Duct clashes with beam", pause, click **Save as 3D
+    view** on its row. Expect "Saved the 3D view \"Model Walk - Snag 001 - Duct clashes with beam\"" in the pause menu,
+    the view under 3D Views looking at the duct from where you stood, the duct in its own colours (not red), and one
+    Undo step "Model Walk: save snag 1 as 3D view". Click it again: "... (2)". Check the pause menu row still shows the
+    comment (three buttons fit).
+
+| Check (#77) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 69 | NEEDS REAL REVIT |
