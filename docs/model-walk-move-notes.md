@@ -413,11 +413,12 @@ from AJ-Tools.
 | 61 Busy end in third person | | | | |
 | 62 Click while turning (third person) | | | | |
 | 63 Viewpoint named "#..." kept | | | | |
+| 64 Third-person camera after Pass-through / Hide | | | | |
 
 ## Extra Revit checks (steps 19-29)
 
 Steps 19 and 20 check issues #41 and #40; steps 21-29 the audit fixes that only Revit can prove. Do them after steps
-1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 63 now) has one row in the results table
+1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 64 now) has one row in the results table
 above**; steps 30 and later are in the sections that added them, below.
 
 19. **Snags.csv on a ";" Windows region (issue #41).** In Windows Settings, Region, pick a format whose list
@@ -951,3 +952,26 @@ After #74, #75, #76, #78, #80, #87 and #88 merged, the Revit test script was mad
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 63 | NEEDS REAL REVIT |
+
+# Third-person camera after a mode or world change (2026-11-22, issue #83 item 2)
+
+Item 1 of #83 (the camera's old wall distance used from a new place when the frame had no rays left) was fixed by #88.
+
+| What was wrong | Now |
+|---|---|
+| The camera's wall check is cast only when the pivot or the look direction moves. Pass-through stores the full 3 m distance (nothing blocks), so leaving Pass-through while standing still with a wall behind kept the camera behind the wall until the mouse moved. The same after hiding the wall behind you (the camera stayed short) or showing it again (the camera stayed inside it). | The stored distance is forgotten when Pass-through goes on or off, when Model Walk hides an element or shows hidden ones, when Revit's own Reset Temporary Hide/Isolate is noticed, and on the world refresh every 4 s (links, Visibility/Graphics). The next frame casts the check again. Cost: one cast (1-2 rays) after each of those, nothing while standing still otherwise. |
+
+### Revit test step
+
+64. **Third-person camera after Pass-through / Hide.** Third person, Walk. Stand with your back 1 m from a wall. Press
+    Pass-through: the camera goes 3 m back, through the wall. Without moving the mouse or keys, press Pass-through
+    again: within a blink the camera comes back in front of the wall. Then turn round, Hide that wall (Hide mode, click
+    it) and turn back: the camera is 3 m back. Standing still, press Show hidden: the wall comes back and the camera
+    comes back in front of it at once, not inside it.
+
+| Check (#83 item 2) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 64 | NEEDS REAL REVIT |
+
