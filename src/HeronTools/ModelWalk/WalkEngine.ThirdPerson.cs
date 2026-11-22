@@ -75,6 +75,16 @@ namespace HeronTools.Services.ModelWalk
                 hud.Toast("Third person without the character: " + (WalkCharacterServer.CharacterProblem ?? "it could not be read") +
                           ". The camera is behind you; nothing else changes.", WalkToastKind.Refused);
             }
+            // Where he stands BEFORE the drawing service is switched on: Revit can ask for the character's box the
+            // moment the server goes on the active list, and a box still at the internal origin (the first walk of a
+            // Revit session) lies far outside the picture in a model set out far from that origin - he was culled there.
+            if (input.ThirdPerson && hasCharacter)
+            {
+                pose.Document = doc;
+                pose.ViewId = view.Id;
+                pose.Feet = new XYZ(position.X, position.Y, position.Z - _session.EyeHeightFt);
+                pose.YawRad = input.YawDeg * Math.PI / 180.0;
+            }
             bool switchedOn = hasCharacter && !WalkCharacterServer.InUse;
             if (switchedOn && !WalkCharacterServer.SwitchOn())
             {
@@ -193,6 +203,118 @@ namespace HeronTools.Services.ModelWalk
             _thirdForward = forward;
             return _thirdEye;
         }
+
+        // ------------------------------------------------------------------ why the character is (not) on screen
+
+        private bool _nearCutToldThisWalk;
+        private Transform _toSharedForLine;
+        private bool _toSharedRead;
+
+        /// <summary>
+        /// A few times a second, on Revit's thread: tells the walker once when Revit's own near cut (everything nearer the
+        /// camera than this is not drawn - large in a very big model) is farther than the character, and fills the F12
+        /// line while F12 is on. Reads only; changes nothing.
+        /// </summary>
+        private void CheckCharacter(Document doc, View3D view, WalkInput input, WalkHudState hud, XYZ position)
+        {
+            double cameraToCharacterFt = -1;
+            XYZ feet = WalkCharacterServer.Pose.Feet;
+            if (_thirdEye != null && feet != null)
+                cameraToCharacterFt = _thirdEye.DistanceTo(new XYZ(feet.X, feet.Y, feet.Z + WalkTuning.MmToFt(1000.0)));
+            double nearFt = WalkCharacterServer.Diag.NearFt;
+            bool nearTooFar = _characterShown && nearFt > 0 && cameraToCharacterFt > 0 && nearFt > cameraToCharacterFt;
+            if (nearTooFar && !_nearCutToldThisWalk)
+            {
+                _nearCutToldThisWalk = true;
+                hud.Toast("Revit does not draw anything nearer than " + Metres(nearFt) + " to the camera in this model (it is very big), " +
+                          "so the character " + Metres(cameraToCharacterFt) + " in front is cut off. F12 shows the details. First person is not affected.",
+                          WalkToastKind.Refused);
+            }
+
+            if (!hud.DiagnosticsWanted)
+            {
+                hud.CharacterLine = "";
+                return;
+            }
+
+            var line = new System.Text.StringBuilder("Character: ");
+            string reason;
+            if (!input.ThirdPerson) reason = "first person (Q shows him)";
+            else if (!WalkCharacterServer.HasCharacter) reason = "not loaded - " + (WalkCharacterServer.CharacterProblem ?? "unknown");
+            else if (!WalkCharacterServer.InUse) reason = "drawing service off";
+            else if (!_characterShown) reason = "hidden for a snag picture";
+            else if (WalkCharacterServer.Diag.RenderCalls == 0) reason = "Revit has not asked to draw him yet";
+            else if (WalkCharacterServer.Diag.Drawn == 0) reason = "Revit asked, nothing drawn" +
+                     (WalkCharacterServer.Diag.LastProblem != null ? " (" + WalkCharacterServer.Diag.LastProblem + ")" : "");
+            else if (nearTooFar) reason = "cut off by Revit's near cut";
+            else if (SectionBoxState(view, feet) == "on, he is OUTSIDE it") reason = "outside the section box";
+            else reason = "drawn";
+            line.Append(reason.ToUpperInvariant());
+
+            line.Append("  |  service ").Append(WalkCharacterServer.ServiceState());
+            line.Append("  |  Revit asked ").Append(WalkCharacterServer.Diag.CanExecuteYes).Append(" yes / ")
+                .Append(WalkCharacterServer.Diag.CanExecuteNo).Append(" no, box ").Append(WalkCharacterServer.Diag.BoxCalls)
+                .Append(", draw ").Append(WalkCharacterServer.Diag.RenderCalls).Append(", drawn ").Append(WalkCharacterServer.Diag.Drawn);
+            long last = WalkCharacterServer.Diag.LastDrawnUtcTicks;
+            if (last > 0)
+                line.Append(string.Format(System.Globalization.CultureInfo.InvariantCulture, " (last {0:0.0} s ago)",
+                                          new TimeSpan(DateTime.UtcNow.Ticks - last).TotalSeconds));
+
+            if (feet != null)
+            {
+                line.Append("  |  feet internal ").Append(Point(feet));
+                Transform toShared = ToShared(doc);
+                if (toShared != null)
+                    line.Append(", shared ").Append(Point(toShared.OfPoint(feet)));
+            }
+            XYZ box = WalkCharacterServer.Diag.BoxCentre;
+            if (box != null && feet != null)
+                line.Append("  |  box ").Append(box.DistanceTo(feet) < WalkTuning.MmToFt(1.0) ? "on him" : Metres(box.DistanceTo(feet)) + " off");
+            if (nearFt > 0)
+                line.Append("  |  Revit near cut ").Append(Metres(nearFt)).Append(", far ").Append(Metres(WalkCharacterServer.Diag.FarFt));
+            if (cameraToCharacterFt > 0)
+                line.Append(", camera to him ").Append(Metres(cameraToCharacterFt));
+            line.Append("  |  section box ").Append(SectionBoxState(view, feet));
+            if (WalkCharacterServer.Diag.ClipPlanes >= 0)
+                line.Append(" (").Append(WalkCharacterServer.Diag.ClipPlanes).Append(" clip planes)");
+            hud.CharacterLine = line.ToString();
+        }
+
+        /// <summary>"off", "on, he is inside it" or "on, he is OUTSIDE it" (feet and head tested). Never throws.</summary>
+        private static string SectionBoxState(View3D view, XYZ feet)
+        {
+            try
+            {
+                if (!view.IsSectionBoxActive)
+                    return "off";
+                if (feet == null)
+                    return "on";
+                BoundingBoxXYZ box = view.GetSectionBox();
+                return WalkTuning.InsideBox(box, feet) && WalkTuning.InsideBox(box, feet + (XYZ.BasisZ * WalkTuning.MmToFt(WalkCharacterServer.CharacterHeightMm)))
+                    ? "on, he is inside it" : "on, he is OUTSIDE it";
+            }
+            catch (Autodesk.Revit.Exceptions.ApplicationException)
+            {
+                return "unknown";
+            }
+        }
+
+        private Transform ToShared(Document doc)
+        {
+            if (_toSharedRead)
+                return _toSharedForLine;
+            _toSharedRead = true;
+            try { _toSharedForLine = doc.ActiveProjectLocation?.GetTotalTransform()?.Inverse; }
+            catch (Autodesk.Revit.Exceptions.ApplicationException) { _toSharedForLine = null; }
+            return _toSharedForLine;
+        }
+
+        private static string Metres(double ft) =>
+            (WalkTuning.FtToMm(ft) / 1000.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " m";
+
+        private static string Point(XYZ p) =>
+            string.Format(System.Globalization.CultureInfo.InvariantCulture, "({0:0.000}, {1:0.000}, {2:0.000}) m",
+                          WalkTuning.FtToMm(p.X) / 1000.0, WalkTuning.FtToMm(p.Y) / 1000.0, WalkTuning.FtToMm(p.Z) / 1000.0);
 
         /// <summary>
         /// Makes the next third-person frame cast the camera's wall check again, even standing still. Called when what

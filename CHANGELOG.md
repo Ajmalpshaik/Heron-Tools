@@ -4,6 +4,15 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+Planned as 1.2.1: Model Walk fixes from the owner's first test on a big linked model (issue #104).
+
+### Fixed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Third-person character missing in a big model far from the origin:** where he stands is now set before Revit's
+  drawing service is switched on (Revit could take his box at the internal origin, off screen). When Revit's own
+  near cut in a very big model is farther than the character, the walk says so once instead of showing nothing.
+- **F12** shows a second line for the character: drawn or why not, Revit's near cut, the section box, and where his feet
+  are (internal and shared).
+
 ## [1.2.0] - 2026-11-22
 
 In short: the new **Model Walk** tool (first and third person with a real character, quick snags, viewpoints), a full

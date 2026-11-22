@@ -37,9 +37,12 @@ namespace HeronTools.UI.ModelWalk
             ClearHeightText.Visibility = hud.ClearHeightMm > 0 ? Visibility.Visible : Visibility.Collapsed;
 
             // Frame budget, measured every frame - shown only on the Frame timing key.
+            // The same key shows the third-person character's line under it (what Revit drew, and why not).
             FrameText.Visibility = _showFrameTiming ? Visibility.Visible : Visibility.Collapsed;
+            hud.DiagnosticsWanted = _showFrameTiming;
             if (_showFrameTiming)
-                FrameText.Text = string.Format("Frame {0:0} ms (average {1:0} ms) - {2} rays", hud.LastFrameMs, hud.AverageFrameMs, hud.LastFrameRays);
+                FrameText.Text = string.Format("Frame {0:0} ms (average {1:0} ms) - {2} rays", hud.LastFrameMs, hud.AverageFrameMs, hud.LastFrameRays) +
+                                 (string.IsNullOrEmpty(hud.CharacterLine) ? "" : "\n" + hud.CharacterLine);
 
             // Messages
             long age = DateTimeOffset.Now.ToUnixTimeMilliseconds() - hud.ToastStampMs;

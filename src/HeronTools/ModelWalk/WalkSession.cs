@@ -126,6 +126,15 @@ namespace HeronTools.Services.ModelWalk
 
         public static double MmToFt(double mm) => mm * FtPerMm;
         public static double FtToMm(double ft) => ft * Constants.FEET_TO_MM;
+
+        /// <summary>Is a model point inside a section box (its own Transform applied)? A null box counts as inside.</summary>
+        public static bool InsideBox(Autodesk.Revit.DB.BoundingBoxXYZ box, Autodesk.Revit.DB.XYZ point)
+        {
+            if (box == null || point == null)
+                return true;
+            Autodesk.Revit.DB.XYZ p = box.Transform != null ? box.Transform.Inverse.OfPoint(point) : point;
+            return p.X >= box.Min.X && p.X <= box.Max.X && p.Y >= box.Min.Y && p.Y <= box.Max.Y && p.Z >= box.Min.Z && p.Z <= box.Max.Z;
+        }
     }
 
     /// <summary>Written by the HUD (keys, mouse); read - and for one-shot actions cleared - by the engine.</summary>
@@ -266,6 +275,11 @@ namespace HeronTools.Services.ModelWalk
         public double LastFrameMs;
         public double AverageFrameMs;
         public int LastFrameRays;
+
+        // The F12 line about the third-person character (why it is or is not drawn). The overlay sets
+        // DiagnosticsWanted while F12 is on; the engine fills CharacterLine a few times a second, on Revit's thread.
+        public bool DiagnosticsWanted;
+        public string CharacterLine = "";
 
         public bool Alive = true;
         public string StopReason = "";

@@ -1073,3 +1073,46 @@ The spec's optional "one saved 3D view per snag" for the issue meeting, built as
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 69 | NEEDS REAL REVIT |
+
+# Big linked model far from the origin: character not shown (2026-11-22, issue #104)
+
+The owner's test in Revit 2020.2 on a big workshared MEP model with the architecture and structure linked, set out far
+from Revit's internal origin (Eye Elevation 443709 mm, shared EL. +110.150): no character in third person, the building
+"cut", the player on top of a linked roof. In a small new model the character showed.
+
+| Cause found | Fix |
+|---|---|
+| The character's place (`Pose.Feet`) was only written AFTER the drawing server was switched on, so on the first walk of a Revit session it was still the internal origin (0,0,0). Revit can ask for the server's bounding box when it joins the active list; a box at the origin is far outside the picture in a model set out far from it, so Revit can cull the character. Near the origin (a small new model) the stale box was still on screen - which matches "only in the big model". | The pose (model, view, feet, facing) is written before `SwitchOn`. |
+| Revit's own near cut: in a very big model Revit draws nothing nearer to the camera than a distance it picks from the model's size. When that is more than the 3 m from the third-person camera to the character, he is cut off - and nearby walls and slabs are cut by a straight plane too. Cannot be set through the API. | `RenderScene` reads `DrawContext.GetCamera().NearDistance` / `FarDistance` and `GetClipPlanes()`; when the near cut is farther than the character the walk says so once, in plain words. |
+| Float precision of the vertex buffers at large coordinates. | Checked, not the cause: Revit keeps a model within about 32 km (20 miles) of the internal origin; a float there still resolves about 2 mm. No change. |
+| Nothing showed WHY the character was missing. | F12 now shows a second line, below. |
+
+**The F12 character line** (Frame timing key, a few times a second, reads only):
+
+`Character: DRAWN | service registered, active | Revit asked 120 yes / 3 no, box 4, draw 118, drawn 118 (last 0.1 s ago) | feet internal (x, y, z) m, shared (E, N, EL) m | box on him | Revit near cut 0.3 m, far 900.0 m, camera to him 3.1 m | section box off (0 clip planes)`
+
+The first word is the reason: FIRST PERSON, NOT LOADED, DRAWING SERVICE OFF, HIDDEN FOR A SNAG PICTURE, REVIT HAS NOT
+ASKED TO DRAW HIM YET (CanExecute / active list), REVIT ASKED, NOTHING DRAWN (with Revit's message), CUT OFF BY REVIT'S
+NEAR CUT, OUTSIDE THE SECTION BOX, or DRAWN. The near and far values are Revit's own camera numbers, read as feet.
+
+API checked in the `Nice3point.Revit.Api` 2020-2027 XML (and compiled in all eight): `DrawContext.GetCamera`,
+`Camera.NearDistance` / `FarDistance` / `EyePosition`, `DrawContext.GetClipPlanes`, `View3D.IsSectionBoxActive`,
+`View3D.GetSectionBox`, `MultiServerService.GetActiveServerIds` - all since 2017/2018. The API note on `RenderScene`
+says it "may be called in a separate thread": the diagnostics it writes are plain numbers read by the walk frame.
+
+### Revit test steps
+
+70. **Character in a big linked model far from the origin.** Open a big model with the architecture linked, set out far
+    from the internal origin (as 4355-BHVD). Start Model Walk inside the building, press Q (third person), then F12.
+    Expect the site worker 3 m in front of the camera, and the second F12 line starting "Character: DRAWN" with "box on
+    him". If he is not there, read out the whole second line - its first words say why.
+71. **Revit's near cut.** In the same model, if the character is missing and F12 says "CUT OFF BY REVIT'S NEAR CUT",
+    check the walk showed once "Revit does not draw anything nearer than ... m to the camera in this model". Note the
+    near cut value for the issue.
+
+| Check (#104, character) | State |
+|---|---|
+| Revit API members above in `Nice3point.Revit.Api` 2020-2027 | PASS - compiled in all eight |
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 70-71 | NEEDS REAL REVIT |
