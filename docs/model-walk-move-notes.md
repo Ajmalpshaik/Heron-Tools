@@ -412,15 +412,17 @@ from AJ-Tools.
 | 60 No pause / end card in a picture | | | | |
 | 61 Busy end in third person | | | | |
 | 62 Click while turning (third person) | | | | |
-| 67 Slide past a door frame near a link | | | | |
-| 68 Walk view redrawn after switching view (tiled) | | | | |
 | 63 Viewpoint named "#..." kept | | | | |
 | 64 Third-person camera after Pass-through / Hide | | | | |
+| 65 Linked element snagged once; CSV snag colour | | | | |
+| 66 Character after a quick second walk | | | | |
+| 67 Slide past a door frame near a link | | | | |
+| 68 Walk view redrawn after switching view (tiled) | | | | |
 
 ## Extra Revit checks (steps 19-29)
 
 Steps 19 and 20 check issues #41 and #40; steps 21-29 the audit fixes that only Revit can prove. Do them after steps
-1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 64 now) has one row in the results table
+1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 68 now) has one row in the results table
 above**; steps 30 and later are in the sections that added them, below.
 
 19. **Snags.csv on a ";" Windows region (issue #41).** In Windows Settings, Region, pick a format whose list
@@ -578,6 +580,8 @@ A fresh read of the whole change (`git diff origin/main...HEAD`), the files it t
 |---|---|---|---|
 | R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). An end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view - fixed later at the next walk's start (camera session, C1). |
 | R2 | Medium | Wall slide: with a surface closer than 550 mm along the camera ray (a duct or slab just above the head while looking down), the camera was still put 300 mm out - past the surface, so the view looked from inside or behind it. | **Fixed** - the camera stops half way to such a surface, always in front of it. |
+| R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. |
+| R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and runs a pending switch-off first (#85). `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
 | R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. (The 24 is the move budget, not a hard frame cap - #82.) |
 | R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and cancels a pending switch-off. `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
 | R5 | Checked, no defect | Quick snags: the "One moment" refusal, the picture hand-off (`SnagAwaitingPicture` cleared and `SnagPictureBusy` set in the same UI-thread call, so the figure cannot come back between them), `Snags.csv` rewritten through the temp file with the #41 separator and quoting for commas, quotes and line breaks, comment-box keys (Enter / Esc / repeats), Open still adds to the selection, the setting on = the old box. | - |
@@ -976,6 +980,45 @@ Item 1 of #83 (the camera's old wall distance used from a new place when the fra
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 64 | NEEDS REAL REVIT |
+
+# Snags: linked element twice, CSV colour column (2026-11-22, issue #84)
+
+| What was wrong | Now |
+|---|---|
+| "Already snag N in this walk" was checked only for this model's own elements, so clicking the same linked duct twice gave two report rows. | A linked element is the same snag when it is the same element (Unique ID) in the same link instance. The same link placed twice (a repeated floor) puts the element in two places: those stay two snags. |
+| The CSV "Snag colour" column said "coloured in the walk view" even after J, a Save or a Sync gave the colour back during the walk. | It says "coloured when recorded" - always true. What is red now is in the walk view itself. |
+
+### Revit test step
+
+65. **Linked element snagged once.** In a model with a link, Snag a linked duct, then click it again: "Already snag n in
+    this walk", no second row in `Snags.csv`. Snag a host duct, press J, end the walk: its "Snag colour" cell says
+    "coloured when recorded".
+
+| Check (#84) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 65 | NEEDS REAL REVIT |
+
+# Character switch-off and buffers (2026-11-22, issue #85)
+
+No defect here made the character stay drawn after a walk; these two could make it vanish during one.
+
+| What was wrong | Now |
+|---|---|
+| A walk ended from the overlay (Alt+F4, Revit busy, a fault) asks Revit to switch the character off at its next idle moment. If a second walk started first, that switch-off could still run in the middle of walk 2 (notes R4 said a second walk cancels it - it did not). Walk 2 switched him on again, but a standing character was not redrawn, so he was invisible until the camera moved. (The issue also named a model close that is cancelled: checked - the walk already ends the moment its model starts to close, so it does not carry on.) | Starting a walk (the ribbon command, Revit's thread) now runs a waiting switch-off at once, so it cannot land later. And every time the character is switched on in a walk, the view is redrawn, so he shows even standing still. |
+| When a graphics buffer had to be remade, the old one was disposed first; if the remake failed, the disposed one stayed, and the next redraw failed on it - that part, and every part after it, lost for the rest of the Revit session. | The field is emptied after the dispose, so a failed remake is tried again on the next redraw (the vertex buffer already did this). |
+
+### Revit test step
+
+66. **Character after a quick second walk.** Third person. Close the overlay with Alt+F4 and click Model Walk again at
+    once, then stand still in third person (Q): the character is drawn and stays drawn (wait 5 s without moving).
+
+| Check (#85) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 66 | NEEDS REAL REVIT |
 
 # Engine: slide near links, failed open, redraw at the end (2026-11-22, issue #82)
 

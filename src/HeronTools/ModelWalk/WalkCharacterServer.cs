@@ -201,6 +201,10 @@ namespace HeronTools.Services.ModelWalk
         {
             if (_switchOffEvent == null)
                 _switchOffEvent = ExternalEvent.Create(new SwitchOffHandler());
+            // The last walk ended from the overlay and its switch-off has not run yet: run it now (a command is Revit's
+            // thread), so it cannot land later in the middle of this walk.
+            if (_switchOffPending)
+                SwitchOff();
             if (_watching || uiApp == null)
                 return;
             _watching = true;
@@ -400,7 +404,10 @@ namespace HeronTools.Services.ModelWalk
 
                 if (_format == null || !_format.IsValid())
                 {
+                    // Null before the remake: if the remake throws, the next redraw makes it again instead of
+                    // finding a disposed buffer (and losing the character for the rest of the session).
                     _format?.Dispose();
+                    _format = null;
                     _format = new VertexFormat(VertexFormatBits.PositionNormal);
                 }
 
@@ -419,11 +426,13 @@ namespace HeronTools.Services.ModelWalk
                     if (b.Effect == null || !b.Effect.IsValid())
                     {
                         b.Effect?.Dispose();
+                        b.Effect = null;
                         b.Effect = MakeEffect(b.Colour);
                     }
                     if (b.Indices == null || !b.Indices.IsValid())
                     {
                         b.Indices?.Dispose();
+                        b.Indices = null;
                         b.Indices = MakeIndices(part, triangleCount);
                     }
                     if (b.Vertices == null || !b.Vertices.IsValid() || b.VerticesVersion != _poseVersion)
