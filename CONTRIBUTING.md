@@ -68,6 +68,22 @@ Plain words, short sentences, Revit's own vocabulary (element, family, parameter
 4. The `Gates` check (metadata + compile 2020-2027) must pass.
 5. The maintainer tests in Revit before merging. Nothing is merged without his word.
 
+## Keep your PC's copy of the repository tidy
+
+After pull requests are merged, their branches are deleted on GitHub but stay in your PC's copy. From the
+repository folder, in PowerShell:
+
+```powershell
+git checkout main
+git pull
+git fetch --prune                     # forget branches that were deleted on GitHub
+git branch --merged main              # list your local branches already merged into main
+git branch -d <branch-name>           # delete one of them (-d refuses a branch that is not merged)
+```
+
+`git branch -d` never deletes work that is not in `main`. Do not use `-D` unless you are sure the branch is
+not needed.
+
 ## Code style
 
 - C#, `LangVersion latest`, nullable off, no implicit usings - as the project sets them.

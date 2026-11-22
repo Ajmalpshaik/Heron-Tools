@@ -224,8 +224,8 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 - Every button that changes the model runs as **one named transaction** - one Undo entry, named for the
   tool (for example `Filter Pro: ...`, `Assign Links to Workset`). If anything in that run fails, the whole
   run is rolled back and the modeller is told, in plain words, that nothing was changed.
-- Revit's API is called only from Revit's own thread. Most windows are modal, so they run there; the one
-  modeless window (Quick Clash) reaches the API only through an `ExternalEvent`.
+- Revit's API is called only from Revit's own thread. Most windows are modal, so they run there; the
+  modeless ones (the Quick Clash window and the Model Walk overlay) reach the API only through an `ExternalEvent`.
 - Version-specific API code lives only in `src/HeronTools/Helpers/` behind `REVIT<year>` /
   `REVIT<year>_OR_GREATER` compile symbols (units 2021, parameter types 2022, case-sensitive filter
   rules 2023, 64-bit `ElementId.Value` 2024, `IntegerValue` removed 2026).
@@ -243,7 +243,7 @@ AddInId GUID per Revit year, namespace `HeronTools`, install folder `HeronTools`
 src/HeronTools/          the add-in (one project, every Revit year)
   App/                   start-up class: builds the ribbon
   Commands/              ribbon commands
-  Services/              each tool's Revit work (FilterPro, Colorize, ViewCrop, UnhideAll, GraphicsTools)
+  Services/              each tool's Revit work, one folder per tool
   Models/  Helpers/      data classes; version-safe helpers
   UI/                    windows and the brand theme (HeronStyles.xaml)
   QuickMenu/  ModelWalk/  tools kept in one folder each (command, services, windows)
