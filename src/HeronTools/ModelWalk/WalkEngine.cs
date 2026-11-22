@@ -59,6 +59,37 @@ namespace HeronTools.Services.ModelWalk
         // outside Revit's API) can tell whether colours are still on without calling Revit's API.
         private SnagColourMemory _snagMemory;
 
+        // A walk that ended in third person WITHOUT Revit's thread (Revit busy, an overlay fault) could not put the walk
+        // view's camera back on the player: what is needed to do it when Model Walk starts again. Plain .NET only.
+        private static Document _leftDoc;
+        private static ElementId _leftViewId;
+        private static XYZ _leftCameraEye;
+        private static XYZ _leftPlayerEye;
+        private static double _leftYawDeg;
+        private static double _leftPitchDeg;
+
+        /// <summary>
+        /// At the start of a walk (inside the command): when the last walk ended in third person without Revit's thread
+        /// and the walk view's camera is still exactly where it left it, gives the player's eye and look instead - the
+        /// next walk starts where the player stood, not 3 m behind. A camera the modeller moved since is kept. Used once.
+        /// </summary>
+        internal static bool TakeLeftThirdPersonCamera(Document doc, ElementId viewId, XYZ cameraEye, out XYZ eye, out double yawDeg, out double pitchDeg)
+        {
+            eye = _leftPlayerEye;
+            yawDeg = _leftYawDeg;
+            pitchDeg = _leftPitchDeg;
+            bool sameModel = _leftDoc != null && _leftDoc.IsValidObject && doc != null && doc.Equals(_leftDoc);
+            if (!sameModel && _leftDoc != null && _leftDoc.IsValidObject)
+                return false;   // a walk in another model: kept for the next walk in that one
+            bool match = sameModel && viewId != null && viewId == _leftViewId && cameraEye != null && _leftPlayerEye != null &&
+                         cameraEye.DistanceTo(_leftCameraEye) < WalkTuning.MmToFt(5.0);
+            _leftDoc = null;
+            _leftViewId = null;
+            _leftCameraEye = null;
+            _leftPlayerEye = null;
+            return match;
+        }
+
         public WalkEngine(WalkSession session)
         {
             _session = session;
@@ -551,6 +582,16 @@ namespace HeronTools.Services.ModelWalk
             _session.Running = false;
             // No Revit API here: the character is hidden at once and switched off on Revit's thread at its next idle moment.
             WalkCharacterServer.SwitchOffSoon();
+            // The walk view's camera stays 3 m behind the player (no Revit API here): the next walk puts it right.
+            if (_thirdEye != null && _lastEye != null && _session.Position != null)
+            {
+                _leftDoc = _session.Document;
+                _leftViewId = _session.WalkViewId;
+                _leftCameraEye = _lastEye;
+                _leftPlayerEye = _session.Position;
+                _leftYawDeg = _session.Input.YawDeg;
+                _leftPitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, _session.Input.PitchDeg));
+            }
             var notes = new List<string>();
             string report = _session.Report.WriteOnce();
             if (report != null) notes.Add(report);
