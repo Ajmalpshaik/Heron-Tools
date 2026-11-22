@@ -31,7 +31,21 @@ namespace HeronTools.UI.ModelWalk
             string fileName = "Snapshot " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss-fff", CultureInfo.InvariantCulture) + ".png";
             CapturePicture(fileName,
                 saved => _session.Hud.Toast("Snapshot saved: " + ShortFolder() + "\\" + saved, WalkToastKind.Done),
-                failed => _session.Hud.Toast("Snapshot not saved (" + failed + ")", WalkToastKind.Refused));
+                failed => SayPictureProblem("Snapshot not saved (" + failed + ")"));
+        }
+
+        /// <summary>A picture problem: in the pause menu's status line while paused (a toast would not show), else a toast.</summary>
+        private void SayPictureProblem(string text)
+        {
+            if (_paused && _pauseMenuShown)
+            {
+                SetPauseStatus(text);
+                ShrinkToPill();
+            }
+            else if (!_ending)
+            {
+                _session.Hud.Toast(text, WalkToastKind.Refused);
+            }
         }
 
         /// <summary>The walk folder as "...\Model Walk - Model\2026-11-21 10-30-00" - short enough for a message.</summary>
@@ -73,6 +87,15 @@ namespace HeronTools.UI.ModelWalk
 
         private void CaptureNow(string fileName, Action<string> saved, Action<string> failed)
         {
+            // The walk paused or ended during the short wait: the pause or end card now covers the view, so no picture
+            // is taken rather than one with the card in it.
+            if (_paused || _ending)
+            {
+                _snapshotBusy = false;
+                failed?.Invoke(_ending ? "the walk ended before it was taken" : "the walk paused before it was taken");
+                return;
+            }
+
             string problem = null;
             try
             {

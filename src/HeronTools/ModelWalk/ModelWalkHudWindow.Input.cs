@@ -125,10 +125,13 @@ namespace HeronTools.UI.ModelWalk
             {
                 if (_session.Input.Pointer == WalkPointerMode.Inspect)
                     _session.Hud.Toast("Inspect only reads. Right-click or Tab for Select, Snag or Hide.");
-                else if (_session.Input.Pointer == WalkPointerMode.Snag && (_snapshotBusy || _session.Hud.SnagAwaitingPicture > 0))
-                    // Quick snagging: the last snag's picture is still being taken (about a tenth of a second). One
-                    // picture at a time, so the next snag waits for a click of its own rather than losing its picture.
-                    _session.Hud.Toast("One moment - the last snag's picture is being taken. Click again.");
+                else if (_session.Input.Pointer == WalkPointerMode.Snag && (_snapshotBusy || SnagPictureOnItsWay || _pauseAfterPicture))
+                    // Quick snagging: the last snag's picture (or a K snapshot) is still being taken - about a tenth of a
+                    // second. One picture at a time, so the next snag waits for a click of its own rather than losing
+                    // its picture.
+                    _session.Hud.Toast(SnagPictureOnItsWay
+                        ? "One moment - the last snag's picture is being taken. Click again."
+                        : _pauseAfterPicture ? "Pausing..." : "One moment - the snapshot is being taken. Click again.");
                 else
                     _session.Input.ClickQueued = true;
                 e.Handled = true;
@@ -235,7 +238,7 @@ namespace HeronTools.UI.ModelWalk
                 return;
 
             // Fixed keys
-            if (key == Key.Escape) { PauseWalk(); e.Handled = true; return; }
+            if (key == Key.Escape) { PauseWhenAsked(); e.Handled = true; return; }
             if (key == Key.Tab)
             {
                 if (!e.IsRepeat) StepMode((Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : +1);
@@ -282,7 +285,7 @@ namespace HeronTools.UI.ModelWalk
                 case WalkKeyBindings.SpeedDown: if (first) StepSpeed(-1); break;
                 case WalkKeyBindings.CleanScreen: if (first) _cleanScreen = !_cleanScreen; break;
                 case WalkKeyBindings.Help: if (first) _helpVisible = !_helpVisible; break;
-                case WalkKeyBindings.Pause: PauseWalk(); break;
+                case WalkKeyBindings.Pause: PauseWhenAsked(); break;
                 case WalkKeyBindings.FrameTiming: if (first) _showFrameTiming = !_showFrameTiming; break;
                 case WalkKeyBindings.ThirdPerson: if (first) ToggleThirdPerson(); break;
                 default: return;

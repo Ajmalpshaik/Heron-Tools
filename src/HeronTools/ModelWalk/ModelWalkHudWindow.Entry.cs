@@ -119,7 +119,7 @@ namespace HeronTools.UI.ModelWalk
                 failed =>
                 {
                     _session.Hud.SnagPictureBusy = false;
-                    _session.Hud.Toast("Snag " + number + " picture not saved (" + failed + ")", WalkToastKind.Refused);
+                    SayPictureProblem("Snag " + number + " was recorded without a picture (" + failed + ").");
                     AskSnagComment(snag);
                 });
         }
@@ -146,7 +146,7 @@ namespace HeronTools.UI.ModelWalk
 
         private void AskSnagComment(WalkSnag snag)
         {
-            if (_paused || _ending || _closedDown || !_session.Settings.AskSnagComment)
+            if (_paused || _ending || _closedDown || _pauseAfterPicture || !_session.Settings.AskSnagComment)
                 return;
             OpenEntry(EntryKind.SnagComment, snag.Number, "Snag " + snag.Number + " - " + snag.Summary, "",
                 "Type a comment  -  Enter saves  -  Esc skips");

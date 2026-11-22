@@ -5,6 +5,10 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ## [Unreleased]
 
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Snag pictures and pause:** Esc right after a quick snag now waits for that snag's picture (about 0.1 s) instead of
+  dropping it; a pause Revit forces says in the pause menu if a snag was left without its picture. A snag click during
+  a Snapshot (K) now says the snapshot is being taken. Esc waits for a Snapshot too, and a picture is never taken with
+  the pause or end card in it (it is skipped and said instead).
 - **Third-person camera:** a walk that ended while Revit was busy no longer starts the next walk 3 m behind you, and
   a click while turning fast now acts on what was under the crosshair.
 - **Key Settings**: Save now always uses the new keys for this walk and says "Keys saved" (a file that cannot be

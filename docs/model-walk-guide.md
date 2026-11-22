@@ -80,7 +80,8 @@ Linked elements: Select and Hide refuse them (they cannot be picked alone). Snag
 **Quick snagging (standard).** Pick **Snag** mode, aim, left click - and again, and again. Each click records the
 element, colours it red and takes a picture of the view (the HUD is hidden for it, about a tenth of a second). No box
 opens: a short message says "Snag n recorded ... - add a comment in the pause menu (Esc)" and you keep walking. A click
-while the last picture is still being taken is refused with "One moment"; click again.
+while the last picture (or a Snapshot) is still being taken is refused with "One moment"; click again. Esc right after a
+snag waits that moment, so the snag keeps its picture.
 
 **Write the comments afterwards.** Press **Esc**. The pause menu lists every snag (newest first): its number, category,
 family : type and comment - **No comment yet** (in the warning colour) where there is none, and how many still have

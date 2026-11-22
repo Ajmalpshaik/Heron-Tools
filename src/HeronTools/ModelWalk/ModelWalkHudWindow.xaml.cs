@@ -29,6 +29,7 @@ namespace HeronTools.UI.ModelWalk
         private const int EndWaitTicks = 90;        // ~3 s for Revit to run the clean-up before the overlay closes anyway
         private const int EndShowTicks = 150;       // ~5 s to read the end message (a click closes it sooner)
         private const double DeniedStopSeconds = 5; // Revit refusing frames this long ends the walk
+        private const double PauseAfterPictureMaxSeconds = 2; // Esc right after a snag waits for its picture, never longer
 
         /// <summary>The running walk's overlay (one at a time), for the ribbon toggle.</summary>
         internal static ModelWalkHudWindow Active { get; private set; }
@@ -41,6 +42,8 @@ namespace HeronTools.UI.ModelWalk
 
         private IntPtr _hwnd = IntPtr.Zero;
         private bool _paused;
+        private bool _pauseAfterPicture;   // Esc came while a snag's picture was on its way: pause once it is saved
+        private DateTime _pauseAfterPictureSince;
         private bool _ending;          // the end sequence has begun
         private bool _waitingForEngine;
         private bool _closedDown;
@@ -303,6 +306,12 @@ namespace HeronTools.UI.ModelWalk
                 hud.SnagAwaitingPicture = 0;
                 FinishSnagRecord(number);
             }
+            else if (_pauseAfterPicture && (!PictureOnItsWay ||
+                     (DateTime.UtcNow - _pauseAfterPictureSince).TotalSeconds > PauseAfterPictureMaxSeconds))
+            {
+                PauseWalk();   // the snag's picture is saved: now the pause asked for with Esc
+                return;
+            }
             else if (hud.ViewpointAwaitingName > 0 && !_snapshotBusy && !EntryOpen)
             {
                 int number = hud.ViewpointAwaitingName;
@@ -357,6 +366,7 @@ namespace HeronTools.UI.ModelWalk
                 return;
 
             _paused = false;
+            _pauseAfterPicture = false;
             _session.Paused = false;
             _deniedSince = null;   // a refusal from before the pause must not count towards the 5 s
             HidePauseMenu();
@@ -378,12 +388,42 @@ namespace HeronTools.UI.ModelWalk
             RaiseFrame();
         }
 
+        /// <summary>A snag's picture is waiting to be taken or being taken right now.</summary>
+        private bool SnagPictureOnItsWay => _session.Hud.SnagAwaitingPicture > 0 || _session.Hud.SnagPictureBusy;
+
+        /// <summary>Any picture on its way: a snag's, or a Snapshot (K) being taken.</summary>
+        private bool PictureOnItsWay => SnagPictureOnItsWay || _snapshotBusy;
+
+        /// <summary>
+        /// Esc or the Pause key right after a snag click or a Snapshot (K): the pause waits for that picture
+        /// (about a tenth of a second) - pausing at once dropped the picture, or caught the pause card in it. Held keys
+        /// stop at once. At most <see cref="PauseAfterPictureMaxSeconds"/>, then the walk pauses anyway.
+        /// </summary>
+        private void PauseWhenAsked()
+        {
+            if (_paused || _ending || _closedDown)
+                return;
+            if (!EntryOpen && PictureOnItsWay)
+            {
+                if (!_pauseAfterPicture)
+                    _pauseAfterPictureSince = DateTime.UtcNow;
+                _pauseAfterPicture = true;
+                ClearHeldKeys();
+                return;
+            }
+            PauseWalk();
+        }
+
         private void PauseWalk()
         {
             if (_paused || _ending || _closedDown)
                 return;
+            _pauseAfterPicture = false;
             CloseEntry(save: true);                 // keep what was typed
-            _session.Hud.SnagAwaitingPicture = 0;   // the view may change while paused: no picture of the wrong place
+            // The view may change while paused: no picture of the wrong place. Said in the pause menu, so a snag
+            // without a picture is never a surprise (this happens only when Revit took the focus right after a snag).
+            int lostPicture = _session.Hud.SnagAwaitingPicture;
+            _session.Hud.SnagAwaitingPicture = 0;
             _session.Hud.ViewpointAwaitingName = 0; // it keeps its own name; rename it by saving again
             _paused = true;
             _session.Paused = true;
@@ -393,6 +433,11 @@ namespace HeronTools.UI.ModelWalk
             ShowPauseMenu();
             ShowPill("Paused", "Revit is free to use - change Visibility/Graphics, filters, anything, then carry on.",
                 "Enter = carry on    S = settings    K = keys    Esc = end the walk");
+            if (lostPicture > 0)
+            {
+                SetPauseStatus("Snag " + lostPicture + " was recorded without a picture: the walk paused before it was taken.");
+                ShrinkToPill();
+            }
         }
 
         private void ShowPill(string title, string line1, string line2)
