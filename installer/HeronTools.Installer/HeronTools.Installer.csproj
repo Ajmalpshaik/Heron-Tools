@@ -33,7 +33,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Only for a plain "dotnet build". build\build-installer.ps1 passes -p:Version with the version read from
          the HeronTools.dll it packs, so the installer always carries the add-in's version. -->
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <Product>Heron Tools Installer</Product>
     <Company>Ajmal PS</Company>
     <Copyright>Copyright 2026 Ajmal PS. Licensed under the Apache License 2.0.</Copyright>

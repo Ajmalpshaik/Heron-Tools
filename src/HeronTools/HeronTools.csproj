@@ -19,7 +19,7 @@
     <Company>Ajmal PS</Company>
     <Product>Heron Tools</Product>
     <Copyright>Copyright 2026 Ajmal PS. Licensed under the Apache License 2.0.</Copyright>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
 
