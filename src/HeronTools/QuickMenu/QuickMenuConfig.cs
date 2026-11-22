@@ -51,6 +51,8 @@ namespace HeronTools.Services.QuickMenu
             Style = QuickMenuLook.DefaultStyle;
             ShowNames = true;
             Opening = QuickMenuLook.DefaultOpening;
+            Colour = QuickMenuLook.DefaultColour;
+            Effect = QuickMenuLook.DefaultEffect;
             Slots = new List<string>();
         }
 
@@ -68,6 +70,12 @@ namespace HeronTools.Services.QuickMenu
 
         /// <summary>Which of the four ways the wheel opens.</summary>
         public QuickMenuOpening Opening { get; set; }
+
+        /// <summary>Dark or Light. A file saved before this setting existed reads as Dark.</summary>
+        public QuickMenuColour Colour { get; set; }
+
+        /// <summary>Flat, Soft or Clay. A file saved before this setting existed reads as Flat.</summary>
+        public QuickMenuEffect Effect { get; set; }
 
         /// <summary>One command class name per slot, "" for an empty slot. Always SlotCount long.</summary>
         public List<string> Slots { get; private set; }
@@ -158,6 +166,16 @@ namespace HeronTools.Services.QuickMenu
                     {
                         recognised++;
                         config.Opening = QuickMenuLook.ParseOpening(value);
+                    }
+                    else if (string.Equals(name, "Colour", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.Colour = QuickMenuLook.ParseColour(value);
+                    }
+                    else if (string.Equals(name, "Effect", StringComparison.OrdinalIgnoreCase))
+                    {
+                        recognised++;
+                        config.Effect = QuickMenuLook.ParseEffect(value);
                     }
                     else if (name.StartsWith("Slot", StringComparison.OrdinalIgnoreCase))
                     {
@@ -251,7 +269,9 @@ namespace HeronTools.Services.QuickMenu
                     "Diameter=" + Diameter.ToString(CultureInfo.InvariantCulture),
                     "Style=" + Style,
                     "Names=" + (ShowNames ? "On" : "Off"),
-                    "Opening=" + Opening
+                    "Opening=" + Opening,
+                    "Colour=" + Colour,
+                    "Effect=" + Effect
                 };
 
                 for (int i = 0; i < Slots.Count; i++)

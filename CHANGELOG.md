@@ -4,6 +4,15 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Added - Quick Menu look (NEEDS A REAL REVIT TEST)
+- **Colour and Effect for the wheel:** every one of the six designs now comes in **Dark** or **Light**, and **Flat**,
+  **Soft** (neumorphism: soft raised buttons on a plate, the pointed one presses in) or **Clay** (soft 3D clay: rounded
+  buttons, the pointed one pops out in orange with a white icon). Flat and Dark are the standard, so a wheel saved
+  before looks exactly as it did. The soft shadows are drawn once when the wheel opens, never live.
+- **Quick Menu Settings has two tabs:** **Slots** (which tool sits where, as before) and **Look** (design, colour,
+  effect, names, opening and size), with the real wheel shown live on the Look tab - point at it to see a tool light up.
+- The layout file gains two lines, `Colour=` and `Effect=`; an older file without them still reads fine.
+
 ## [1.2.1] - 2026-11-22
 
 Model Walk fixes from the owner's first test on a big linked model (issue #104), plus jump. Release notes:
