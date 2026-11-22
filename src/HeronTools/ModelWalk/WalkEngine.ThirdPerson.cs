@@ -33,6 +33,7 @@ namespace HeronTools.Services.ModelWalk
         private XYZ _characterLastFeet;
         private double _characterSpeedFtPerSec;
         private bool _characterShown;
+        private bool _characterWasMoving;
         private bool _noCharacterToldThisWalk;
         private XYZ _slidePivot;
         private XYZ _slideDirection;
@@ -91,12 +92,15 @@ namespace HeronTools.Services.ModelWalk
                 _thirdForward = null;
                 _characterLastFeet = null;
                 _characterSpeedFtPerSec = 0;
+                _characterWasMoving = false;
                 _slideAllowedFt = -1;
                 return position;
             }
 
             // --- The character: feet on the floor under the eye, facing the look direction ---
             var feet = new XYZ(position.X, position.Y, position.Z - _session.EyeHeightFt);
+            if (_characterLastFeet == null)
+                WalkCharacterServer.ResetPose();   // first third-person frame of this walk, or Q again: start standing
             double walkedFt = 0.0;
             if (_characterLastFeet != null)
             {
@@ -124,9 +128,12 @@ namespace HeronTools.Services.ModelWalk
             // Snag pictures are of the model, not of the character: hidden while one waits or is being taken.
             bool show = hasCharacter && WalkCharacterServer.HasCharacter && hud.SnagAwaitingPicture <= 0 && !hud.SnagPictureBusy;
             pose.Visible = show;
-            if (show != _characterShown || (show && moving))
+            // The frame the blend into Idle finishes is drawn too (moving just went false), so he ends fully standing
+            // rather than a few per cent short of it until something else redraws the view.
+            if (show != _characterShown || (show && (moving || _characterWasMoving)))
                 redraw = true;
             _characterShown = show;
+            _characterWasMoving = moving;
             animating = show && moving;
 
             // --- The camera: behind and right of the head, never through a wall ---
