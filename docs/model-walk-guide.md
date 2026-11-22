@@ -41,7 +41,7 @@ you walk through it. Change these while paused, then carry on.
 | Z | Clean screen - only the crosshair |
 | H | Help card on / off |
 | P or Esc | Pause |
-| F12 | Frame timing (for checking speed on a big model) |
+| F12 | Frame timing (for checking speed on a big model), and a line saying why the third-person character is or is not drawn |
 | Q | First person / third person - see a site worker where you stand (below) |
 
 Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow keys. Left and right Shift, Ctrl
@@ -155,6 +155,9 @@ character)** in Settings.
   no element, no Undo step, nothing saved. Walls and ducts hide him when he walks behind them.
 - Standing still with the mouse still, nothing is redrawn, so he holds his standing pose; he moves again as soon as
   you walk or look around. This keeps a big model from being redrawn 30 times a second just for him.
+- **Character missing?** Press **F12**: the second line starts with why (for example "CUT OFF BY REVIT'S NEAR CUT" -
+  in a very big model Revit itself does not draw anything close to the camera - or "OUTSIDE THE SECTION BOX"). Send
+  that line with a bug report.
 - If the character cannot be read (a damaged install), third person still works - the camera is behind you, nobody is
   drawn - and the walk says so once.
 - When a wall is behind you, the camera **slides in** closer, always stopping in front of the surface, so it never

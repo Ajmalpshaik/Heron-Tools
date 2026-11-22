@@ -373,15 +373,18 @@ namespace HeronTools.Services.ModelWalk
 
         public bool CanExecute(View dBView)
         {
+            bool yes;
             try
             {
-                return Pose.Visible && _animator != null && dBView != null && Pose.ViewId != null && Pose.Document != null &&
-                       dBView.Id == Pose.ViewId && dBView.Document.Equals(Pose.Document);
+                yes = Pose.Visible && _animator != null && dBView != null && Pose.ViewId != null && Pose.Document != null &&
+                      dBView.Id == Pose.ViewId && dBView.Document.Equals(Pose.Document);
             }
             catch (Exception)
             {
-                return false;   // a view half-way through closing: draw nothing
+                yes = false;   // a view half-way through closing: draw nothing
             }
+            if (yes) Diag.CanExecuteYes++; else Diag.CanExecuteNo++;
+            return yes;
         }
 
         public Outline GetBoundingBox(View dBView)
@@ -390,6 +393,8 @@ namespace HeronTools.Services.ModelWalk
             double reach = WalkTuning.MmToFt(1200.0);
             double height = WalkTuning.MmToFt(2000.0);
             XYZ f = Pose.Feet ?? XYZ.Zero;
+            Diag.BoxCalls++;
+            Diag.BoxCentre = f;
             return new Outline(new XYZ(f.X - reach, f.Y - reach, f.Z - WalkTuning.MmToFt(100.0)),
                                new XYZ(f.X + reach, f.Y + reach, f.Z + height));
         }
@@ -398,9 +403,11 @@ namespace HeronTools.Services.ModelWalk
         {
             try
             {
+                Diag.RenderCalls++;
                 WalkCharacterAnimator animator = _animator;
                 if (!Pose.Visible || animator == null || _buffers == null || !DrawContext.IsAvailable())
                     return;
+                ReadCamera();
 
                 if (_format == null || !_format.IsValid())
                 {
@@ -446,10 +453,87 @@ namespace HeronTools.Services.ModelWalk
                     DrawContext.FlushBuffer(b.Vertices, vertexCount, b.Indices, triangleCount * IndexTriangle.GetSizeInShortInts(),
                                             _format, b.Effect, PrimitiveType.TriangleList, 0, triangleCount);
                 }
+                Diag.Drawn++;
+                Diag.LastDrawnUtcTicks = DateTime.UtcNow.Ticks;
+                Diag.LastProblem = null;
+            }
+            catch (Exception ex)
+            {
+                // Broad on purpose: a failed draw only loses the character for one redraw - never Revit's own redraw.
+                Diag.LastProblem = ex.Message;
+            }
+        }
+
+        /// <summary>Revit's camera for this redraw: its near and far cut and the section box planes - for the F12 line only.</summary>
+        private static void ReadCamera()
+        {
+            try
+            {
+                Camera camera = DrawContext.GetCamera();
+                if (camera != null)
+                {
+                    Diag.NearFt = camera.NearDistance;
+                    Diag.FarFt = camera.FarDistance;
+                    Diag.CameraEye = camera.EyePosition;
+                }
+                Diag.ClipPlanes = DrawContext.GetClipPlanes()?.Count ?? 0;
             }
             catch (Exception)
             {
-                // Broad on purpose: a failed draw only loses the character for one redraw - never Revit's own redraw.
+                // Broad on purpose: a diagnostic read must never stop the character being drawn.
+            }
+        }
+
+        // ------------------------------------------------------------------ diagnostics (F12)
+
+        /// <summary>
+        /// What Revit asked of the character server, for the F12 line. Written by Revit's drawing callbacks (which the API
+        /// notes say may run on another thread), read by the walk's frame: plain numbers only, a stale value is harmless.
+        /// </summary>
+        internal static class Diag
+        {
+            public static int CanExecuteYes;
+            public static int CanExecuteNo;
+            public static int BoxCalls;
+            public static int RenderCalls;
+            public static int Drawn;
+            public static long LastDrawnUtcTicks;
+            public static XYZ BoxCentre;
+            public static double NearFt = -1;
+            public static double FarFt = -1;
+            public static XYZ CameraEye;
+            public static int ClipPlanes = -1;
+            public static string LastProblem;
+
+            /// <summary>At the start of each walk, so the line only counts this walk.</summary>
+            public static void Reset()
+            {
+                CanExecuteYes = CanExecuteNo = BoxCalls = RenderCalls = Drawn = 0;
+                LastDrawnUtcTicks = 0;
+                BoxCentre = null;
+                NearFt = FarFt = -1;
+                CameraEye = null;
+                ClipPlanes = -1;
+                LastProblem = null;
+            }
+        }
+
+        /// <summary>Registered and on Revit's active list right now (Revit's thread). For the F12 line; never throws.</summary>
+        internal static string ServiceState()
+        {
+            try
+            {
+                MultiServerService service = Service();
+                if (service == null)
+                    return "no drawing service";
+                if (!service.IsRegisteredServerId(ServerGuid))
+                    return "not registered";
+                return service.GetActiveServerIds().Contains(ServerGuid) ? "registered, active" : "registered, NOT active";
+            }
+            catch (Exception ex)
+            {
+                // Broad on purpose: a diagnostic only.
+                return "service check failed (" + ex.Message + ")";
             }
         }
 

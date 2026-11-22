@@ -102,7 +102,8 @@
                         <TextBlock x:Name="LocationText" Style="{StaticResource HudMain}" FontSize="14" Text="Model Walk"/>
                         <TextBlock x:Name="StatusText" Style="{StaticResource HudSecond}"/>
                         <TextBlock x:Name="ClearHeightText" Style="{StaticResource HudSecond}" Visibility="Collapsed"/>
-                        <TextBlock x:Name="FrameText" Style="{StaticResource HudHint}" Margin="0,3,0,0" Visibility="Collapsed"/>
+                        <TextBlock x:Name="FrameText" Style="{StaticResource HudHint}" Margin="0,3,0,0" Visibility="Collapsed"
+                                   TextWrapping="Wrap" MaxWidth="560"/>
                     </StackPanel>
                 </Border>
 

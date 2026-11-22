@@ -31,6 +31,7 @@ namespace HeronTools.Services.ModelWalk
         private double _lastWorldRefresh;
         private double _lastInspect = -10;
         private double _lastClearHeight = -10;
+        private double _lastCharacterCheck = -10;
         private WalkCollision _collision;
         private bool _ended;
 
@@ -97,6 +98,7 @@ namespace HeronTools.Services.ModelWalk
 
         public WalkEngine(WalkSession session)
         {
+            WalkCharacterServer.Diag.Reset();   // the F12 character line counts this walk only
             _session = session;
             _current = this;
         }
@@ -373,6 +375,12 @@ namespace HeronTools.Services.ModelWalk
                 WalkRayHit upHit = down != null ? _collision.CastNear(position, XYZ.BasisZ, WalkTuning.NearBoxAboveFt) : null;
                 if (down != null && upHit != null)
                     hud.ClearHeightMm = WalkTuning.FtToMm(down.DistanceFt + upHit.DistanceFt);
+            }
+
+            if (now - _lastCharacterCheck >= WalkTuning.ClearHeightRefreshSec)
+            {
+                _lastCharacterCheck = now;
+                CheckCharacter(doc, view, input, hud, position);
             }
 
             UpdateRoom(doc, view, position, now, hud);
