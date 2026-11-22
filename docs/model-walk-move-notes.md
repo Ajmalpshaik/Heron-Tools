@@ -1173,3 +1173,33 @@ API: `Reference.LinkedElementId`, `Reference.ElementId` (2020-2027, 64-bit id th
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 75 | NEEDS REAL REVIT |
+
+## Walk view without annotation (owner's request A, after #104)
+
+| What | How |
+|---|---|
+| Annotation in the walk | At every start the walk view (only) hides every category of type Annotation - levels, grids, section / elevation / callout marks, tags, dimensions, text, and the rest - plus **Scope Boxes** (`OST_VolumeOfInterest`) and **Reference Planes** (`OST_CLines`). `View.CanCategoryBeHidden` is checked for each; only categories still shown are changed. |
+| View template | A template on the walk view locks Visibility/Graphics, so it is taken off the walk view (only). |
+| Linked models | A link's annotation follows the walk view's categories while the link's Visibility/Graphics is "By host view" (Revit's default). A link set to "Custom" keeps its own - change it in the walk view's Visibility/Graphics > Revit Links if needed. |
+| Undo | Together with the section box / far clip rule in the same one Undo step "Model Walk: walk view settings", made only when something changes. The walk says what it did. |
+| Imported CAD, point clouds | Kept (model content, not annotation). |
+| Your own views | Never changed. Show a category again in the walk view's Visibility/Graphics while paused; the next walk start hides it again. |
+
+API checked in the `Nice3point.Revit.Api` 2020-2027 XML (and compiled in all eight): `View.CanCategoryBeHidden`,
+`View.GetCategoryHidden`, `View.SetCategoryHidden`, `Category.CategoryType`, `View.ViewTemplateId` (set).
+
+### Revit test steps
+
+76. **No annotation in the walk.** In a model whose 3D views show levels, grids and scope boxes, start Model Walk: none
+    of them in the walk view, the message "Walk view: ... annotation (levels, grids, tags...) hidden ...", one Undo step.
+    Your own 3D view still shows them. A second start makes no new Undo step.
+77. **Walk view with a template.** Give the walk view a view template (View Properties), end the walk, start again: the
+    template is off the walk view and the message says so. Linked model's grids and levels are hidden too (link "By
+    host view").
+
+| Check (annotation) | State |
+|---|---|
+| Revit API members above in `Nice3point.Revit.Api` 2020-2027 | PASS - compiled in all eight |
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 76-77 | NEEDS REAL REVIT |

@@ -12,6 +12,8 @@ Planned as 1.2.1: Model Walk fixes from the owner's first test on a big linked m
   near cut in a very big model is farther than the character, the walk says so once instead of showing nothing.
 - **Building cut away:** a walk that starts outside the walk view's section box switches that section box off (the walk
   view only, one Undo step, and the walk says so); far clipping is switched off. A box you start inside stays.
+- **No annotation in the walk view:** levels, grids, scope boxes, reference planes, marks, tags, dimensions and text are
+  hidden in the walk view (only), and a view template is taken off it - in the same one Undo step.
 - **Start on a roof:** the location line says "on a roof (outside)" and the walk says once how to get inside.
 - **"Something Revit could not name"** in the readout now names the link it is in (and the ID when Revit has one).
 - Long messages stay on screen long enough to read (up to 9 s).
