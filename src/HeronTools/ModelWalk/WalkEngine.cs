@@ -544,9 +544,11 @@ namespace HeronTools.Services.ModelWalk
             // The third-person character goes first, whatever else fails: hidden, off the active list, removed if Revit allows.
             bool characterWasShown = WalkCharacterServer.Pose.Visible;
             WalkCharacterServer.SwitchOff();
-            if (characterWasShown && doc.IsValidObject)
+            if (characterWasShown && app != null && doc.IsValidObject)   // no app: the model is closing - no redraw then
             {
-                try { app?.ActiveUIDocument?.RefreshActiveView(); }
+                // Every open view of the walk's model, not only the active one: after "you switched to another view",
+                // the walk view can still be on screen (tiled, a second monitor) with the character in its last picture.
+                try { new UIDocument(doc).UpdateAllOpenViews(); }
                 catch (Autodesk.Revit.Exceptions.ApplicationException) { /* the next redraw clears it */ }
             }
 
