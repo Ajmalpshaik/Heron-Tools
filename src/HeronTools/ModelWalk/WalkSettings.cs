@@ -218,7 +218,7 @@ namespace HeronTools.Services.ModelWalk
                 Directory.CreateDirectory(Path.GetDirectoryName(file));
                 var speeds = new List<string>();
                 foreach (double v in SpeedsMetresPerSec)
-                    speeds.Add(v.ToString("0.###", CultureInfo.InvariantCulture));
+                    speeds.Add(v.ToString("R", CultureInfo.InvariantCulture));   // exact: 1.0001 and 1.0004 must not both save as 1
                 var lines = new List<string>
                 {
                     "SensitivityPercent=" + SensitivityPercent.ToString("0.###", CultureInfo.InvariantCulture),
