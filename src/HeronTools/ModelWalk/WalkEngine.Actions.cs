@@ -167,7 +167,7 @@ namespace HeronTools.Services.ModelWalk
         private void Measure(XYZ position, XYZ forward, WalkHudState hud)
         {
             string key = _session.Keys.Label(WalkKeyBindings.Measure);
-            WalkRayHit hit = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
+            WalkRayHit hit = _collision.CastFull(AimFrom(position), AimAlong(forward), WalkTuning.AimRangeFt);
             if (hit == null)
             {
                 hud.Toast("Measure: aim at a surface, then press " + key, WalkToastKind.Refused);
@@ -356,7 +356,7 @@ namespace HeronTools.Services.ModelWalk
 
         private XYZ GoToPoint(XYZ position, XYZ forward, WalkHudState hud)
         {
-            WalkRayHit target = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
+            WalkRayHit target = _collision.CastFull(AimFrom(position), AimAlong(forward), WalkTuning.AimRangeFt);
             if (target == null)
             {
                 hud.Toast("Aim at a floor or a surface first, then release " + _session.Keys.Label(WalkKeyBindings.GoToPoint), WalkToastKind.Refused);
@@ -503,7 +503,7 @@ namespace HeronTools.Services.ModelWalk
 
         private WalkRayHit ClickTarget(XYZ position, XYZ forward, WalkHudState hud)
         {
-            WalkRayHit hit = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
+            WalkRayHit hit = _collision.CastFull(AimFrom(position), AimAlong(forward), WalkTuning.AimRangeFt);
             if (hit?.Element == null)
             {
                 hud.Toast("Nothing under the crosshair", WalkToastKind.Refused);

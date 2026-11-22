@@ -83,6 +83,13 @@ namespace HeronTools.Commands.ModelWalk
                     ViewOrientation3D o = walkView.GetOrientation();
                     eye = o.EyePosition;
                     ForwardToAngles(o.ForwardDirection, out yaw, out pitch);
+                    // The last walk ended in third person while Revit was busy: start from the player, not the camera.
+                    if (WalkEngine.TakeLeftThirdPersonCamera(doc, walkView.Id, eye, out XYZ playerEye, out double playerYaw, out double playerPitch))
+                    {
+                        eye = playerEye;
+                        yaw = playerYaw;
+                        pitch = playerPitch;
+                    }
                 }
                 else
                 {

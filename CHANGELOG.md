@@ -5,6 +5,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ## [Unreleased]
 
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Third-person camera:** a walk that ended while Revit was busy no longer starts the next walk 3 m behind you, and
+  a click while turning fast now acts on what was under the crosshair.
 - **Key Settings**: Save now always uses the new keys for this walk and says "Keys saved" (a file that cannot be
   written shows a message, as Settings does); the window, help card, Settings window, guide and ribbon tooltip now
   describe every key and setting as the code does (Pass-through rises and sinks like Fly, remapped keys, Enter fixed).
@@ -27,6 +29,14 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   Revit's own graphics service (nothing added to the model, no Undo step).
   Collision, steps and doors stay with you; clicks, Measure and the readout aim from the camera so they land on the
   crosshair. The status line says First person / Third person. Snag pictures hide the character; snapshots show him.
+
+### Fixed - Model Walk files (NEEDS A REAL REVIT TEST)
+- **Keys:** an action left without a key no longer comes back next walk as "had a key that cannot be used (None)" -
+  that wrong note hid the real one ("has no key: its standard key is used by another action").
+- **Settings:** the five walk speeds are saved exactly. Two close speeds (1.0001 and 1.0004 m/s) used to save as the
+  same number, so the next walk put all five back to standard.
+- **Character file:** the reader refuses a file nested too deep or with an impossible size before it uses memory, and a
+  bad speed or bone weight can no longer break the animation for the rest of the walk.
 
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
