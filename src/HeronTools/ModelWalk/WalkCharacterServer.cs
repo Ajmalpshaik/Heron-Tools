@@ -165,6 +165,29 @@ namespace HeronTools.Services.ModelWalk
             }
         }
 
+        /// <summary>
+        /// Puts the character back to standing (start of Idle, no blend) - called on the first third-person frame of a
+        /// walk or after Q, so he never finishes a clip left over from the last time. Never throws.
+        /// </summary>
+        internal static void ResetPose()
+        {
+            WalkCharacterAnimator animator = _animator;
+            if (animator == null)
+                return;
+            try
+            {
+                animator.Reset();
+                _poseVersion++;
+            }
+            catch (Exception ex)
+            {
+                // Broad on purpose, as in Advance: a maths fault only loses the character, never the walk.
+                _animator = null;
+                CharacterProblem = "the character's animation failed (" + ex.Message + ")";
+                Pose.Visible = false;
+            }
+        }
+
         /// <summary>True when a character was read and can be drawn.</summary>
         internal static bool HasCharacter => _animator != null;
 
