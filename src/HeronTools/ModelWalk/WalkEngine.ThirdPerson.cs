@@ -29,6 +29,7 @@ namespace HeronTools.Services.ModelWalk
         // (the distance walked gives its speed), that speed smoothed, what was drawn last, whether "no character" was
         // already said this walk, and the wall-slide ray's last answer (cast again only when the camera moved).
         private XYZ _thirdEye;
+        private XYZ _thirdForward;   // the look sent with _thirdEye - together they are the picture on screen
         private XYZ _characterLastFeet;
         private double _characterSpeedFtPerSec;
         private bool _characterShown;
@@ -40,6 +41,13 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>Where the crosshair ray starts: the camera in third person, the eye in first person.</summary>
         private XYZ AimFrom(XYZ position) => _thirdEye ?? position;
+
+        /// <summary>
+        /// Which way the crosshair ray goes. Third person: the look sent with the camera in <see cref="AimFrom"/>, so a
+        /// click (handled before this frame's camera move) aims through the crosshair of the picture on screen - the
+        /// previous camera with this frame's newer look missed by a few cm when turning fast. First person: as before.
+        /// </summary>
+        private XYZ AimAlong(XYZ forward) => _thirdEye != null && _thirdForward != null ? _thirdForward : forward;
 
         /// <summary>Distance from the player to a crosshair hit (the ray itself may start at the camera, 3 m behind).</summary>
         private double PlayerDistanceFt(WalkRayHit hit, XYZ position) =>
@@ -81,6 +89,7 @@ namespace HeronTools.Services.ModelWalk
                 pose.Visible = false;
                 _characterShown = false;
                 _thirdEye = null;
+                _thirdForward = null;
                 _characterLastFeet = null;
                 _characterSpeedFtPerSec = 0;
                 _characterWasMoving = false;
@@ -134,6 +143,7 @@ namespace HeronTools.Services.ModelWalk
             if (length < 1e-6)
             {
                 _thirdEye = pivot;
+                _thirdForward = forward;
                 return pivot;
             }
             XYZ direction = offset / length;
@@ -169,6 +179,7 @@ namespace HeronTools.Services.ModelWalk
             }
 
             _thirdEye = pivot + (direction * Math.Min(length, _slideAllowedFt));
+            _thirdForward = forward;
             return _thirdEye;
         }
     }
