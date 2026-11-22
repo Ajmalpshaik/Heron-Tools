@@ -557,15 +557,18 @@ namespace HeronTools.Services.ModelWalk
             // Already a snag in THIS walk's report: say which one, no second row. An element still red from an earlier
             // walk (kept colours), or whose snag step was undone, is a new snag for this report: it gets its row, and
             // the colour memory keeps its true original (Colour copies the override only the first time).
-            if (!hit.FromLink)
+            // A linked element is the same snag only in the same link instance: the same link placed twice (a typical
+            // floor) puts the same element in two places, two real snags.
+            foreach (WalkSnag earlier in _session.Report.Snags)
             {
-                foreach (WalkSnag earlier in _session.Report.Snags)
+                bool same = hit.FromLink
+                    ? earlier.LinkInstanceId != null && earlier.LinkInstanceId == hit.Link.Id &&
+                      !string.IsNullOrEmpty(earlier.UniqueId) && earlier.UniqueId == (hit.Element.UniqueId ?? "")
+                    : earlier.HostElementId != null && earlier.HostElementId == hit.Element.Id;
+                if (same)
                 {
-                    if (earlier.HostElementId != null && earlier.HostElementId == hit.Element.Id)
-                    {
-                        hud.Toast("Already snag " + earlier.Number + " in this walk: " + what);
-                        return;
-                    }
+                    hud.Toast("Already snag " + earlier.Number + " in this walk: " + what);
+                    return;
                 }
             }
 
@@ -582,6 +585,7 @@ namespace HeronTools.Services.ModelWalk
                 LinkName = hit.FromLink ? WalkCollision.LinkName(hit.Link) : "",
                 Room = hud.RoomText,
                 HostElementId = hit.FromLink ? null : element.Id,
+                LinkInstanceId = hit.FromLink ? hit.Link.Id : null,
                 HitPoint = hit.Point,
                 Eye = position,
                 YawDeg = input.YawDeg,

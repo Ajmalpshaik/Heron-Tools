@@ -44,6 +44,8 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>This model's element, for Open snag; null for a linked element (it cannot be selected).</summary>
         public ElementId HostElementId;
+        /// <summary>The link instance a linked element was snagged in (null for this model's own), so it is not snagged twice.</summary>
+        public ElementId LinkInstanceId;
 
         // Where, in Revit internal feet, and how the camera looked
         public XYZ HitPoint;
@@ -238,7 +240,8 @@ namespace HeronTools.Services.ModelWalk
                     Mm(p?.X), Mm(p?.Y), Mm(p?.Z),
                     Camera(s),
                     s.PictureFile,
-                    s.Coloured ? "coloured in the walk view" : "not coloured: " + s.NotColouredWhy);
+                    // The state when the snag was recorded: J, a Save or a Sync can give the colour back later in the walk.
+                    s.Coloured ? "coloured when recorded" : "not coloured: " + s.NotColouredWhy);
             }
             return r.ToString();
         }
