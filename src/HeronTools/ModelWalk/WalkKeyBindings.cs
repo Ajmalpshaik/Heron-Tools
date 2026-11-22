@@ -263,6 +263,10 @@ namespace HeronTools.Services.ModelWalk
                 string keyName = raw.Substring(split + 1).Trim();
                 if (!IsKnownAction(id))
                     continue;
+                // "None" is what Save writes for an action that was left without a key: nothing to read, not a damaged
+                // line. It then gets its standard key if that is free, else the plain "has no key" note below.
+                if (keyName == nameof(Key.None))
+                    continue;
                 // Enum.TryParse alone takes "999" or a name for no real key - check the key is real and allowed.
                 if (!Enum.TryParse(keyName, out Key key) || int.TryParse(keyName, out _) || !IsAllowed(key))
                 {

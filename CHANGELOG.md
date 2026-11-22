@@ -9,6 +9,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   dropping it; a pause Revit forces says in the pause menu if a snag was left without its picture. A snag click during
   a Snapshot (K) now says the snapshot is being taken. Esc waits for a Snapshot too, and a picture is never taken with
   the pause or end card in it (it is skipped and said instead).
+- **Third-person camera:** a walk that ended while Revit was busy no longer starts the next walk 3 m behind you, and
+  a click while turning fast now acts on what was under the crosshair.
 - **Third person now shows a real character** (from AJ-Tools Game Mode v1.61.0): a site worker in a yellow hard hat,
   1850 mm tall, in place of the blocky figure, which is removed. He stands when you stop, walks when you move and runs
   with Shift, blending smoothly between them; his legs speed up with you up to a limit, so at the faster speed steps
@@ -28,6 +30,14 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   Revit's own graphics service (nothing added to the model, no Undo step).
   Collision, steps and doors stay with you; clicks, Measure and the readout aim from the camera so they land on the
   crosshair. The status line says First person / Third person. Snag pictures hide the character; snapshots show him.
+
+### Fixed - Model Walk files (NEEDS A REAL REVIT TEST)
+- **Keys:** an action left without a key no longer comes back next walk as "had a key that cannot be used (None)" -
+  that wrong note hid the real one ("has no key: its standard key is used by another action").
+- **Settings:** the five walk speeds are saved exactly. Two close speeds (1.0001 and 1.0004 m/s) used to save as the
+  same number, so the next walk put all five back to standard.
+- **Character file:** the reader refuses a file nested too deep or with an impossible size before it uses memory, and a
+  bad speed or bone weight can no longer break the animation for the rest of the walk.
 
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own

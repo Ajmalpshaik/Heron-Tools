@@ -392,9 +392,9 @@ from AJ-Tools.
 | 45 Standing still costs no redraws | | | | |
 | 46 Big model speed with the character (F12) | | | | |
 | 47 Colours, walls and pictures with the character | | | | |
-| 50 Esc right after a snag keeps its picture | | | | |
-| 51 Snag click during a Snapshot (K) | | | | |
-| 52 No pause / end card in a picture | | | | |
+| 51 Esc right after a snag keeps its picture | | | | |
+| 52 Snag click during a Snapshot (K) | | | | |
+| 53 No pause / end card in a picture | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -470,11 +470,11 @@ the diffs in the HUD, keys and session). AJ-Tools was read only, never changed.
 | Switch | Key **Q** (new remappable action `ThirdPerson`, "First / third person (show a character)"; Q was free) and the setting **Third-person view (show a character)** (Settings, Look card; `ThirdPerson` in `ModelWalkSettings.txt`, **off** by default) - the view each walk starts in. Saving Settings with the box changed switches the running walk too. The status line ends "First person" / "Third person"; the help card lists the key. |
 | Camera | 3000 mm behind and 500 mm right of a pivot 1900 mm above the feet (along the full look direction, so looking down lifts the camera). **One** cast (`CastNear`, host + near links - up to 2 rays, the near box round the eye) from the pivot to the camera; a hit pulls the camera in to 250 mm before it, never closer than 300 mm - unless the surface is closer than 550 mm, then half way to it (always in front of it; stage 6 review). Cast only when the pivot or direction changed and both rays fit in the 24-ray budget; otherwise the last answer is kept (or the 300 mm camera if there is none) - never a guess. No ray in Pass-through. |
 | Character | Was: about 17 shaded boxes in the Heron colours. **Replaced** by the real character - see "The real character (2026-11-21, stage 8)" at the end. Drawn only in the walk view of the walk's model (`ElementId` **and** `Document` matched - ids repeat across models). No transaction, no element, no Undo step. |
-| Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera, which is the picture the modeller aimed at. |
+| Player vs camera | Player: collision, gravity, step-up, door hint and E, floor and clear height, room, viewpoints, the snag's camera / "where you stood", Open snag. Camera: the crosshair ray - readout, Select, Snag, Hide, Measure, Go to point - so clicks land on the crosshair; distances shown (readout, "Moved ... mm") are from the player. Clicks use the previous frame's camera **and the look it was sent with**, which is the picture the modeller aimed at (camera session). |
 | Rays | Third person adds at most **1** cast (2 rays with near links) a frame (the wall slide), only while the camera moves; the readout ray just starts at the camera. Measure with F12 on a big model (step 40). |
 | Redraws | The camera moving already redraws. With no camera move, the view is refreshed only when the character appears or goes, or while it walks, runs or blends on the spot (frames are asked for until it stands). |
 | Snag pictures | The character is hidden from the snag click until its picture is saved (`SnagAwaitingPicture`, then `SnagPictureBusy` from the HUD) - snag pictures show the model only. **Snapshots (K) show the character** (they are what you see); Q first for one without it. |
-| Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. When a walk ends in third person on Revit's thread, `End` puts the walk view's camera back on the player's eye (stage 6 review: the next walk starts from that camera). Only when the walk ends without Revit's thread (Revit busy, overlay fault) does it stay 3 m back. |
+| Viewpoints, Save as 3D view | Save the player's eye and look, never the third-person camera offset. "Save as 3D view" therefore looks from the player's eyes. When a walk ends in third person on Revit's thread, `End` puts the walk view's camera back on the player's eye (stage 6 review: the next walk starts from that camera). When the walk ends without Revit's thread (Revit busy, overlay fault) the view cannot be touched; the next walk in that model starts from the player instead, if the camera was not moved since (camera session). |
 
 ### Switching the character off - what Revit allows
 
@@ -546,12 +546,12 @@ A fresh read of the whole change (`git diff origin/main...HEAD`), the files it t
 
 | # | Severity | Finding | State |
 |---|---|---|---|
-| R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). Left: an end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view; that rare case still starts 3 m back. |
+| R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). An end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view - fixed later at the next walk's start (camera session, C1). |
 | R2 | Medium | Wall slide: with a surface closer than 550 mm along the camera ray (a duct or slab just above the head while looking down), the camera was still put 300 mm out - past the surface, so the view looked from inside or behind it. | **Fixed** - the camera stops half way to such a surface, always in front of it. |
 | R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. |
 | R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and cancels a pending switch-off. `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
 | R5 | Checked, no defect | Quick snags: the "One moment" refusal, the picture hand-off (`SnagAwaitingPicture` cleared and `SnagPictureBusy` set in the same UI-thread call, so the figure cannot come back between them), `Snags.csv` rewritten through the temp file with the #41 separator and quoting for commas, quotes and line breaks, comment-box keys (Enter / Esc / repeats), Open still adds to the selection, the setting on = the old box. | - |
-| R6 | Note, not changed | A click uses the previous frame's camera with this frame's look direction; turning fast while clicking in third person can shift the hit by a few centimetres. First person has the same one-frame lag. A snag recorded and then paused within 0.1 s keeps no picture (as before this change). The "One moment" message also shows while a Snapshot (K) is being taken. | Left - no new behaviour asked for. |
+| R6 | Note, not changed | A click uses the previous frame's camera with this frame's look direction; turning fast while clicking in third person can shift the hit by a few centimetres. First person has the same one-frame lag. A snag recorded and then paused within 0.1 s keeps no picture (as before this change). The "One moment" message also shows while a Snapshot (K) is being taken. | Click offset fixed later (camera session, C2); the rest left - no new behaviour asked for. |
 
 Extra Revit test steps:
 
@@ -667,6 +667,32 @@ Extra Revit test step:
 | Reader + animator outside Revit, en-US / de-DE / fr-FR, 18 broken files, NaN / infinite input | PASS (S1-S3 failed before their fixes) |
 | Buffer reuse and dispose over a long walk and two models (step 48) | NEEDS REAL REVIT |
 
+## Third-person camera session (2026-11-22)
+
+Builds only - nothing here has run in Revit. Area: the camera (offset, wall slide, ray budget, aim rays, Q, end paths),
+not the character drawing.
+
+| # | Finding | State |
+|---|---|---|
+| C1 | A walk ended in third person **without** Revit's thread (Revit busy 3 s, overlay fault) left the walk view's camera 3 m back, and the next walk started there (stage 6 R1, the case left). | **Fixed** - `EndWithoutRevit` (no Revit API) remembers the model, the walk view, the camera it left and the player's eye and look. `CmdModelWalk` starts the next walk in that model and view from the player when the walk view's camera is still within 5 mm of where it was left; a camera the modeller moved since is kept. A walk in another model keeps the note for its own model. |
+| C2 | In third person a click (handled before this frame's camera move) used the previous camera with this frame's newer look - a few cm off when turning fast (stage 6 R6). | **Fixed** - clicks, Measure and Go to point use the look that camera was sent with (`AimAlong`), so they go through the crosshair of the picture on screen. The readout already used this frame's camera and look. First person unchanged. |
+| C3 | Q mid-move and during Play viewpoints: the first third-person frame always casts the wall slide (`_slideAllowedFt` reset to -1 by first person); Play viewpoints moves the player, the camera follows with the slide cast when it moved (Play uses no movement rays). Every end path on Revit's thread puts the camera back (`End`), the rest now C1. | Checked, no defect |
+
+Extra Revit test steps (camera session):
+
+- **Camera-1. Busy end in third person.** In third person, stand near a wall with a room behind you. Start a Revit
+  command that keeps Revit busy for more than 3 s (or close the overlay with Alt+F4 while a modal dialog is open) so the
+  walk ends with "Revit was busy". Click Model Walk again: you start where the character stood, not 3 m back. Repeat,
+  but orbit the walk view by hand before starting again: the walk starts from your orbited camera.
+- **Camera-2. Click while turning.** In third person, aim at the edge of a thin pipe, then turn the mouse fast and
+  click while turning, in Select mode. The pipe that was under the crosshair at the click is selected.
+
+| Check (camera session) | State |
+|---|---|
+| Camera-1, Camera-2 | NEEDS REAL REVIT |
+| Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+
 ## Character polish (2026-11-22)
 
 Two small fixes in the character drawing, from the stage 8 review's notes. Builds and an outside-Revit check only.
@@ -689,6 +715,26 @@ Revit test step:
 | `Reset()` outside Revit (throwaway test): after running, back to Idle, not moving, 1850 mm, the same pose as the first load, 0 bytes allocated | PASS |
 | Step 49 in Revit | NEEDS REAL REVIT |
 
+## File readers review (2026-11-22)
+
+A read of every Model Walk file reader and writer: `ModelWalkSettings.txt` (`WalkSettings`), `ModelWalkKeys.txt`
+(`WalkKeyBindings`), the viewpoint store (`WalkViewpointStore`), and the character reader (`WalkJson`,
+`WalkCharacterModel`, the embedded resource - see "Stage 8 review" above). Run outside Revit in a throwaway .NET test
+(not committed - the repo has no test project) in **de-DE**, with missing, damaged and hand-edited files.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| F1 | Medium | Keys: `Save` writes `Action=None` for an action left without a key (its standard key taken by another). The next walk read that as a damaged line - "had a key that cannot be used (None)" - and the HUD shows only the first note, so the true one ("has no key: its standard key is used by another action, press K") was hidden. | **Fixed** (`2171dfe`) - `None` is skipped as "no key saved": the action gets its standard key if free, else the true note. |
+| F2 | Low | Settings: the five speeds were saved rounded to 3 decimals. Two speeds the window accepts (1.0001 and 1.0004 m/s) saved as the same number, the next walk found them not increasing, and all five went back to standard. | **Fixed** (`df6ae57`) - saved exactly (`R`, invariant culture). |
+| F3 | Checked, no defect | All three files: numbers written and read in the invariant culture (de-DE writes `1650.5`, a hand-typed `1,7` is refused, not read as 17); NaN, `1e999`, out-of-range and unknown lines keep the standard value with one plain note; missing file = standard, no note; read refusal (locked, no access) caught; every save goes through a `.tmp` file then `File.Replace` / `File.Move`, and an I/O or access error comes back as a plain message, never an exception. Viewpoints round-trip exactly (`R`), names with tabs / line breaks cleaned, empty names become "Viewpoint", pitch over 90 degrees refused. Swapped keys (W / S) round-trip with no note. | - |
+| F4 | Note, not changed | A viewpoint file name is the model name + a 16-character hash. On Revit 2020-2024 (.NET Framework, 260-character paths) a model name over about 170 characters makes the path too long: the viewpoints cannot be saved, and the walk says so plainly ("could not be saved (... too long ...)"). Shortening the name would move existing viewpoints of long-named models to a new file, so it is left. Revit 2025+ has no such limit. | Left - told here. |
+
+| Check (file readers) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Settings / keys / viewpoints outside Revit, de-DE, missing + damaged files (F1, F2 failed before their fixes) | PASS |
+| 50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |
 ---
 
 # Snag pictures and pause (2026-11-22, quick snags session)
@@ -703,11 +749,11 @@ The two notes the stage 6 / stage 8 reviews left (R6 above).
 
 ### Revit test steps
 
-50. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
+51. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
     Expect the walk to pause a blink later, and `Snag nnn.png` to show the red duct with no pause card in it. Then
     snag, and Alt+Tab away at once: the pause menu says "Snag n was recorded without a picture".
-51. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
+52. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
     taken. Click again."; click again: recorded with its picture.
-52. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
+53. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
     Snag, then make Revit take the focus at once (Alt+Tab): no snag picture with the pause card in it; the pause menu
     says the snag was recorded without a picture.
