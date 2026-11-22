@@ -12,6 +12,7 @@
 
 using System;
 using Autodesk.Revit.DB;
+using HeronTools.Utils;
 
 namespace HeronTools.Services.ModelWalk
 {
@@ -110,6 +111,8 @@ namespace HeronTools.Services.ModelWalk
                 }
                 ground = _collision.CastFull(position, -XYZ.BasisZ, WalkTuning.FloorSearchFt);
             }
+
+            _groundIsRoof = ground?.Element?.Category != null && ElementIdHelper.IsCategory(ground.Element.Category.Id, BuiltInCategory.OST_Roofs);
 
             if (ground == null)
             {

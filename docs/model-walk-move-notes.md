@@ -1116,3 +1116,34 @@ says it "may be called in a separate thread": the diagnostics it writes are plai
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Steps 70-71 | NEEDS REAL REVIT |
+
+## Section box, far clipping and a start on a roof (#104, part 2)
+
+| Seen | Decision |
+|---|---|
+| The building cut away by straight planes while the player stood outside it (on a linked roof). | At every start, on the **walk view only**: a section box the start eye is **outside** of is switched off; far clipping is switched off. One Undo step "Model Walk: walk view settings", only when something was on, and the walk says what it switched off. A section box you start **inside** is kept - walking through what it cuts is a feature (see the guide). The modeller's own 3D view is never changed. To have a section box, turn it on while paused (it is kept for that walk; next start, the same rule). |
+| A new walk view could inherit a default view template from the 3D view type. | The new walk view has no view template (as the code comment already said). |
+| The start on top of a roof, with nothing saying so. | While you stand on a roof (this model's or a link's, `OST_Roofs`) the location line says "on a roof (outside)", and once a walk the walk says how to get in: Go to point, Fly down, or start from a 3D view that looks inside. Nothing moves you by itself - the simplest safe behaviour. |
+| Toasts were 2.6 s - too short for a sentence of advice. | A long message stays about 15 characters a second, up to 9 s. |
+
+API checked in the `Nice3point.Revit.Api` 2020-2027 XML (and compiled in all eight): `View3D.IsSectionBoxActive`
+(get / set), `View3D.GetSectionBox`, `BoundingBoxXYZ.Transform`, `View.ViewTemplateId` (set),
+`BuiltInParameter.VIEWER_BOUND_ACTIVE_FAR`.
+
+### Revit test steps
+
+72. **Start outside a section box.** In the walk view, while paused, turn on Section Box and drag it so it is below
+    where you stand; end the walk. Click Model Walk again: expect the message "You started outside the walk view's
+    section box, so it was switched off", the building whole, one Undo step "Model Walk: walk view settings", and your
+    own 3D view's section box unchanged.
+73. **Start inside a section box.** Same, but the box around you: it stays on and no Undo step is made.
+74. **Start on a roof.** In the big linked model, start where the walk view stands on the linked roof (EL. +110.150):
+    expect "on a roof (outside)" on the location line and the message on how to get inside; use Go to point to a floor
+    inside - the note goes away.
+
+| Check (#104, view and start) | State |
+|---|---|
+| Revit API members above in `Nice3point.Revit.Api` 2020-2027 | PASS - compiled in all eight |
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 72-74 | NEEDS REAL REVIT |
