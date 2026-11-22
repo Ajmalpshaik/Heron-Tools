@@ -139,9 +139,9 @@ GitHub **Gates** check makes the same file on every change (download it from the
 
 To release: push a version tag that matches `<Version>` in `src/HeronTools/HeronTools.csproj`
 (`git tag v1.0.0`, then `git push origin v1.0.0`). The **Release** workflow builds every Revit year again,
-refuses a tag that does not match the built version, and makes a **draft** GitHub release with
-`HeronToolsInstaller.exe` attached. A draft is seen only by the owner; publish it after the Revit test.
-A tag with a hyphen (`v1.0.0-beta.1`) is marked pre-release.
+refuses a tag that does not match the built version, and publishes a GitHub **pre-release** with
+`HeronToolsInstaller.exe` and `SHA256SUMS.txt` attached; its text is `docs/releases/<version>.md` when that
+file exists. After the owner's Revit test, edit the release and set it as the latest (full) release.
 
 ## Help
 
@@ -289,7 +289,7 @@ Directory.Build.props    Revit year -> .NET runtime, output folders, compile sym
 [CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) · [CODE OF CONDUCT](CODE_OF_CONDUCT.md) ·
 [DISCLAIMER](DISCLAIMER.md) · [CHANGELOG](CHANGELOG.md) · [AGENTS](AGENTS.md) (for AI agents working on the code)
 
-For modellers: [Install](docs/install.md) · [Tool catalogue](docs/tools/README.md) · [Model Walk guide](docs/model-walk-guide.md)
+For modellers: [Install](docs/install.md) · [Tool catalogue](docs/tools/README.md) · [Model Walk guide](docs/model-walk-guide.md) · [Release notes](docs/releases/)
 
 Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
 [Panels move notes](docs/panels-move-notes.md) · [Model Walk move notes](docs/model-walk-move-notes.md) · [Model Walk guide](docs/model-walk-guide.md) ·
