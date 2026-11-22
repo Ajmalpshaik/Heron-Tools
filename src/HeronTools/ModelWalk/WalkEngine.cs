@@ -609,7 +609,18 @@ namespace HeronTools.Services.ModelWalk
             if (report != null) notes.Add(report);
             if (!touchModel && doc.IsValidObject)
             {
-                // The model is closing: nothing in it was touched. If the close is cancelled, say what is still on.
+                // The model is closing: nothing in it was touched. In third person the walk view's camera stays 3 m
+                // behind the player - if the close is cancelled, the next walk in this model puts it right.
+                if (_thirdEye != null && _lastEye != null && _session.Position != null)
+                {
+                    _leftDoc = doc;
+                    _leftViewId = _session.WalkViewId;
+                    _leftCameraEye = _lastEye;
+                    _leftPlayerEye = _session.Position;
+                    _leftYawDeg = _session.Input.YawDeg;
+                    _leftPitchDeg = Math.Max(-WalkTuning.PitchClampDeg, Math.Min(WalkTuning.PitchClampDeg, _session.Input.PitchDeg));
+                }
+                // If the close is cancelled, say what is still on.
                 if (_snagMemory != null && _snagMemory.Count > 0 && !_session.Settings.KeepSnagColours)
                     notes.Add("If the model stays open, its snag colours are still on - they are given back before the next save, or when Model Walk starts again.");
                 if (_hiddenByWalk.Count > 0)
