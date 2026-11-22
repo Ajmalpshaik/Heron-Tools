@@ -35,6 +35,14 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - **Character file:** the reader refuses a file nested too deep or with an impossible size before it uses memory, and a
   bad speed or bone weight can no longer break the animation for the rest of the walk.
 
+### Fixed - Model Walk walk engine (NEEDS A REAL REVIT TEST)
+- The first step after standing still no longer jumps about 0.8 m forward.
+- Closing the walk's model, or closing Revit, now ends the walk at once and writes Snags.csv.
+- Hiding the floor you stand on (or showing it again) now finds the floor again straight away.
+- E (door) while looking down at the door lands 900 mm past it, as when looking straight at it.
+- The walk view is found again by number ("(2)" before "(10)").
+- In a workshared model, a Revit user name with a character Revit refuses in view names no longer stops the walk view being made.
+
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
   sub-transaction, never left with no bubble at either end while the rest commit.

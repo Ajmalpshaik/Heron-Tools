@@ -48,6 +48,7 @@ namespace HeronTools.Services.ModelWalk
                 _tempModeIsOurs = false;
                 _hiddenByWalk.Clear();
                 _collision.Refresh();
+                _forceFloorCheck = true;
             }
             hud.HiddenCount = _hiddenByWalk.Count;
 
@@ -399,7 +400,12 @@ namespace HeronTools.Services.ModelWalk
             }
 
             XYZ through = flatForward.GetLength() > 1e-9 ? flatForward : forward;
-            XYZ landing = position + (through.Normalize() * (door.DistanceFt + WalkTuning.DoorPassExtraFt));
+            // The door's distance across the floor, not along the slanted look: looking down at a door the slanted
+            // distance is longer, and the step would land further past the door than meant.
+            double across = flatForward.GetLength() > 1e-9
+                ? new XYZ(door.Point.X - position.X, door.Point.Y - position.Y, 0).GetLength()
+                : door.DistanceFt;
+            XYZ landing = position + (through.Normalize() * (across + WalkTuning.DoorPassExtraFt));
             string problem = LandingProblem(landing, out XYZ standing);
             if (problem != null)
             {
@@ -674,6 +680,7 @@ namespace HeronTools.Services.ModelWalk
             _hiddenByWalk.Add(id);
             hud.HiddenCount = _hiddenByWalk.Count;
             _collision.Refresh();
+            _forceFloorCheck = true;   // the hidden element may be the one you stood on
             hud.Toast("Hidden for now: " + WalkCollision.DescribeLine1(hit) + "   (" + _session.Keys.Label(WalkKeyBindings.ShowHidden) +
                       " shows what this walk hid)", WalkToastKind.Done);
         }
@@ -726,6 +733,7 @@ namespace HeronTools.Services.ModelWalk
             _tempModeIsOurs = false;
             _hiddenByWalk.Clear();
             _collision.Refresh();
+            _forceFloorCheck = true;   // a floor shown again may now be under you
             return null;
         }
 
