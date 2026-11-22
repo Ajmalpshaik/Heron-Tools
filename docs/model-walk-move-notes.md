@@ -412,6 +412,7 @@ from AJ-Tools.
 | 60 No pause / end card in a picture | | | | |
 | 61 Busy end in third person | | | | |
 | 62 Click while turning (third person) | | | | |
+| 66 Character after a quick second walk | | | | |
 | 63 Viewpoint named "#..." kept | | | | |
 
 ## Extra Revit checks (steps 19-29)
@@ -576,7 +577,7 @@ A fresh read of the whole change (`git diff origin/main...HEAD`), the files it t
 | R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). An end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view - fixed later at the next walk's start (camera session, C1). |
 | R2 | Medium | Wall slide: with a surface closer than 550 mm along the camera ray (a duct or slab just above the head while looking down), the camera was still put 300 mm out - past the surface, so the view looked from inside or behind it. | **Fixed** - the camera stops half way to such a surface, always in front of it. |
 | R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. |
-| R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and cancels a pending switch-off. `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
+| R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and runs a pending switch-off first (#85). `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
 | R5 | Checked, no defect | Quick snags: the "One moment" refusal, the picture hand-off (`SnagAwaitingPicture` cleared and `SnagPictureBusy` set in the same UI-thread call, so the figure cannot come back between them), `Snags.csv` rewritten through the temp file with the #41 separator and quoting for commas, quotes and line breaks, comment-box keys (Enter / Esc / repeats), Open still adds to the selection, the setting on = the old box. | - |
 | R6 | Note, not changed | A click uses the previous frame's camera with this frame's look direction; turning fast while clicking in third person can shift the hit by a few centimetres. First person has the same one-frame lag. A snag recorded and then paused within 0.1 s keeps no picture (as before this change). The "One moment" message also shows while a Snapshot (K) is being taken. | Click offset fixed later (camera session, C2); the rest left - no new behaviour asked for. |
 
@@ -951,3 +952,23 @@ After #74, #75, #76, #78, #80, #87 and #88 merged, the Revit test script was mad
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 63 | NEEDS REAL REVIT |
+
+# Character switch-off and buffers (2026-11-22, issue #85)
+
+No defect here made the character stay drawn after a walk; these two could make it vanish during one.
+
+| What was wrong | Now |
+|---|---|
+| A walk ended from the overlay (Alt+F4, Revit busy, a fault) asks Revit to switch the character off at its next idle moment. If a second walk started first, that switch-off could still run in the middle of walk 2 (notes R4 said a second walk cancels it - it did not). Walk 2 switched him on again, but a standing character was not redrawn, so he was invisible until the camera moved. (The issue also named a model close that is cancelled: checked - the walk already ends the moment its model starts to close, so it does not carry on.) | Starting a walk (the ribbon command, Revit's thread) now runs a waiting switch-off at once, so it cannot land later. And every time the character is switched on in a walk, the view is redrawn, so he shows even standing still. |
+| When a graphics buffer had to be remade, the old one was disposed first; if the remake failed, the disposed one stayed, and the next redraw failed on it - that part, and every part after it, lost for the rest of the Revit session. | The field is emptied after the dispose, so a failed remake is tried again on the next redraw (the vertex buffer already did this). |
+
+### Revit test step
+
+66. **Character after a quick second walk.** Third person. Close the overlay with Alt+F4 and click Model Walk again at
+    once, then stand still in third person (Q): the character is drawn and stays drawn (wait 5 s without moving).
+
+| Check (#85) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 66 | NEEDS REAL REVIT |
