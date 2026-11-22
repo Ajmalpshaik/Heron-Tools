@@ -43,8 +43,9 @@ slot, set the number of slots and the size, then save. It works even with no mod
 **What it changes in the model:** nothing. The layout is saved for your Windows user on this PC in
 `%AppData%\HeronTools\quickmenu-slots.txt`, so it stays after Revit restarts and Heron Tools updates.
 
-**Undo:** change the slots again in the same window. If the settings file is damaged, the window shows the
-standard layout and does not save over the damaged file.
+**Undo:** change the slots again in the same window. If the settings file is empty or damaged, the window shows the
+standard layout, keeps the old file as `quickmenu-slots.txt.bad` and Save still works. If the file cannot be opened
+at all (for example locked by another program), Save is turned off so nothing is lost.
 
 Screenshot needed: the Quick Menu Settings window.
 

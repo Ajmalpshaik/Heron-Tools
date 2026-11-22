@@ -136,7 +136,7 @@ as standard).
 1. **View Crop > Crop View by Elements.**
 2. Pick the views.
 3. Choose whether the crop fits the **visible elements** or **all model elements**, and set the offset. Tick
-   grids and reference planes if they should push the crop out too.
+   **Levels, grids and reference planes** if they should push the crop out too.
 4. Run.
 
 **Limits:**
