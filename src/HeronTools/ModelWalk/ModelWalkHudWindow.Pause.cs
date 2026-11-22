@@ -93,8 +93,12 @@ namespace HeronTools.UI.ModelWalk
                 var row = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
                 Button open = SmallButton("Open", "Go back to snag " + snag.Number + " and add the element to Revit's selection",
                                           snag.Number, OnSnagRowClick);
+                Button saveView = SmallButton("Save as 3D view", "Save a Revit 3D view looking at snag " + snag.Number +
+                                              " - for the issue meeting or a sheet (one Undo step)", snag.Number, OnSnagSaveViewClick);
                 DockPanel.SetDock(open, Dock.Right);
+                DockPanel.SetDock(saveView, Dock.Right);
                 row.Children.Add(open);
+                row.Children.Add(saveView);
                 row.Children.Add(RowButton(content, (noComment ? "Write" : "Change") + " the comment of snag " + snag.Number,
                                            snag.Number, OnSnagCommentRowClick));
                 SnagMenuList.Children.Add(row);
@@ -282,6 +286,16 @@ namespace HeronTools.UI.ModelWalk
             if (!(sender is Button button) || !(button.Tag is int number))
                 return;
             _session.Input.SaveViewpointAsView = number;
+            SetPauseStatus("Saving the 3D view...");
+            ShrinkToPill();
+            RaiseFrame();   // the engine makes the view on Revit's thread, while the walk stays paused
+        }
+
+        private void OnSnagSaveViewClick(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is Button button) || !(button.Tag is int number))
+                return;
+            _session.Input.SaveSnagAsView = number;
             SetPauseStatus("Saving the 3D view...");
             ShrinkToPill();
             RaiseFrame();   // the engine makes the view on Revit's thread, while the walk stays paused

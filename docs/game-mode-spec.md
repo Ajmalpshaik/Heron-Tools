@@ -239,7 +239,7 @@ NEEDS REAL REVIT until the owner's test script passes (issue #42).
 | 27 | Key settings | KEEP | Yes. `%AppData%\HeronTools\ModelWalkKeys.txt`, Heron window style, reset and swap. Opened from the pause menu (Keys, or K while paused). |
 | 28 | Help (H), pause (P / Esc) | KEEP | Yes. Pause is a small menu at the top of the view; Revit is usable while paused. |
 | 29, 32 | Location block, rooms | KEEP / ADD | Yes. "Level - Room", facing (project north), move mode, speed step, first / third person. Rooms in links are read too - NEEDS REAL REVIT (#44). |
-| 31 | Open snag | ADD | Yes - from the pause menu snag list: camera back, element **added** to the selection (owner). **Not built:** the optional "one saved 3D view per snag" - issue #77. Save as 3D view exists for viewpoints only. |
+| 31 | Open snag | ADD | Yes - from the pause menu snag list: camera back, element **added** to the selection (owner). Optional "one saved 3D view per snag": **built** (#77) - **Save as 3D view** on each snag row in the pause menu, the same code as the viewpoint one: "Model Walk - Snag 003 - <short comment>". |
 | 33 | Measure (M) | ADD | Yes. Two hits, distance + horizontal + vertical in mm, text only. |
 | 34 | Mouse sensitivity, invert, speeds, eye, step-up | ADD | Yes - Settings window (`%AppData%\HeronTools\ModelWalkSettings.txt`). |
 | 35 | Smooth camera | ADD | Yes. Moves ease in and out (0.12 s); look stays direct. |

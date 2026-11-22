@@ -124,7 +124,10 @@ changed yourself after snagging is left as you set it. To get the colours back a
 - **Settings** (S), **Keys** (K), **Clear snag colours**, **Open report folder**, **End walk** (Esc).
 - **Snags** - newest first, with the comment or **No comment yet**. Click one to write or change its comment (see
   above). **Open** on a row: the camera goes back where it was recorded and the element is added to Revit's
-  selection - what you already selected stays (a linked element is not selected).
+  selection - what you already selected stays (a linked element is not selected). **Save as 3D view** on a row makes
+  a real Revit 3D view, "Model Walk - Snag 003 - *first words of the comment*" (the category if there is no comment
+  yet), looking from where you stood when you recorded it - same Visibility/Graphics, filters and section box as the
+  walk view, without the snag red. One Undo step. Use it for the issue meeting or on a sheet.
 - **Viewpoints** - click one to go there; **Save as 3D view**; **Delete**; **Play viewpoints**.
 
 ## Viewpoints

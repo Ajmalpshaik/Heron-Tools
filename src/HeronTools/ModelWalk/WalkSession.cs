@@ -169,6 +169,7 @@ namespace HeronTools.Services.ModelWalk
         public bool SettingsChangedQueued; // eye height or step-up changed: find the floor again
         public int OpenSnag;               // pause menu: go back to snag N and select its element, 0 = none
         public int SaveViewpointAsView;    // pause menu: save viewpoint N as a Revit 3D view, 0 = none
+        public int SaveSnagAsView;         // pause menu: save snag N's camera as a Revit 3D view, 0 = none
 
         /// <summary>True while any held key asks for movement.</summary>
         public bool AnyMoveHeld => MoveForward || MoveBack || StrafeLeft || StrafeRight || UpKey || DownKey;
@@ -177,7 +178,8 @@ namespace HeronTools.Services.ModelWalk
         public bool AnyQueued =>
             DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued ||
             GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || MeasureQueued || ShowHiddenQueued ||
-            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0 || SaveViewpointAsView > 0;
+            ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0 || SaveViewpointAsView > 0 ||
+            SaveSnagAsView > 0;
     }
 
     /// <summary>What the engine tells the HUD after each frame.</summary>
