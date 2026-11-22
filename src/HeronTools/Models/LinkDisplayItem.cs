@@ -5,13 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Linked Tools - Link Display Item
-// Description: Model helper for representing host or linked documents in search workflows.
-// Author: Ajmal P.S.
-// Version: 1.0.0
-// Last Updated: 2025-12-10
-// Revit Version: 2020
-// Dependencies: Autodesk.Revit.DB
+// Model helper for representing host or linked documents in search workflows.
 
 using Autodesk.Revit.DB;
 

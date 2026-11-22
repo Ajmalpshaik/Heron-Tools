@@ -5,13 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Set Link Workset - Settings
-// Description: Persists last-used workset name for the Set Link Workset tool.
-// Author: Ajmal P.S.
-// Version: 1.0.1
-// Last Updated: 2026-10-12
-// Revit Version: 2020
-// Dependencies: System, System.IO
+// Persists last-used workset name for the Set Link Workset tool.
 
 using System;
 using System.IO;

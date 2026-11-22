@@ -4,6 +4,10 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Added - Docs
+- **Tool catalogue** (`docs/tools/`): one page per ribbon panel - what each tool does, when to use it, step by
+  step, what it changes in the model, how to undo it, and its limits - with a picture of the ribbon.
+
 ### Changed - Docs
 - **README** rewritten for a modeller first: what Heron Tools is, who it is for, a picture of the ribbon, every tool in
   one line with a link to its catalogue page, install in four steps, where to get help.

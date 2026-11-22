@@ -44,7 +44,7 @@ namespace HeronTools.Services.ModelWalk
         private bool IsFree(XYZ eye, XYZ move, bool withSides)
         {
             double length = move.GetLength();
-            if (length < 1e-9 || _collision.OverBudget)
+            if (length < 1e-9 || !MoveCastFits())
                 return false;
 
             XYZ direction = move.Normalize();
@@ -55,7 +55,7 @@ namespace HeronTools.Services.ModelWalk
             double[] drops = { 0.0, eyeFt * 0.25, eyeFt * 0.5, shin };
             foreach (double drop in drops)
             {
-                if (_collision.CastNear(new XYZ(eye.X, eye.Y, eye.Z - drop), direction, reach) != null || _collision.OverBudget)
+                if (!MoveCastFits() || _collision.CastNear(new XYZ(eye.X, eye.Y, eye.Z - drop), direction, reach) != null)
                     return false;
             }
 
@@ -66,13 +66,21 @@ namespace HeronTools.Services.ModelWalk
                 {
                     XYZ side = new XYZ(-flat.Y, flat.X, 0).Normalize() * WalkTuning.BodyRadiusFt;
                     var chest = new XYZ(eye.X, eye.Y, eye.Z - (eyeFt * 0.5));
-                    if (_collision.CastNear(chest + side, direction, reach) != null ||
-                        _collision.CastNear(chest - side, direction, reach) != null || _collision.OverBudget)
+                    if (!MoveCastFits() || _collision.CastNear(chest + side, direction, reach) != null ||
+                        !MoveCastFits() || _collision.CastNear(chest - side, direction, reach) != null)
                         return false;
                 }
             }
             return true;
         }
+
+        /// <summary>
+        /// Does one more near cast (up to 2 rays: the model and the near links) fit in the move's share of the budget?
+        /// The last <see cref="WalkTuning.FloorRayReserve"/> rays stay for the floor check, so a slide already found
+        /// free is kept, not thrown away because the floor could not be checked (MEP model with architecture linked).
+        /// </summary>
+        private bool MoveCastFits() =>
+            _collision.RaysThisFrame + 2 <= WalkTuning.RayBudgetPerFrame - WalkTuning.FloorRayReserve;
 
         /// <summary>
         /// Gravity, stairs and landing in Walk. <paramref name="before"/> is where the eye was before this frame's
@@ -90,8 +98,18 @@ namespace HeronTools.Services.ModelWalk
             if (_collision.OverBudget)
                 return before;     // cannot check the floor this frame: do not step
 
-            WalkRayHit ground = _collision.CastNear(position, -XYZ.BasisZ, WalkTuning.FloorSearchFt)
-                                ?? (_collision.OverBudget ? null : _collision.CastFull(position, -XYZ.BasisZ, WalkTuning.FloorSearchFt));
+            WalkRayHit ground = _collision.CastNear(position, -XYZ.BasisZ, WalkTuning.FloorSearchFt);
+            if (ground == null)
+            {
+                if (_collision.OverBudget)
+                {
+                    // Nothing near below, and no ray left for the long one: not "no floor" - check again next frame.
+                    // Nothing near below also means nothing to step up onto, so this frame's step can stand.
+                    _forceFloorCheck = true;
+                    return position;
+                }
+                ground = _collision.CastFull(position, -XYZ.BasisZ, WalkTuning.FloorSearchFt);
+            }
 
             if (ground == null)
             {

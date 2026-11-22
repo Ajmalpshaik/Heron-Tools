@@ -5,12 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Pin Elements Service
-// Description: Collects target groups and applies pin/unpin state in bulk.
-// Author: Ajmal P.S.
-// Version: 1.3.2
-// Last Updated: 2026-11-21
-// Revit Version: 2020
+// Collects target groups and applies pin/unpin state in bulk.
 
 using System;
 using System.Collections.Generic;
