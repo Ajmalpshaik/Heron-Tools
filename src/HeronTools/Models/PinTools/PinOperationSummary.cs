@@ -5,12 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Pin Operation Summary Model
-// Description: Captures pin/unpin execution counts for result reporting.
-// Author: Ajmal P.S.
-// Version: 1.1.0
-// Last Updated: 2026-11-21
-// Revit Version: 2020
+// Captures pin/unpin execution counts for result reporting.
 
 namespace HeronTools.Models.PinTools
 {

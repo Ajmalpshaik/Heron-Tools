@@ -218,8 +218,6 @@ namespace HeronTools.Installer
             return years;
         }
 
-        public bool UnknownRevitOpen() => RunningRevitYears().Contains(0);
-
         public List<YearState> ReadYears()
         {
             List<int> running = RunningRevitYears();

@@ -86,25 +86,6 @@ namespace HeronTools.Services.GraphicsTools
             DialogHelper.ShowError(title, text);
         }
 
-        /// <summary>
-        /// For the pick-until-Esc tools: some picks were changed, some were not. Says how many were left
-        /// and why, once, at the end of the session.
-        /// </summary>
-        internal static void ReportNotChanged(string title, int changedCount, int notChangedCount, string firstReason)
-        {
-            if (notChangedCount <= 0)
-                return;
-
-            string text = changedCount > 0
-                ? string.Format("Changed {0}. {1} pick(s) could not be changed in this view and were left as they were.", changedCount, notChangedCount)
-                : string.Format("Nothing was changed: Revit did not accept the change for any of the {0} pick(s) in this view.", notChangedCount);
-
-            if (!string.IsNullOrWhiteSpace(firstReason))
-                text += "\n\nRevit's reason: " + firstReason;
-
-            DialogHelper.ShowInfo(title, text);
-        }
-
         internal static GraphicsOperationSummary ExecuteSummaryTransaction(
             Document doc,
             string transactionName,
@@ -225,47 +206,6 @@ namespace HeronTools.Services.GraphicsTools
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
             {
                 return new SelectionCaptureResult(new List<ElementId>(), true);
-            }
-        }
-
-        public static bool TryPickSingleElementId(
-            UIDocument uidoc,
-            ISelectionFilter selectionFilter,
-            string prompt,
-            out ElementId elementId,
-            out bool wasCancelled)
-        {
-            elementId = ElementId.InvalidElementId;
-            wasCancelled = false;
-
-            if (uidoc == null || uidoc.Document == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                Reference pickedRef = selectionFilter == null
-                    ? uidoc.Selection.PickObject(ObjectType.Element, prompt)
-                    : uidoc.Selection.PickObject(ObjectType.Element, selectionFilter, prompt);
-
-                if (pickedRef == null || pickedRef.ElementId == null || pickedRef.ElementId == ElementId.InvalidElementId)
-                {
-                    return false;
-                }
-
-                if (uidoc.Document.GetElement(pickedRef.ElementId) == null)
-                {
-                    return false;
-                }
-
-                elementId = pickedRef.ElementId;
-                return true;
-            }
-            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-            {
-                wasCancelled = true;
-                return false;
             }
         }
 

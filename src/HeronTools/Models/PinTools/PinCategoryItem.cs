@@ -5,12 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Pin Category Item Model
-// Description: UI row model for selectable pin target groups.
-// Author: Ajmal P.S.
-// Version: 1.0.0
-// Last Updated: 2026-04-15
-// Revit Version: 2020
+// UI row model for selectable pin target groups.
 
 using System.ComponentModel;
 using System.Runtime.CompilerServices;

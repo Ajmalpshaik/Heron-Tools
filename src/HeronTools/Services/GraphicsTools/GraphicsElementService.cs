@@ -71,13 +71,5 @@ namespace HeronTools.Services.GraphicsTools
 
             return summary;
         }
-
-        public static GraphicsOperationSummary ClearOverrides(
-            Document doc,
-            View view,
-            IEnumerable<ElementId> elementIds)
-        {
-            return ApplyOverrides(doc, view, elementIds, new OverrideGraphicSettings());
-        }
     }
 }
