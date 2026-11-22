@@ -49,6 +49,7 @@ namespace HeronTools.Services.ModelWalk
                 _hiddenByWalk.Clear();
                 _collision.Refresh();
                 _forceFloorCheck = true;
+                ForgetCameraSlide();
             }
             hud.HiddenCount = _hiddenByWalk.Count;
 
@@ -556,15 +557,18 @@ namespace HeronTools.Services.ModelWalk
             // Already a snag in THIS walk's report: say which one, no second row. An element still red from an earlier
             // walk (kept colours), or whose snag step was undone, is a new snag for this report: it gets its row, and
             // the colour memory keeps its true original (Colour copies the override only the first time).
-            if (!hit.FromLink)
+            // A linked element is the same snag only in the same link instance: the same link placed twice (a typical
+            // floor) puts the same element in two places, two real snags.
+            foreach (WalkSnag earlier in _session.Report.Snags)
             {
-                foreach (WalkSnag earlier in _session.Report.Snags)
+                bool same = hit.FromLink
+                    ? earlier.LinkInstanceId != null && earlier.LinkInstanceId == hit.Link.Id &&
+                      !string.IsNullOrEmpty(earlier.UniqueId) && earlier.UniqueId == (hit.Element.UniqueId ?? "")
+                    : earlier.HostElementId != null && earlier.HostElementId == hit.Element.Id;
+                if (same)
                 {
-                    if (earlier.HostElementId != null && earlier.HostElementId == hit.Element.Id)
-                    {
-                        hud.Toast("Already snag " + earlier.Number + " in this walk: " + what);
-                        return;
-                    }
+                    hud.Toast("Already snag " + earlier.Number + " in this walk: " + what);
+                    return;
                 }
             }
 
@@ -581,6 +585,7 @@ namespace HeronTools.Services.ModelWalk
                 LinkName = hit.FromLink ? WalkCollision.LinkName(hit.Link) : "",
                 Room = hud.RoomText,
                 HostElementId = hit.FromLink ? null : element.Id,
+                LinkInstanceId = hit.FromLink ? hit.Link.Id : null,
                 HitPoint = hit.Point,
                 Eye = position,
                 YawDeg = input.YawDeg,
@@ -681,6 +686,7 @@ namespace HeronTools.Services.ModelWalk
             hud.HiddenCount = _hiddenByWalk.Count;
             _collision.Refresh();
             _forceFloorCheck = true;   // the hidden element may be the one you stood on
+            ForgetCameraSlide();       // or the wall the camera was kept in front of
             hud.Toast("Hidden for now: " + WalkCollision.DescribeLine1(hit) + "   (" + _session.Keys.Label(WalkKeyBindings.ShowHidden) +
                       " shows what this walk hid)", WalkToastKind.Done);
         }
@@ -734,6 +740,7 @@ namespace HeronTools.Services.ModelWalk
             _hiddenByWalk.Clear();
             _collision.Refresh();
             _forceFloorCheck = true;   // a floor shown again may now be under you
+            ForgetCameraSlide();       // a wall shown again may now be behind the camera
             return null;
         }
 
