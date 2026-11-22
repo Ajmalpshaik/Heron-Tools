@@ -282,7 +282,7 @@ namespace HeronTools.Services.ModelWalk
             {
                 _lastInspect = now;
                 // The crosshair ray starts at the camera (the player's eye in first person); the distance is the player's.
-                WalkRayHit aim = _collision.CastFull(AimFrom(position), forward, WalkTuning.AimRangeFt);
+                WalkRayHit aim = _collision.CastFull(AimFrom(position), AimAlong(forward), WalkTuning.AimRangeFt);
                 hud.AimHasHit = aim != null;
                 hud.AimDistanceMm = aim != null ? WalkTuning.FtToMm(PlayerDistanceFt(aim, position)) : 0;
                 hud.AimLine1 = aim != null ? WalkCollision.DescribeLine1(aim) : "";
