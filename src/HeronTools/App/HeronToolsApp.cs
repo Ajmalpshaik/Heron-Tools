@@ -270,7 +270,7 @@ namespace HeronTools.App
                 "picture and a red colour, click after click; write the comments in the pause menu; the report goes in a folder next " +
                 "to the model), Hide. Snag colours are given back by J and before every Save and Sync - no red is saved in the " +
                 "model. Q (standard key) switches to third person: a site worker drawn on screen where you stand, nothing added to the model. Pause (Esc) for snags, " +
-                "viewpoints and settings. Camera " +
+                "viewpoints, settings and keys. Camera " +
                 "moves make no Undo entries; each snag is one Undo step."));
 
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")

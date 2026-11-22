@@ -6,7 +6,7 @@
   Heron-Layer:  revit
   See docs/metadata-standard.md
 
-  Model Walk - Settings (pause the walk, press S). Look, movement and snag colours, saved for this Windows user.
+  Model Walk - Settings (pause the walk, press S). Look, third person, movement and snags, saved for this Windows user.
   Distances in millimetres, speeds in metres per second. Save applies them to the walk at once.
   Heron brand (UI/HeronStyles.xaml), the same layout as Model Walk keys: header with the mark, cards on Surface,
   footer status on the left, then ONE Accent button (Save) and Cancel, as in every Heron Tools window.
@@ -127,7 +127,7 @@
                             <TextBox x:Name="Speed5Box" Style="{StaticResource ModernTextBox}" Margin="6,0,0,0" ToolTip="Step 5 - the fastest"/>
                         </UniformGrid>
                         <TextBlock Style="{StaticResource HelpText}" Margin="0,6,0,0"
-                                   Text="+ / - or the mouse wheel change the step during the walk. Fly is twice as fast; holding Shift is three times."/>
+                                   Text="The Faster / Slower keys (standard + and -) or the mouse wheel change the step during the walk. Fly and Pass-through are twice as fast; holding Run (standard Shift) is three times."/>
                     </StackPanel>
                 </Border>
 

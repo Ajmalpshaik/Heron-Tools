@@ -352,14 +352,16 @@ namespace HeronTools.UI.ModelWalk
             _session.Hud.Toast(window.SaveProblem ?? "Settings saved", window.SaveProblem == null ? WalkToastKind.Done : WalkToastKind.Refused);
         }
 
-        /// <summary>Key Settings - only while paused. Cancel (or closing it) puts the old keys back.</summary>
+        /// <summary>Key Settings - only while paused. Save uses the new keys at once; Cancel (or closing it) puts the old keys back.</summary>
         private void OpenKeySettings()
         {
             var window = new ModelWalkKeysWindow(_keys) { Owner = this };
-            window.ShowDialog();
+            bool saved = window.ShowDialog() == true;
             HelpText.Text = BuildHelpText();
             UpdateKeyHints();
             UpdateModeChips();
+            if (saved)
+                _session.Hud.Toast(window.SaveProblem ?? "Keys saved", window.SaveProblem == null ? WalkToastKind.Done : WalkToastKind.Refused);
         }
     }
 }

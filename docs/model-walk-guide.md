@@ -23,9 +23,9 @@ you walk through it. Change these while paused, then carry on.
 | W A S D or the arrow keys | Walk forward, back, left, right. The mouse looks around. |
 | Shift (hold) | Go three times faster |
 | + / - or the mouse wheel | Speed step 1 to 5 (shown as "Speed 3/5") |
-| C | Low eye on / off (1000 mm) - look under ducts and into ceiling voids. In Fly: hold to sink |
+| C | Low eye on / off (1000 mm, or 300 mm under your eye height if that is lower) - look under ducts and into ceiling voids. In Fly and Pass-through: hold to sink |
 | F | Fly on / off. Space (hold) rises, C (hold) sinks. Walls and slabs still stop you |
-| G | Pass-through on / off - nothing stops you (past a locked room or a clash) |
+| G | Pass-through on / off - nothing stops you (past a locked room or a clash). Space rises, C sinks, as in Fly |
 | E | Go through the door you look at (when the door hint shows) |
 | T (hold, aim, let go) | Go to point - aim at a floor; a ring shows where you land |
 | R | Back to start |
@@ -44,7 +44,14 @@ you walk through it. Change these while paused, then carry on.
 | F12 | Frame timing (for checking speed on a big model) |
 | Q | First person / third person - see a site worker where you stand (below) |
 
-Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow keys.
+Fixed keys that cannot be changed: Esc, Tab, Enter, the mouse, 1-9 and the arrow keys. Left and right Shift, Ctrl
+and Alt count as one key.
+
+**Change a key:** pause (Esc), press **K** (or click **Keys**), click the action's key, then press the key you want
+(Esc keeps the old one). A key another action already has is swapped with it, and the window says so. **Save** uses
+the new keys at once and keeps them for your next walks (`%AppData%\HeronTools\ModelWalkKeys.txt`); **Cancel** or
+the close box puts the old keys back. **Reset to standard keys** puts every key back to this table. The help card (H)
+and the HUD hints always name the keys you set.
 
 ## Modes
 
@@ -170,13 +177,15 @@ Nothing is drawn on the model. M again starts a new measure.
 | Mouse sensitivity | 100 % | 25 - 250 % (lower it if fast turning makes you feel unwell) |
 | Invert look | off | mouse forward looks down |
 | Third-person view (show a character) | off | start each walk in third person; Q switches during the walk |
-| Walk speeds, slowest first | 0.8, 1.5, 3.5, 5.5, 8 m/s | 0.2 - 20 m/s, each faster than the last. Fly x2, Shift x3 |
+| Walk speeds, slowest first | 0.8, 1.5, 3.5, 5.5, 8 m/s | 0.2 - 20 m/s, each faster than the last. Every walk starts on step 3. Fly and Pass-through x2, Shift x3 |
 | Eye height | 1700 mm | 1000 - 2000 mm (low eye = 1000 mm, or 300 mm under the eye) |
 | Step-up height | 350 mm | 100 - 450 mm - the highest stair or step you walk up |
 | Keep snag colours after the walk | on | |
 | Ask for a comment at each snag | off | off = quick snagging, comments in the pause menu; on = a box after each snag |
 
-Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). Save applies them at once.
+Saved for you on this computer (`%AppData%\HeronTools\ModelWalkSettings.txt`). Save applies them at once (ticking
+or clearing Third-person view switches the view now too). **Reset to standard settings** fills in the standard values;
+Save keeps them. Cancel changes nothing.
 
 ## What goes in the Undo list
 

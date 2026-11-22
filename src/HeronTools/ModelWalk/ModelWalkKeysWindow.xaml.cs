@@ -26,6 +26,9 @@ namespace HeronTools.UI.ModelWalk
         private string _capturing;
         private bool _saved;
 
+        /// <summary>Null, or why the keys could not be written to the file (they are still used for this walk).</summary>
+        internal string SaveProblem { get; private set; }
+
         internal ModelWalkKeysWindow(WalkKeyBindings keys)
         {
             _keys = keys;
@@ -130,13 +133,9 @@ namespace HeronTools.UI.ModelWalk
         private void OnSaveClick(object sender, RoutedEventArgs e)
         {
             CancelCapture();
-            string problem = _keys.Save();
-            if (problem != null)
-            {
-                // Not saved: keep the window open so the modeller sees why. Cancel still puts the old keys back.
-                StatusText.Text = problem;
-                return;
-            }
+            // A file that cannot be written still leaves the new keys in use for this walk (as Settings does); the
+            // walk says why in a message, so the save problem's own words ("they still work until the walk ends") hold.
+            SaveProblem = _keys.Save();
             _saved = true;
             DialogResult = true;
         }

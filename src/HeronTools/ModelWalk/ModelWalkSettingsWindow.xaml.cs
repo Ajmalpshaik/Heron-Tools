@@ -61,7 +61,7 @@ namespace HeronTools.UI.ModelWalk
             var probe = new WalkSettings();
             if (TryRead(EyeHeightBox.Text, out double eye) && WalkSettings.InRange(eye, WalkSettings.MinEyeHeightMm, WalkSettings.MaxEyeHeightMm))
                 probe.EyeHeightMm = eye;
-            LowEyeNote.Text = "Low eye (C in Walk) is then " + probe.LowEyeHeightMm.ToString("N0", CultureInfo.CurrentCulture) +
+            LowEyeNote.Text = "Low eye (standard key C, in Walk) is then " + probe.LowEyeHeightMm.ToString("N0", CultureInfo.CurrentCulture) +
                               " mm - for looking under ducts and into ceiling voids.";
         }
 

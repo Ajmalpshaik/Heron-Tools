@@ -5,6 +5,9 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ## [Unreleased]
 
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
+- **Key Settings**: Save now always uses the new keys for this walk and says "Keys saved" (a file that cannot be
+  written shows a message, as Settings does); the window, help card, Settings window, guide and ribbon tooltip now
+  describe every key and setting as the code does (Pass-through rises and sinks like Fly, remapped keys, Enter fixed).
 - **Third person now shows a real character** (from AJ-Tools Game Mode v1.61.0): a site worker in a yellow hard hat,
   1850 mm tall, in place of the blocky figure, which is removed. He stands when you stop, walks when you move and runs
   with Shift, blending smoothly between them; his legs speed up with you up to a limit, so at the faster speed steps

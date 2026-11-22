@@ -190,15 +190,15 @@ namespace HeronTools.UI.ModelWalk
                     k(WalkKeyBindings.StrafeRight) + " or the arrow keys  -  look with the mouse  -  hold " + k(WalkKeyBindings.Run) + " to go faster",
                 "Speed\t" + k(WalkKeyBindings.SpeedUp) + " / " + k(WalkKeyBindings.SpeedDown) + " or the mouse wheel (" + _session.Settings.SpeedStepCount + " steps)",
                 "Low eye\t" + k(WalkKeyBindings.DownOrLowEye) + " on / off (" + _session.Settings.LowEyeHeightMm.ToString("N0") + " mm) - to look under ducts and into ceiling voids",
-                "Fly\t" + k(WalkKeyBindings.Fly) + " on / off  -  hold " + k(WalkKeyBindings.Up) + " to rise, " + k(WalkKeyBindings.DownOrLowEye) + " to sink",
-                "Pass-through\t" + k(WalkKeyBindings.PassThrough) + " on / off - walls and slabs do not stop you",
+                "Fly\t" + k(WalkKeyBindings.Fly) + " on / off  -  hold " + k(WalkKeyBindings.Up) + " to rise, " + k(WalkKeyBindings.DownOrLowEye) + " to sink  -  walls and slabs still stop you",
+                "Pass-through\t" + k(WalkKeyBindings.PassThrough) + " on / off  -  nothing stops you; rise and sink as in Fly",
                 "Door\t" + k(WalkKeyBindings.Door) + " when the door hint shows",
                 "Go to point\thold " + k(WalkKeyBindings.GoToPoint) + ", aim at a floor, let go",
                 "Modes\tright-click or Tab (Shift+Tab back): Inspect, Select, Snag, Hide - left click acts",
                 _session.Settings.AskSnagComment
                     ? "Snag\tin Snag mode, click: a picture is taken, then type a comment (Enter saves, Esc skips)"
                     : "Snag\tin Snag mode, click snag after snag (each gets a picture)  -  write the comments in the pause menu (Esc)",
-                "Snag colours\t" + k(WalkKeyBindings.ClearSnags) + " gives every snagged element its own colours back",
+                "Snag colours\t" + k(WalkKeyBindings.ClearSnags) + " gives every snagged element its own colours back (also in the pause menu)",
                 "Show hidden\t" + k(WalkKeyBindings.ShowHidden) + " shows again what this walk hid",
                 "Measure\t" + k(WalkKeyBindings.Measure) + " at point 1, " + k(WalkKeyBindings.Measure) + " at point 2 - distance in mm",
                 "Viewpoints\t" + k(WalkKeyBindings.SaveViewpoint) + " saves and names one  -  1 to 9 go back  -  " + k(WalkKeyBindings.PlayViewpoints) + " plays them",
