@@ -42,16 +42,6 @@ namespace HeronTools.Models.GraphicsTools
             return new GraphicsColorValue(false, red, green, blue);
         }
 
-        public static GraphicsColorValue FromRevitColor(Color color)
-        {
-            if (color == null || !color.IsValid)
-            {
-                return ByView();
-            }
-
-            return FromRgb(color.Red, color.Green, color.Blue);
-        }
-
         public Color ToRevitColorOrInvalid()
         {
             return IsByView

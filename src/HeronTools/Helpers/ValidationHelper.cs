@@ -5,13 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Validation Helper
-// Description: Centralized validation utilities for common Revit document/view checks.
-// Author: Ajmal P.S.
-// Version: 1.0.0
-// Last Updated: 2025-12-11
-// Revit Version: 2020
-// Dependencies: Autodesk.Revit.DB, Autodesk.Revit.UI
+// Centralized validation utilities for common Revit document/view checks.
 
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
