@@ -392,6 +392,8 @@ from AJ-Tools.
 | 45 Standing still costs no redraws | | | | |
 | 46 Big model speed with the character (F12) | | | | |
 | 47 Colours, walls and pictures with the character | | | | |
+| 49 Esc right after a snag keeps its picture | | | | |
+| 50 Snag click during a Snapshot (K) | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -663,3 +665,23 @@ Extra Revit test step:
 | Character resource in all eight DLLs | PASS |
 | Reader + animator outside Revit, en-US / de-DE / fr-FR, 18 broken files, NaN / infinite input | PASS (S1-S3 failed before their fixes) |
 | Buffer reuse and dispose over a long walk and two models (step 48) | NEEDS REAL REVIT |
+
+
+---
+
+# Snag pictures and pause (2026-11-22, quick snags session)
+
+The two notes the stage 6 / stage 8 reviews left (R6 above).
+
+| What was wrong | Now |
+|---|---|
+| Quick snagging, then Esc within about 0.1 s: the pause cleared `SnagAwaitingPicture`, so that snag kept **no picture**; if the picture was already being taken, the pause card could land in it. | Esc and the Pause key now go through `PauseWhenAsked`: while a snag's picture is waiting or being taken, held keys stop at once and the pause comes as soon as the picture is saved (at most 2 s, then it pauses anyway). The comment box (setting on) does not open in between. A pause Revit forces (the overlay loses focus or the mouse) still pauses at once; if that drops a waiting picture, the pause menu now says "Snag n was recorded without a picture". |
+| A Snag click during a Snapshot (K) said "the last snag's picture is being taken". | It says "One moment - the snapshot is being taken. Click again." (and "Pausing..." in the moment before a pause). |
+
+### Revit test steps
+
+49. **Esc right after a snag keeps its picture.** Quick snagging on. Snag a duct and press Esc at once (same moment).
+    Expect the walk to pause a blink later, and `Snag nnn.png` to show the red duct with no pause card in it. Then
+    snag, and Alt+Tab away at once: the pause menu says "Snag n was recorded without a picture".
+50. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
+    taken. Click again."; click again: recorded with its picture.
