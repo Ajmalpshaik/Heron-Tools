@@ -49,6 +49,7 @@ namespace HeronTools.Services.ModelWalk
                 _hiddenByWalk.Clear();
                 _collision.Refresh();
                 _forceFloorCheck = true;
+                ForgetCameraSlide();
             }
             hud.HiddenCount = _hiddenByWalk.Count;
 
@@ -681,6 +682,7 @@ namespace HeronTools.Services.ModelWalk
             hud.HiddenCount = _hiddenByWalk.Count;
             _collision.Refresh();
             _forceFloorCheck = true;   // the hidden element may be the one you stood on
+            ForgetCameraSlide();       // or the wall the camera was kept in front of
             hud.Toast("Hidden for now: " + WalkCollision.DescribeLine1(hit) + "   (" + _session.Keys.Label(WalkKeyBindings.ShowHidden) +
                       " shows what this walk hid)", WalkToastKind.Done);
         }
@@ -734,6 +736,7 @@ namespace HeronTools.Services.ModelWalk
             _hiddenByWalk.Clear();
             _collision.Refresh();
             _forceFloorCheck = true;   // a floor shown again may now be under you
+            ForgetCameraSlide();       // a wall shown again may now be behind the camera
             return null;
         }
 
