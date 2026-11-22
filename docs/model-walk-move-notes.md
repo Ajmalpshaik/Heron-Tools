@@ -685,3 +685,24 @@ Revit test step:
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | `Reset()` outside Revit (throwaway test): after running, back to Idle, not moving, 1850 mm, the same pose as the first load, 0 bytes allocated | PASS |
 | Step 49 in Revit | NEEDS REAL REVIT |
+
+## File readers review (2026-11-22)
+
+A read of every Model Walk file reader and writer: `ModelWalkSettings.txt` (`WalkSettings`), `ModelWalkKeys.txt`
+(`WalkKeyBindings`), the viewpoint store (`WalkViewpointStore`), and the character reader (`WalkJson`,
+`WalkCharacterModel`, the embedded resource - see "Stage 8 review" above). Run outside Revit in a throwaway .NET test
+(not committed - the repo has no test project) in **de-DE**, with missing, damaged and hand-edited files.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| F1 | Medium | Keys: `Save` writes `Action=None` for an action left without a key (its standard key taken by another). The next walk read that as a damaged line - "had a key that cannot be used (None)" - and the HUD shows only the first note, so the true one ("has no key: its standard key is used by another action, press K") was hidden. | **Fixed** (`2171dfe`) - `None` is skipped as "no key saved": the action gets its standard key if free, else the true note. |
+| F2 | Low | Settings: the five speeds were saved rounded to 3 decimals. Two speeds the window accepts (1.0001 and 1.0004 m/s) saved as the same number, the next walk found them not increasing, and all five went back to standard. | **Fixed** (`df6ae57`) - saved exactly (`R`, invariant culture). |
+| F3 | Checked, no defect | All three files: numbers written and read in the invariant culture (de-DE writes `1650.5`, a hand-typed `1,7` is refused, not read as 17); NaN, `1e999`, out-of-range and unknown lines keep the standard value with one plain note; missing file = standard, no note; read refusal (locked, no access) caught; every save goes through a `.tmp` file then `File.Replace` / `File.Move`, and an I/O or access error comes back as a plain message, never an exception. Viewpoints round-trip exactly (`R`), names with tabs / line breaks cleaned, empty names become "Viewpoint", pitch over 90 degrees refused. Swapped keys (W / S) round-trip with no note. | - |
+| F4 | Note, not changed | A viewpoint file name is the model name + a 16-character hash. On Revit 2020-2024 (.NET Framework, 260-character paths) a model name over about 170 characters makes the path too long: the viewpoints cannot be saved, and the walk says so plainly ("could not be saved (... too long ...)"). Shortening the name would move existing viewpoints of long-named models to a new file, so it is left. Revit 2025+ has no such limit. | Left - told here. |
+
+| Check (file readers) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Settings / keys / viewpoints outside Revit, de-DE, missing + damaged files (F1, F2 failed before their fixes) | PASS |
+| 50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |

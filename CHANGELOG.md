@@ -25,6 +25,14 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   Collision, steps and doors stay with you; clicks, Measure and the readout aim from the camera so they land on the
   crosshair. The status line says First person / Third person. Snag pictures hide the character; snapshots show him.
 
+### Fixed - Model Walk files (NEEDS A REAL REVIT TEST)
+- **Keys:** an action left without a key no longer comes back next walk as "had a key that cannot be used (None)" -
+  that wrong note hid the real one ("has no key: its standard key is used by another action").
+- **Settings:** the five walk speeds are saved exactly. Two close speeds (1.0001 and 1.0004 m/s) used to save as the
+  same number, so the next walk put all five back to standard.
+- **Character file:** the reader refuses a file nested too deep or with an impossible size before it uses memory, and a
+  bad speed or bone weight can no longer break the animation for the rest of the walk.
+
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
   sub-transaction, never left with no bubble at either end while the rest commit.
