@@ -15,7 +15,8 @@
 <p align="center">
   <a href="#tools">Tools</a> ·
   <a href="#supported-revit-versions">Revit versions</a> ·
-  <a href="#build-and-install">Install</a> ·
+  <a href="docs/install.md">Install</a> ·
+  <a href="#help">Help</a> ·
   <a href="#rules-this-code-follows">Safety</a> ·
   <a href="#project-documents">Docs</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
@@ -23,52 +24,63 @@
 
 # Heron Tools
 
-Everyday Revit tools for BIM modellers, on the **Heron** ribbon tab.
+**Everyday Revit tools for BIM modellers, on the Heron ribbon tab.**
+View filters and colours in a few clicks, tidy crops and datums, MEP elevations and levels, a clash check and a
+model walk - for Revit 2020 to 2027, free and open source.
+
+**Who it is for:** BIM modellers and coordinators (MEP first) who repeat the same view, datum and coordination
+jobs every day and want them done in one click, with one Undo step and a way back.
+
+> **Status:** in development. Every tool builds for Revit 2020 to 2027, but none has been signed off in a real
+> Revit model yet. Try it on a copy of a model first.
 
 ## Tools
 
-Heron Tools is a stand-alone Revit add-in. It does not need Heron AI and uses none of Heron AI's code.
-The two only share the name of the ribbon tab, so when both are installed their buttons sit side by
-side on one **Heron** tab.
+Heron Tools is a stand-alone Revit add-in. It does not need Heron AI and uses none of Heron AI's code. The two
+only share the name of the ribbon tab, so when both are installed their buttons sit side by side on one
+**Heron** tab.
 
-| Tool | Panel | What it does |
+![The Heron ribbon tab with the Heron Tools panels and buttons](docs/tools/ribbon.svg)
+
+Every tool, step by step, with what it changes and how to undo it: **[tool catalogue](docs/tools/README.md)**.
+
+| Panel | Tool | What it does |
 |---|---|---|
-| **Filter Pro** | View | Pick categories, a parameter and its values. Filter Pro makes one view filter per value, names it for you (the name says the rule, e.g. "Not 300", "Has value") and adds it to the active view or views you pick, first in the filter list. Shuffle colours gives every filter its own colour. |
-| **Colorize** | View | The same picks, but the colour goes straight onto the matching elements (no view filter) - by value, or whole categories. **Restore original** puts back the elements' own overrides. |
-| **View Crop** | View | **Crop View by Elements** fits plan crops around their elements with a margin. **Annotation Crop by View Crop** turns the annotation crop on at an offset measured on paper. |
-| **Unhide All** | View | Shows everything hidden one by one in the view and turns Temporary Hide/Isolate off. |
-| **Toggle Links** | View | Turns the RVT Links category off or on in the view, and says if some links stay hidden one by one. |
-| **3D Snapshot** | View | One click fits Revit's own 3D view ({3D}) to a selected room, space or zone (or its tag, linked rooms too), a selected section mark or the section you are in, or a window you drag in a plan. You stay in your view; the 3D view updates behind it. |
-| **Highlight** | View | Selection in red, the rest grey. **Click again to put the view back** - every element's own overrides are remembered. |
-| **Reset Graphics** | View | **Reset Selected** clears the selected elements' overrides in one click (with their insulation and lining). **Reset Graphics...** clears element overrides, category (V/G) overrides or both, in this view or picked views - it counts first, and can leave Colorize and Highlight colours alone. **Restore Last Reset** puts everything back. |
-| **Quick Menu** | Quick | A tool wheel that opens around the mouse pointer with your favourite Heron Tools buttons and Revit commands; **Quick Menu Settings** chooses what sits in each slot. |
-| **Reset Datums to 3D** | Datums | Put grid and/or level ends in the view back to their 3D extents. |
-| **Level Extents** | Datums | Match level extents to another level, or stretch them to the section box. |
-| **Flip Bubbles** | Datums | Swap which end of a grid or level shows its bubble. |
-| **Match Elevation** | Modify | Match the centre, top or bottom elevation of a source MEP element. |
-| **Reassign Level** | Modify | Move MEP elements to another reference level without moving them in space. |
-| **Pin / Unpin** | Modify | Pin or unpin groups (title blocks, views on sheets, ducts, pipes, grids, levels...). |
-| **Smart Selection** | Modify | Pick one element, window-select, keep only that category. |
-| **Quick Clash** | Coordination | A Navisworks-style clash test in the active 3D view, in a window that stays open. Selection A (categories of this model, or your selection) against Selection B (categories of this model or of a linked model); Hard with a tolerance and/or Clearance with a distance, in mm. Clashes turn red and green, the rest grey and see-through; click one or several clashes to zoom to them, then **Isolate** (show only those), **Show all** or **Select** them in Revit, like Navisworks. **Reset view puts every element's own colours back exactly** - also done by itself before Save and Sync with Central. Only what the view shows is tested (in Revit 2020-2022, link elements inside the section box). 3D views only. |
-| **Model Walk** | Coordination | Walk the model in first person from a 3D view (W A S D, mouse, Fly, doors, Measure, viewpoints) - or in third person with a site worker drawn on screen where you stand, who stands, walks and runs with you (Q). Modes: **Inspect** (what is under the crosshair and how far), **Select**, **Snag** (click after click: picture + red colour, comments written in the pause menu, a CSV report next to the model), **Hide** (for now). Only what the view shows blocks you. Snag colours stay after the walk; **every element's own colours come back** with J and before Save and Sync; Esc pauses and leaves Revit free, with the snag list, viewpoints (saved per model, or as a Revit 3D view) and Settings; click again to stop. 3D views only. [Guide](docs/model-walk-guide.md). |
-| **Element ID** | Coordination | See the ID of a picked element (also in links), or find an element by ID and zoom to it. |
-| **3D Views by Workset** | Coordination | One 3D view per user workset. |
-| **Link Workset** | Coordination | Put selected Revit links and CAD imports on a workset. |
-| **About Heron** | About | Version details and the Heron family. |
+| [Quick](docs/tools/quick.md) | **Quick Menu** | A tool wheel at the mouse pointer with your favourite Heron Tools buttons and Revit commands; **Quick Menu Settings** chooses what sits in each slot. |
+| [View](docs/tools/view.md) | **Filter Pro** | One view filter per parameter value, named for you, added to the view first in the list; **Shuffle colours** gives each its own colour. |
+| | **Colorize** | The same picks, but the colour goes straight onto the elements (no filter). **Restore original** puts their own overrides back. |
+| | **Reset Graphics** | Clear the overrides of the selection, or of whole views and categories - it counts first. **Restore Last Reset** puts them back. |
+| | **View Crop** | Fit plan crops around their elements with a margin; set the annotation crop at an offset on paper. |
+| | **3D Snapshot** | Fit Revit's own {3D} view to a selected room, a section, or a window you drag in a plan - you stay in your view. |
+| | **Unhide All** | Show everything hidden one by one in the view and turn Temporary Hide/Isolate off. |
+| | **Toggle Links** | Turn the RVT Links category off or on in the view. |
+| | **Highlight** | Selection in red, the rest grey. **Click again to put the view back.** |
+| [Datums](docs/tools/datums.md) | **Reset Datums to 3D** | Put grid and/or level ends in the view back to their 3D extents. |
+| | **Level Extents** | Match level extents to another level, or stretch them to the section box. |
+| | **Flip Bubbles** | Swap which end of a grid or level shows its bubble. |
+| [Modify](docs/tools/modify.md) | **Match Elevation** | Match the centre, top or bottom elevation of a source MEP element. |
+| | **Reassign Level** | Move MEP elements to another reference level without moving them in space. |
+| | **Pin / Unpin** | Pin or unpin groups: title blocks, views on sheets, ducts, pipes, grids, levels... |
+| | **Smart Selection** | Pick one element, window-select, keep only that category. |
+| [Coordination](docs/tools/coordination.md) | **Quick Clash** | A Navisworks-style clash test in the active 3D view, in a window that stays open. **Reset view** puts every element's own colours back (also done before Save and Sync). |
+| | **Model Walk** | Walk the model in first or third person from a 3D view; inspect, select, measure and record snags with a picture. [Guide](docs/model-walk-guide.md). |
+| | **Element ID** | See the ID of a picked element (also in links), or find an element by ID and zoom to it. |
+| | **3D Views by Workset** | One 3D view per user workset. |
+| | **Link Workset** | Put Revit links and CAD imports on a workset. |
+| [About](docs/tools/about.md) | **About Heron** | Version details and the Heron family. |
 
 Every button press is **one Undo step**; if anything fails, the whole run is undone and the window says so.
 
 **The Filter Pro window** reads left to right in the order you work: **1 Categories - 2 Parameter - 3 Values**,
 each with a count ("2 of 10 picked"), a search box and an empty-list hint. On the right, the live **name
-preview** sits above four tabs - **Rule** (rules that do not suit the picked parameter are switched off),
-**Name**, **Apply** (active view or picked views) and **Colours**. Anything a run skipped is listed with the
-reason; a missing pick is said in the status line, never in a pop-up. Only **Apply to view** is orange.
+preview** sits above four tabs - **Rule**, **Name**, **Apply** (active view or picked views) and **Colours**.
+Anything a run skipped is listed with the reason. Only **Apply to view** is orange.
 
 ![Filter Pro window](docs/filter-pro-window.png)
 
 ## Supported Revit versions
 
-| Revit | .NET runtime it is built for | Built | Installed by `build.ps1` when that Revit is on the PC |
+| Revit | .NET runtime it is built for | Built | Installed by the installer / `build.ps1` when that Revit is on the PC |
 |---|---|---|---|
 | 2020 | .NET Framework 4.7.2 (`net472`) | yes | yes |
 | 2021 | .NET Framework 4.8 (`net48`) | yes | yes |
@@ -88,9 +100,12 @@ it does not know.
 
 ## Install (for modellers)
 
-Run **`HeronToolsInstaller.exe`** - one file, nothing else to install first (it runs on the .NET Framework
-that every Windows 10 and 11 already has). It finds every Revit 2020 to 2027 on the PC (also Revit installed on
-another drive, such as `D:\Autodesk\Revit 2024`), and installs Heron Tools into the ones you tick, for your Windows user only - no administrator needed.
+Full guide - update, remove, where the files go, common problems: **[docs/install.md](docs/install.md)**.
+
+1. Download **`HeronToolsInstaller.exe`** from the [latest release](https://github.com/Ajmalpshaik/Heron-Tools/releases/latest).
+2. Run it (Windows may say it is not signed: **More info > Run anyway**). No administrator rights needed.
+3. Tick your Revit versions (2020 to 2027) and press **Install**. If that Revit is open, it waits until you close it.
+4. Start Revit and look for the **Heron** tab. **About Heron** shows the version.
 
 <p align="center">
   <img src="docs/installer/installer-window.png" alt="The Heron Tools installer window" width="560">
@@ -126,6 +141,15 @@ To release: push a version tag that matches `<Version>` in `src/HeronTools/Heron
 refuses a tag that does not match the built version, and makes a **draft** GitHub release with
 `HeronToolsInstaller.exe` attached. A draft is seen only by the owner; publish it after the Revit test.
 A tag with a hyphen (`v1.0.0-beta.1`) is marked pre-release.
+
+## Help
+
+- **How a tool works:** the [tool catalogue](docs/tools/README.md), and the [Model Walk guide](docs/model-walk-guide.md).
+- **Install problems:** [docs/install.md - Common problems](docs/install.md#common-problems).
+- **A bug or an idea:** [open an issue](https://github.com/Ajmalpshaik/Heron-Tools/issues/new/choose) with the Bug
+  report or Feature request form. Say which tool, which Revit version, which view, what you did and what happened.
+  Never attach a client model.
+- **A security problem:** report it privately - see [SECURITY.md](SECURITY.md).
 
 ## Build and install (for developers)
 
@@ -179,7 +203,10 @@ The install is per user (no admin rights). That is deliberate: Revit 2027 moved 
 add-in folder from `C:\ProgramData` to `C:\Program Files` (admin only); the per-user folder is the
 same on every release.
 
-## Uninstall
+## Uninstall (developer install)
+
+Installed with the installer? Run it again and press **Remove Heron Tools** - see [docs/install.md](docs/install.md#remove-heron-tools).
+Installed with `build.ps1`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File build\uninstall.ps1
@@ -251,7 +278,7 @@ src/HeronTools/          the add-in (one project, every Revit year)
 manifests/               one .addin manifest per Revit year
 installer/               HeronToolsInstaller.exe - the setup window (.NET Framework 4.8, one file)
 build/                   build.ps1, build-installer.ps1, uninstall.ps1, check-metadata.ps1, picture makers
-docs/                    notes (what was moved and fixed, metadata standard, ideas for Heron AI), pictures
+docs/                    install guide, tool catalogue (docs/tools), Model Walk guide, records, pictures
 Directory.Build.props    Revit year -> .NET runtime, output folders, compile symbols
 .github/workflows/       Gates (every change: metadata, every Revit year, installer); Release (a version tag)
 ```
@@ -260,6 +287,8 @@ Directory.Build.props    Revit year -> .NET runtime, output folders, compile sym
 
 [CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) · [CODE OF CONDUCT](CODE_OF_CONDUCT.md) ·
 [DISCLAIMER](DISCLAIMER.md) · [CHANGELOG](CHANGELOG.md) · [AGENTS](AGENTS.md) (for AI agents working on the code)
+
+For modellers: [Install](docs/install.md) · [Tool catalogue](docs/tools/README.md) · [Model Walk guide](docs/model-walk-guide.md)
 
 Records: [Filter Pro move notes](docs/filter-pro-move-notes.md) · [View tools move notes](docs/view-tools-move-notes.md) ·
 [Panels move notes](docs/panels-move-notes.md) · [Model Walk move notes](docs/model-walk-move-notes.md) · [Model Walk guide](docs/model-walk-guide.md) ·
