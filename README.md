@@ -50,7 +50,7 @@ Every tool, step by step, with what it changes and how to undo it: **[tool catal
 | [View](docs/tools/view.md) | **Filter Pro** | One view filter per parameter value, named for you, added to the view first in the list; **Shuffle colours** gives each its own colour. |
 | | **Colorize** | The same picks, but the colour goes straight onto the elements (no filter). **Restore original** puts their own overrides back. |
 | | **Reset Graphics** | Clear the overrides of the selection, or of whole views and categories - it counts first. **Restore Last Reset** puts them back. |
-| | **View Crop** | Fit plan crops around their elements with a margin; set the annotation crop at an offset on paper. |
+| | **View Crop** | Fit plan crops around their elements with a margin; tick a box to also set the annotation crop at an offset on paper. |
 | | **3D Snapshot** | Fit Revit's own {3D} view to a selected room, a section, or a window you drag in a plan - you stay in your view. |
 | | **Unhide All** | Show everything hidden one by one in the view and turn Temporary Hide/Isolate off. |
 | | **Toggle Links** | Turn the RVT Links category off or on in the view. |

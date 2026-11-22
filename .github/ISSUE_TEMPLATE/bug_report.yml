@@ -17,8 +17,7 @@ body:
         - Filter Pro
         - Colorize
         - Reset Graphics (Reset Selected / Reset Graphics / Restore Last Reset)
-        - Crop View by Elements
-        - Annotation Crop by View Crop
+        - View Crop (Crop View by Elements, with or without the annotation crop)
         - 3D Snapshot
         - Unhide All
         - Toggle Links

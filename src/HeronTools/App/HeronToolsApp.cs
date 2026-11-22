@@ -140,23 +140,13 @@ namespace HeronTools.App
                 "Put back every override the last reset in this model cleared.",
                 "Works while Revit stays open, even after other work (where Undo would also undo that work). One Undo step."));
 
-            // View Crop: two related tools under one button.
-            var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View\nCrop")
-            {
-                ToolTip = "Fit crop regions and annotation crops of plan views.",
-                Image = BrandImages.Load("ViewCrop16.png"),
-                LargeImage = BrandImages.Load("ViewCrop32.png"),
-            };
-            var viewCropButton = (PulldownButton)panel.AddItem(viewCrop);
-            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_CropByElements", "Crop View\nby Elements",
+            // View Crop: one button. The annotation crop is a tick box in its window (no separate button).
+            panel.AddItem(Button(assemblyPath, "HeronTools_ViewCrop", "View\nCrop",
                 typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
-                "Fit the crop region of plan views around their elements.",
-                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the offset. " +
-                "Each run is one Undo step."));
-            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_AnnotationCrop", "Annotation Crop\nby View Crop",
-                typeof(CmdSetAnnotationCropByViewCrop), typeof(CmdPlanViewAvailability), "AnnotationCrop",
-                "Turn on the annotation crop in the picked views and set an equal offset from each view's crop region.",
-                "Pick the views and the offset. Revit's own limits on the annotation crop are respected. Each run is one Undo step."));
+                "Fit the crop region of plan views around their elements - and, if you tick it, the annotation crop too.",
+                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the margin. " +
+                "Tick \"Also turn on the annotation crop\" to set it the same distance outside the new crop on all four sides " +
+                "(an offset on paper; Revit's own limits on the annotation crop are respected). Each run is one Undo step."));
 
             // 3D Snapshot: one click fits Revit's default 3D view to a room, a section or a plan window.
             panel.AddItem(Button(assemblyPath, "HeronTools_3DSnapshot", "3D\nSnapshot", typeof(Cmd3DSnapshot), typeof(Cmd3DSnapshotAvailability), "Snapshot3D",

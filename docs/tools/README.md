@@ -32,7 +32,7 @@ Model Walk has its own full guide: [Model Walk user guide](../model-walk-guide.m
 | Clear colour overrides from elements or a whole view (and get them back) | **Reset Graphics** |
 | Bring back everything hidden in a view | **Unhide All** |
 | Hide or show all Revit links in a view | **Toggle Links** |
-| Fit plan crops around the model, or set the annotation crop | **View Crop** |
+| Fit plan crops around the model, and set the annotation crop with them | **View Crop** |
 | See a room or a section in 3D in one click | **3D Snapshot** |
 | Tidy grid and level ends in a view | **Reset Datums to 3D**, **Level Extents**, **Flip Bubbles** |
 | Put MEP elements at the same height as another | **Match Elevation** |
