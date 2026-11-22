@@ -5,7 +5,8 @@
 # Heron-Layer:  tool
 # See docs/metadata-standard.md
 #
-# Makes a GitHub release from a version tag, with HeronToolsInstaller.exe attached.
+# Makes a GitHub release from a version tag, with HeronToolsInstaller.exe and SHA256SUMS.txt attached.
+# The release text is docs/releases/<version>.md when that file exists (else a short standard text).
 #
 #   git tag v1.0.0 && git push origin v1.0.0
 #
@@ -95,9 +96,15 @@ jobs:
         run: |
           prerelease=""
           case "$TAG" in *-*) prerelease="--prerelease" ;; esac
-          cat > notes.md <<EOF
-          Built by .github/workflows/release.yml from ${GITHUB_SHA}.
-
+          version="${TAG#v}"; version="${version%%-*}"
+          # The checksum lets a modeller check the download (Get-FileHash in PowerShell).
+          (cd dist && sha256sum HeronToolsInstaller.exe > SHA256SUMS.txt)
+          sha=$(cut -d' ' -f1 dist/SHA256SUMS.txt)
+          # The notes are docs/releases/<version>.md when it exists, else the short standard text.
+          if [ -f "docs/releases/${version}.md" ]; then
+            cp "docs/releases/${version}.md" notes.md
+          else
+            cat > notes.md <<EOF
           ## Install
 
           1. Download **HeronToolsInstaller.exe** below.
@@ -110,7 +117,11 @@ jobs:
 
           See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/CHANGELOG.md).
           EOF
-          gh release create "$TAG" dist/HeronToolsInstaller.exe \
+          fi
+          # Links in the notes file are relative to docs/releases/; on the release page they must be full links.
+          sed -i "s#](\.\./\.\./#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/#g; s#](\.\./#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/docs/#g" notes.md
+          printf '\n---\n\nSHA-256 of HeronToolsInstaller.exe: `%s`\n\nBuilt by .github/workflows/release.yml from %s.\n' "$sha" "$GITHUB_SHA" >> notes.md
+          gh release create "$TAG" dist/HeronToolsInstaller.exe dist/SHA256SUMS.txt \
             --draft $prerelease \
             --title "Heron Tools $TAG" \
             --notes-file notes.md \

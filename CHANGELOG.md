@@ -4,6 +4,15 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-22
+
+In short: the new **Model Walk** tool (first and third person with a real character, quick snags, viewpoints), a full
+code review of every other tool (issues #18-#37 fixed), and exact mm-to-feet. Release notes:
+[docs/releases/1.2.0.md](docs/releases/1.2.0.md).
+
+**Model Walk is DRAFT: it compiles for every Revit year but has not yet been tested in Revit.** Every fix below also
+still needs a real Revit test.
+
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
 - **Model Walk docs:** the spec (`docs/game-mode-spec.md`) now says what was built, item by item; the Revit test
   script in `docs/model-walk-move-notes.md` is one numbered list, steps 1-62, each with a results row.
