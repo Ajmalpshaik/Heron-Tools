@@ -119,7 +119,7 @@ namespace HeronTools.UI.ModelWalk
                 failed =>
                 {
                     _session.Hud.SnagPictureBusy = false;
-                    _session.Hud.Toast("Snag " + number + " picture not saved (" + failed + ")", WalkToastKind.Refused);
+                    SayPictureProblem("Snag " + number + " was recorded without a picture (" + failed + ").");
                     AskSnagComment(snag);
                 });
         }

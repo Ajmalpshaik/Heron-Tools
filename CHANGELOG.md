@@ -7,7 +7,8 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
 - **Snag pictures and pause:** Esc right after a quick snag now waits for that snag's picture (about 0.1 s) instead of
   dropping it; a pause Revit forces says in the pause menu if a snag was left without its picture. A snag click during
-  a Snapshot (K) now says the snapshot is being taken.
+  a Snapshot (K) now says the snapshot is being taken. Esc waits for a Snapshot too, and a picture is never taken with
+  the pause or end card in it (it is skipped and said instead).
 - **Third person now shows a real character** (from AJ-Tools Game Mode v1.61.0): a site worker in a yellow hard hat,
   1850 mm tall, in place of the blocky figure, which is removed. He stands when you stop, walks when you move and runs
   with Shift, blending smoothly between them; his legs speed up with you up to a limit, so at the faster speed steps

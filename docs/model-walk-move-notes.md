@@ -394,6 +394,7 @@ from AJ-Tools.
 | 47 Colours, walls and pictures with the character | | | | |
 | 50 Esc right after a snag keeps its picture | | | | |
 | 51 Snag click during a Snapshot (K) | | | | |
+| 52 No pause / end card in a picture | | | | |
 
 ## Extra Revit checks (steps 21-29, from the audit)
 
@@ -697,6 +698,7 @@ The two notes the stage 6 / stage 8 reviews left (R6 above).
 | What was wrong | Now |
 |---|---|
 | Quick snagging, then Esc within about 0.1 s: the pause cleared `SnagAwaitingPicture`, so that snag kept **no picture**; if the picture was already being taken, the pause card could land in it. | Esc and the Pause key now go through `PauseWhenAsked`: while a snag's picture is waiting or being taken, held keys stop at once and the pause comes as soon as the picture is saved (at most 2 s, then it pauses anyway). The comment box (setting on) does not open in between. A pause Revit forces (the overlay loses focus or the mouse) still pauses at once; if that drops a waiting picture, the pause menu now says "Snag n was recorded without a picture". |
+| A picture already being taken (the short wait before the screen copy) when the walk paused or ended - a Snapshot (K) then Esc, or a forced pause / end right after a snag - still copied the screen, with the pause or end card in it (final-review comment on #74). | Esc / Pause also wait for a Snapshot. If the walk pauses or ends anyway, `CaptureNow` takes no picture; the snag says "Snag n was recorded without a picture (the walk paused before it was taken)" in the pause menu's status line, a snapshot "Snapshot not saved (...)". |
 | A Snag click during a Snapshot (K) said "the last snag's picture is being taken". | It says "One moment - the snapshot is being taken. Click again." (and "Pausing..." in the moment before a pause). |
 
 ### Revit test steps
@@ -706,3 +708,6 @@ The two notes the stage 6 / stage 8 reviews left (R6 above).
     snag, and Alt+Tab away at once: the pause menu says "Snag n was recorded without a picture".
 51. **Snag click during a Snapshot (K).** Press K and click a snag at once. Expect "One moment - the snapshot is being
     taken. Click again."; click again: recorded with its picture.
+52. **No card in a picture.** Press K and Esc at once: the walk pauses a blink later and the snapshot has no pause card.
+    Snag, then make Revit take the focus at once (Alt+Tab): no snag picture with the pause card in it; the pause menu
+    says the snag was recorded without a picture.

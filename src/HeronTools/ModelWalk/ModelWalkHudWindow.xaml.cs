@@ -291,7 +291,7 @@ namespace HeronTools.UI.ModelWalk
                 hud.SnagAwaitingPicture = 0;
                 FinishSnagRecord(number);
             }
-            else if (_pauseAfterPicture && (!SnagPictureOnItsWay ||
+            else if (_pauseAfterPicture && (!PictureOnItsWay ||
                      (DateTime.UtcNow - _pauseAfterPictureSince).TotalSeconds > PauseAfterPictureMaxSeconds))
             {
                 PauseWalk();   // the snag's picture is saved: now the pause asked for with Esc
@@ -375,8 +375,11 @@ namespace HeronTools.UI.ModelWalk
         /// <summary>A snag's picture is waiting to be taken or being taken right now.</summary>
         private bool SnagPictureOnItsWay => _session.Hud.SnagAwaitingPicture > 0 || _session.Hud.SnagPictureBusy;
 
+        /// <summary>Any picture on its way: a snag's, or a Snapshot (K) being taken.</summary>
+        private bool PictureOnItsWay => SnagPictureOnItsWay || _snapshotBusy;
+
         /// <summary>
-        /// Esc or the Pause key right after a snag click (quick snagging): the pause waits for that snag's picture
+        /// Esc or the Pause key right after a snag click or a Snapshot (K): the pause waits for that picture
         /// (about a tenth of a second) - pausing at once dropped the picture, or caught the pause card in it. Held keys
         /// stop at once. At most <see cref="PauseAfterPictureMaxSeconds"/>, then the walk pauses anyway.
         /// </summary>
@@ -384,7 +387,7 @@ namespace HeronTools.UI.ModelWalk
         {
             if (_paused || _ending || _closedDown)
                 return;
-            if (!EntryOpen && SnagPictureOnItsWay)
+            if (!EntryOpen && PictureOnItsWay)
             {
                 if (!_pauseAfterPicture)
                     _pauseAfterPictureSince = DateTime.UtcNow;
