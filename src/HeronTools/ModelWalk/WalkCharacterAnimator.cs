@@ -135,6 +135,24 @@ namespace HeronTools.Services.ModelWalk
             RunNaturalFtPerSec = NaturalSpeedFtPerSec(_run, WalkTuning.MmToFt(DefaultRunMmPerSec));
         }
 
+        /// <summary>
+        /// Back to the start of Idle with no blend: a new walk, or Q into third person again, shows him standing at once
+        /// instead of finishing whatever clip he was in when third person last ended (the animator lives for the Revit
+        /// session). No allocation.
+        /// </summary>
+        internal void Reset()
+        {
+            _current = _idle ?? _walk ?? _run;
+            _currentTime = 0.0;
+            _previous = null;
+            _previousTime = 0.0;
+            _previousRate = 1.0;
+            _fade = 1.0;
+            LastRate = 1.0;
+            ComputePose();
+            Skin();
+        }
+
         /// <summary>Moves the animation on by one walk frame and re-poses the mesh.</summary>
         internal void Advance(double dt, double speedFtPerSec, bool running)
         {

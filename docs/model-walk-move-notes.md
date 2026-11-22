@@ -648,7 +648,7 @@ has run in Revit.
 | S7 | Checked, no defect | Server: vertex format, effect and stream are all PositionNormal; index count = triangles x 3 shorts; parts over 65,535 vertices skipped (16-bit indices); every buffer tested with `IsValid()` before use; `CanExecute` needs Visible + view id + document; `RenderScene` and `CanExecute` cannot throw; nothing drawn while hidden (snag pictures). Switch on / off, `Prepare`, `TryRemove` and the end paths are line-for-line the stage 6 code (diffed against `main`). Camera back on the eye at End, wall slide and the 24-ray budget unchanged. | - |
 | S8 | Checked, no defect | The embedded resource `HeronTools.ModelWalk.WalkCharacter.gltf` is in every year's DLL (net472, net48 x4, net8 x2, net10), full 469,422 bytes - read from each DLL's resource table. No `int` element id, no transaction, no window colour, no model change; every new file has its 5-field header; `NOTICE` CC0 entry sits with the Manrope entry and says what the Apache grant does not cover. | - |
 | S9 | Note, not changed | A replaced Revit buffer is disposed on the next redraw after it was drawn. The API notes say nothing about disposing a buffer that was already drawn, so this is not proven. | NEEDS REAL REVIT - step 48. |
-| S10 | Note, not changed | The animator is kept for the Revit session, so a new walk (or Q again) starts from the clip it was in last time and blends 0.2 s into Idle - a short settle, not a snap. | Left - cosmetic, no new behaviour asked for. |
+| S10 | Note | The animator is kept for the Revit session, so a new walk (or Q again) starts from the clip it was in last time and blends 0.2 s into Idle - a short settle, not a snap. | **Fixed** in "Character polish" below - he starts standing. |
 
 Extra Revit test step:
 
@@ -663,6 +663,28 @@ Extra Revit test step:
 | Character resource in all eight DLLs | PASS |
 | Reader + animator outside Revit, en-US / de-DE / fr-FR, 18 broken files, NaN / infinite input | PASS (S1-S3 failed before their fixes) |
 | Buffer reuse and dispose over a long walk and two models (step 48) | NEEDS REAL REVIT |
+
+## Character polish (2026-11-22)
+
+Two small fixes in the character drawing, from the stage 8 review's notes. Builds and an outside-Revit check only.
+
+| # | What was wrong | Fix |
+|---|---|---|
+| P1 | (S10) The animator lives for the Revit session, so a new walk or Q back into third person started from the clip he was in last time (walking or running) and settled 0.2 s into Idle. | `WalkCharacterAnimator.Reset()` - start of Idle, no blend, pose made again (no allocation). `WalkCharacterServer.ResetPose()` calls it on the first third-person frame of a walk and after every Q into third person. |
+| P2 | The frame the blend into Idle finishes asked for no redraw (`IsMoving` had just gone false), so with no camera move he was left on the last blend frame - a few per cent short of standing - until something else redrew the view. | That last frame is redrawn too (the engine remembers he was moving one frame before). Still no redraws once he stands. |
+
+Revit test step:
+
+49. **Starts standing.** In third person, run (Shift + W) and press Q mid-run, wait, press Q again: he appears standing
+    at once, no left-over running pose. Run again, end the walk mid-run, start a new walk in third person: standing at
+    once. Walk, stop, keep the mouse still: he ends fully in the standing pose.
+
+| Check (character polish) | State |
+|---|---|
+| Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| `Reset()` outside Revit (throwaway test): after running, back to Idle, not moving, 1850 mm, the same pose as the first load, 0 bytes allocated | PASS |
+| Step 49 in Revit | NEEDS REAL REVIT |
 
 ## File readers review (2026-11-22)
 
@@ -683,4 +705,4 @@ A read of every Model Walk file reader and writer: `ModelWalkSettings.txt` (`Wal
 | Build Revit 2020-2027 after the fixes | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
 | Settings / keys / viewpoints outside Revit, de-DE, missing + damaged files (F1, F2 failed before their fixes) | PASS |
-| 49. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |
+| 50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |
