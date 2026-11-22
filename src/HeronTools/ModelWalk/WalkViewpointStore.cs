@@ -98,7 +98,9 @@ namespace HeronTools.Services.ModelWalk
 
             foreach (string line in lines)
             {
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#", StringComparison.Ordinal))
+                // A comment is a "#" line with no tab (the header). A viewpoint named "#2 riser" also starts
+                // with "#", but its line has tabs, so it is read, not skipped.
+                if (string.IsNullOrWhiteSpace(line) || (line.StartsWith("#", StringComparison.Ordinal) && line.IndexOf('\t') < 0))
                     continue;
                 string[] p = line.Split('\t');
                 if (p.Length != 6 || string.IsNullOrWhiteSpace(p[0]) ||
