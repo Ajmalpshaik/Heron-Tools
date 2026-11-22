@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1318" height="371" viewBox="0 0 1318 371" font-family="Manrope, Segoe UI, Arial, sans-serif">
+<title>The Heron ribbon tab with the Heron Tools panels and buttons</title>
+<rect width="1318" height="371" rx="12" fill="#0F0F10"/>
+<text x="16" y="34" font-size="20" font-weight="700" fill="#FD641A">Heron</text>
+<text x="88" y="34" font-size="13" fill="#F7F5F2" fill-opacity="0.72">ribbon tab - Heron Tools panels, left to right (▾ = drop-down list)</text>
+<rect x="16" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
+<text x="28" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Quick Menu ▾</text>
+<text x="42" y="91" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Quick Menu</text>
+<text x="42" y="110" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Quick Menu Settings</text>
+<line x1="26" y1="327" x2="212" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
+<text x="119" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">Quick</text>
+<rect x="232" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
+<text x="244" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Filter Pro</text>
+<text x="244" y="91" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Colorize</text>
+<text x="244" y="110" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Reset Graphics ▾</text>
+<text x="258" y="129" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Reset Selected</text>
+<text x="258" y="148" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Reset Graphics...</text>
+<text x="258" y="167" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Restore Last Reset</text>
+<text x="244" y="186" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">View Crop ▾</text>
+<text x="258" y="205" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Crop View by Elements</text>
+<text x="258" y="224" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Annotation Crop by View Crop</text>
+<text x="244" y="243" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">3D Snapshot</text>
+<text x="244" y="262" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Unhide All</text>
+<text x="244" y="281" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Toggle Links</text>
+<text x="244" y="300" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Highlight</text>
+<line x1="242" y1="327" x2="428" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
+<text x="335" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">View</text>
+<rect x="448" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
+<text x="460" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Reset Datums to 3D ▾</text>
+<text x="474" y="91" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Grids</text>
+<text x="474" y="110" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Levels</text>
+<text x="474" y="129" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Grids and Levels</text>
+<text x="460" y="148" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Level Extents ▾</text>
+<text x="474" y="167" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Match Level Extents</text>
+<text x="474" y="186" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Levels to Section Box</text>
+<text x="460" y="205" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Flip Bubbles</text>
+<line x1="458" y1="327" x2="644" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
+<text x="551" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">Datums</text>
+<rect x="664" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
+<text x="676" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Match Elevation ▾</text>
+<text x="690" y="91" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Match Centre</text>
+<text x="690" y="110" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Match Top</text>
+<text x="690" y="129" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Match Bottom</text>
+<text x="676" y="148" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Reassign Level</text>
+<text x="676" y="167" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Pin / Unpin</text>
+<text x="676" y="186" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Smart Selection</text>
+<line x1="674" y1="327" x2="860" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
+<text x="767" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">Modify</text>
+<rect x="880" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
+<text x="892" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Quick Clash</text>
+<text x="892" y="91" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Model Walk</text>
+<text x="892" y="110" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Element ID ▾</text>
+<text x="906" y="129" font-size="12" fill="#F7F5F2" fill-opacity="0.72">ID of a Picked Element</text>
+<text x="906" y="148" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Find by Element ID</text>
+<text x="892" y="167" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">3D Views by Workset</text>
+<text x="892" y="186" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Link Workset</text>
+<line x1="890" y1="327" x2="1076" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
+<text x="983" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">Coordination</text>
+<rect x="1096" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
+<text x="1108" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">About Heron</text>
+<line x1="1106" y1="327" x2="1292" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
+<text x="1199" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">About</text>
+</svg>

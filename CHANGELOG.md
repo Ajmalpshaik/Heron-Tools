@@ -13,9 +13,21 @@ code review of every other tool (issues #18-#37 fixed), and exact mm-to-feet. Re
 **Model Walk is DRAFT: it compiles for every Revit year but has not yet been tested in Revit.** Every fix below also
 still needs a real Revit test.
 
+### Added - Docs
+- **Tool catalogue** (`docs/tools/`): one page per ribbon panel - what each tool does, when to use it, step by
+  step, what it changes in the model, how to undo it, and its limits - with a picture of the ribbon.
+
+### Changed - Docs
+- **README** rewritten for a modeller first: what Heron Tools is, who it is for, a picture of the ribbon, every tool in
+  one line with a link to its catalogue page, install in four steps, where to get help.
+- **Install guide** (`docs/install.md`): download, install, check it loaded, where the files go, update, remove,
+  first time in Revit, office install without a window, common problems, and building from source.
+- **Release notes** for each version in `docs/releases/`; the release page shows them, with `SHA256SUMS.txt`
+  to check the download.
+
 ### Changed - Model Walk (NEEDS A REAL REVIT TEST)
 - **Model Walk docs:** the spec (`docs/game-mode-spec.md`) now says what was built, item by item; the Revit test
-  script in `docs/model-walk-move-notes.md` is one numbered list, steps 1-62, each with a results row.
+  script in `docs/model-walk-move-notes.md` is one numbered list, each step with a results row.
 - **Snag pictures and pause:** Esc right after a quick snag now waits for that snag's picture (about 0.1 s) instead of
   dropping it; a pause Revit forces says in the pause menu if a snag was left without its picture. A snag click during
   a Snapshot (K) now says the snapshot is being taken. Esc waits for a Snapshot too, and a picture is never taken with
@@ -57,6 +69,10 @@ still needs a real Revit test.
   bad speed or bone weight can no longer break the animation for the rest of the walk.
 
 ### Fixed - Model Walk walk engine (NEEDS A REAL REVIT TEST)
+- Third person: switching the character off just before a walk ends can no longer switch it off in the next walk;
+  if Revit drops the character's drawing buffers they are made again (#85).
+- Walking along a wall near a link: a slide that is free is no longer thrown away; a walk that fails to open cleans
+  up after itself; ending the walk redraws every open view of the model (#82).
 - Third person: after Pass-through on/off, hiding or showing an element, or Revit's own Reset Temporary Hide, the
   camera checks the wall behind you again at once, even standing still (#83).
 - Snag mode: an element in a link is snagged once per link instance ("Already snag N"), not again on each click;
@@ -69,6 +85,7 @@ still needs a real Revit test.
 - In a workshared model, a Revit user name with a character Revit refuses in view names no longer stops the walk view being made.
 
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
+- Housekeeping: unused code removed and old file headers replaced by the metadata standard (no behaviour change).
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own
   sub-transaction, never left with no bubble at either end while the rest commit.
 - **Reset Graphics, Pin / Unpin, Link Workset**: if the window stops on an error after a change was made, the change is

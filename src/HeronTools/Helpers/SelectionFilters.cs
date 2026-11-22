@@ -5,13 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Tool Name: Selection Filters
-// Description: Reusable selection filters for common Revit element types.
-// Author: Ajmal P.S.
-// Version: 1.0.0
-// Last Updated: 2025-12-11
-// Revit Version: 2020
-// Dependencies: Autodesk.Revit.DB, Autodesk.Revit.UI
+// Reusable selection filters for common Revit element types.
 
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
@@ -27,38 +21,6 @@ namespace HeronTools.Utils
         public bool AllowElement(Element elem)
         {
             return elem is Grid || elem is Level;
-        }
-
-        public bool AllowReference(Reference reference, XYZ position)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Selection filter for Dimension elements.
-    /// </summary>
-    internal class DimensionSelectionFilter : ISelectionFilter
-    {
-        public bool AllowElement(Element elem)
-        {
-            return elem is Dimension;
-        }
-
-        public bool AllowReference(Reference reference, XYZ position)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Selection filter for text notes.
-    /// </summary>
-    internal class TextNoteSelectionFilter : ISelectionFilter
-    {
-        public bool AllowElement(Element elem)
-        {
-            return elem is TextNote;
         }
 
         public bool AllowReference(Reference reference, XYZ position)
@@ -89,29 +51,6 @@ namespace HeronTools.Utils
                 return false;
 
             return ElementIdHelper.TryGetBuiltInCategory(cat.Id, out BuiltInCategory builtIn) && _categories.Contains(builtIn);
-        }
-
-        public bool AllowReference(Reference reference, XYZ position)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Selection filter for duct curves only. The distinct name dates from a collision with the
-    /// Auto Duct Dimension tool's own filter; that tool is now Auto MEP Dimension and its filter is
-    /// HeronTools.Services.MepReferenceDimension.MepRunSelectionFilter, which covers every service
-    /// category and also accepts references inside Revit links.
-    /// </summary>
-    internal class DuctCurveOnlySelectionFilter : ISelectionFilter
-    {
-        public bool AllowElement(Element elem)
-        {
-            Category cat = elem?.Category;
-            if (cat == null)
-                return false;
-
-            return ElementIdHelper.IsCategory(cat.Id, BuiltInCategory.OST_DuctCurves);
         }
 
         public bool AllowReference(Reference reference, XYZ position)

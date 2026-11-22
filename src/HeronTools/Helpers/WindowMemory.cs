@@ -75,10 +75,6 @@ namespace HeronTools.Utils
             _values.TryGetValue(key, out string value) &&
             int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int i) ? i : fallback;
 
-        public long GetLong(string key, long fallback) =>
-            _values.TryGetValue(key, out string value) &&
-            long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l) ? l : fallback;
-
         public double GetDouble(string key, double fallback) =>
             _values.TryGetValue(key, out string value) &&
             double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) &&

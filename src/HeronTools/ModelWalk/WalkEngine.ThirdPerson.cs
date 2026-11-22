@@ -75,11 +75,18 @@ namespace HeronTools.Services.ModelWalk
                 hud.Toast("Third person without the character: " + (WalkCharacterServer.CharacterProblem ?? "it could not be read") +
                           ". The camera is behind you; nothing else changes.", WalkToastKind.Refused);
             }
-            if (hasCharacter && !WalkCharacterServer.InUse && !WalkCharacterServer.SwitchOn())
+            bool switchedOn = hasCharacter && !WalkCharacterServer.InUse;
+            if (switchedOn && !WalkCharacterServer.SwitchOn())
             {
                 input.ThirdPerson = false;
                 hud.Toast("Third-person view is not available: Revit did not let Model Walk draw the character. First person.",
                           WalkToastKind.Refused);
+            }
+            else if (switchedOn)
+            {
+                // Every switch-on redraws: after a switch-off that came from outside this walk, "shown" has not
+                // changed in this walk's memory, so a character standing still would otherwise not be drawn.
+                redraw = true;
             }
 
             if (!input.ThirdPerson)
