@@ -1147,3 +1147,29 @@ API checked in the `Nice3point.Revit.Api` 2020-2027 XML (and compiled in all eig
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Steps 72-74 | NEEDS REAL REVIT |
+
+## "Something Revit could not name" (#104, part 3)
+
+The readout showed "Something Revit could not name  14,616 mm": Revit's ray hit a surface but the hit gave no element.
+That happens when the hit is in a link and Revit gives no element for it (a link inside the link, a link being
+reloaded) - the link itself was known but was thrown away - or, rarely, a reference to a host element Revit does not
+return.
+
+| Before | Now |
+|---|---|
+| "Something Revit could not name" | "Something in the link <link name> (ID n) - Revit gives no details for it", or "A surface Revit gives no element for (ID n)" when there is no link. The ID is shown only when Revit's reference has one. |
+| A click on it: "Nothing under the crosshair" (wrong - something was there). | "Revit gives no element for what is under the crosshair, so it cannot be used here". |
+
+API: `Reference.LinkedElementId`, `Reference.ElementId` (2020-2027, 64-bit id through `LongValue()`).
+
+### Revit test step
+
+75. **Unnamed readout.** In the big linked model, aim where the readout said "Something Revit could not name" before
+    (about 14.6 m away in the owner's video). Expect the link's name (and an ID) instead. Left click there: the new
+    message, not "Nothing under the crosshair".
+
+| Check (#104, readout) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 75 | NEEDS REAL REVIT |

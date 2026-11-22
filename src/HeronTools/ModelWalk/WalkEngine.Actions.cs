@@ -540,7 +540,9 @@ namespace HeronTools.Services.ModelWalk
             WalkRayHit hit = _collision.CastFull(AimFrom(position), AimAlong(forward), WalkTuning.AimRangeFt);
             if (hit?.Element == null)
             {
-                hud.Toast("Nothing under the crosshair", WalkToastKind.Refused);
+                hud.Toast(hit == null ? "Nothing under the crosshair"
+                                      : "Revit gives no element for what is under the crosshair, so it cannot be used here",
+                          WalkToastKind.Refused);
                 return null;
             }
             return hit;

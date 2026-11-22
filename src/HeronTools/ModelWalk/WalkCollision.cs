@@ -38,6 +38,12 @@ namespace HeronTools.Services.ModelWalk
         public RevitLinkInstance Link;
 
         public bool FromLink => Link != null;
+
+        /// <summary>
+        /// When Revit gave a surface but no element (<see cref="Element"/> null): what is still known - the link it is in
+        /// (<see cref="Link"/>), and the id Revit's reference named, for the readout. Empty when nothing at all.
+        /// </summary>
+        public string UnnamedId = "";
     }
 
     internal sealed class WalkCollision
@@ -162,17 +168,20 @@ namespace HeronTools.Services.ModelWalk
             Element element = _doc.GetElement(reference);
             if (element is RevitLinkInstance link)
             {
+                // The link is known even when its element is not (a link inside the link, or a link being reloaded):
+                // the readout then names the link instead of "nothing".
+                hit.Link = link;
                 Document linkDoc = link.GetLinkDocument();
                 Element linked = linkDoc?.GetElement(reference.LinkedElementId);
-                if (linked != null)
-                {
-                    hit.Element = linked;
-                    hit.Link = link;
-                }
+                hit.Element = linked;
+                if (linked == null && ElementIdHelper.IsValid(reference.LinkedElementId))
+                    hit.UnnamedId = reference.LinkedElementId.LongValue().ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
             else
             {
                 hit.Element = element;
+                if (element == null && ElementIdHelper.IsValid(reference.ElementId))
+                    hit.UnnamedId = reference.ElementId.LongValue().ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
             Category category = hit.Element?.Category;
@@ -189,8 +198,16 @@ namespace HeronTools.Services.ModelWalk
         /// <summary>"Ducts - Rectangular Duct : Supply - 600x400 - ID 1234567" (the full 64-bit id).</summary>
         public static string DescribeLine1(WalkRayHit hit)
         {
-            if (hit?.Element == null)
-                return hit == null ? "" : "Something Revit could not name";
+            if (hit == null)
+                return "";
+            if (hit.Element == null)
+            {
+                // Revit hit a surface but gave no element: say what is known, in plain words.
+                string id = string.IsNullOrEmpty(hit.UnnamedId) ? "" : " (ID " + hit.UnnamedId + ")";
+                return hit.FromLink
+                    ? "Something in the link " + LinkName(hit.Link) + id + " - Revit gives no details for it"
+                    : "A surface Revit gives no element for" + id;
+            }
 
             Element element = hit.Element;
             string size = SizeText(element);

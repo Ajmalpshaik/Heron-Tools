@@ -13,6 +13,7 @@ Planned as 1.2.1: Model Walk fixes from the owner's first test on a big linked m
 - **Building cut away:** a walk that starts outside the walk view's section box switches that section box off (the walk
   view only, one Undo step, and the walk says so); far clipping is switched off. A box you start inside stays.
 - **Start on a roof:** the location line says "on a roof (outside)" and the walk says once how to get inside.
+- **"Something Revit could not name"** in the readout now names the link it is in (and the ID when Revit has one).
 - Long messages stay on screen long enough to read (up to 9 s).
 - **F12** shows a second line for the character: drawn or why not, Revit's near cut, the section box, and where his feet
   are (internal and shared).
