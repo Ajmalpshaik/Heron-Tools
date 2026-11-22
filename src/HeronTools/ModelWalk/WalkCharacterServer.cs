@@ -14,8 +14,9 @@
 // if it cannot be read, third person still works (the camera behind you), nothing is drawn, and the walk says so once.
 //
 // Ported from AJ-Tools Game Mode v1.61.0 (GameCharacterServer.cs v1.1.0, commit ab98e2e), read only, never changed.
-// Heron changes: no blocky fallback figure; the server is switched on only while a walk runs in third person and
-// switched off on every end path; the walk view is matched by ElementId AND its document (ids repeat across models);
+// Heron changes: no blocky fallback figure; the server is switched on only while a walk runs in third person (or has
+// a linked snag to mark - the same server draws the red boxes round linked snags, as Revit cannot colour one element
+// inside a link) and switched off on every end path; the walk view is matched by ElementId AND its document (ids repeat across models);
 // Revit's buffers are kept between redraws and rebuilt only when the pose changed or Revit invalidated them.
 //
 // The Revit API rule this follows (ExternalService.RemoveServer, checked in the 2020 to 2027 API notes, identical):
@@ -65,6 +66,15 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>The pose the next redraw uses (engine writes, server reads - both on Revit's thread).</summary>
         internal static readonly WalkCharacterPose Pose = new WalkCharacterPose();
+
+        // Red boxes round the snagged LINKED elements (Revit cannot colour one element inside a link): each is 8
+        // corners in this model's coordinates. Replaced as a whole (never changed in place), so a redraw on another
+        // thread always sees a complete list. Drawn in the walk view while the server is on, in first and third person,
+        // and in snag pictures - they are the linked snag's only mark.
+        private static XYZ[][] _markers = new XYZ[0][];
+        private static int _markersVersion;
+        private static Document _markerDocument;
+        private static ElementId _markerViewId;
 
         /// <summary>True from the frame the character is switched on until it is switched off again.</summary>
         internal static bool InUse { get; private set; }
@@ -188,6 +198,26 @@ namespace HeronTools.Services.ModelWalk
             }
         }
 
+        /// <summary>
+        /// The red boxes to draw for this walk's linked snags (8 corners each, this model's coordinates), in the walk view
+        /// of <paramref name="doc"/>. Revit's thread. The caller switches the server on (<see cref="SwitchOn"/>).
+        /// </summary>
+        internal static void SetMarkers(Document doc, ElementId viewId, IList<XYZ[]> boxes)
+        {
+            var copy = new List<XYZ[]>();
+            if (boxes != null)
+                foreach (XYZ[] box in boxes)
+                    if (box != null && box.Length == 8)
+                        copy.Add(box);
+            _markerDocument = doc;
+            _markerViewId = viewId;
+            _markers = copy.ToArray();
+            _markersVersion++;
+        }
+
+        /// <summary>How many red boxes are drawn now (for the F12 line).</summary>
+        internal static int MarkerCount => _markers.Length;
+
         /// <summary>True when a character was read and can be drawn.</summary>
         internal static bool HasCharacter => _animator != null;
 
@@ -265,6 +295,10 @@ namespace HeronTools.Services.ModelWalk
             Pose.Visible = false;
             Pose.Document = null;
             Pose.ViewId = null;
+            _markers = new XYZ[0][];
+            _markersVersion++;
+            _markerDocument = null;
+            _markerViewId = null;
             InUse = false;
             _switchOffPending = false;
             try
@@ -376,8 +410,11 @@ namespace HeronTools.Services.ModelWalk
             bool yes;
             try
             {
-                yes = Pose.Visible && _animator != null && dBView != null && Pose.ViewId != null && Pose.Document != null &&
-                      dBView.Id == Pose.ViewId && dBView.Document.Equals(Pose.Document);
+                bool character = Pose.Visible && _animator != null && dBView != null && Pose.ViewId != null && Pose.Document != null &&
+                                 dBView.Id == Pose.ViewId && dBView.Document.Equals(Pose.Document);
+                bool markers = _markers.Length > 0 && dBView != null && _markerViewId != null && _markerDocument != null &&
+                               dBView.Id == _markerViewId && dBView.Document.Equals(_markerDocument);
+                yes = character || markers;
             }
             catch (Exception)
             {
@@ -395,8 +432,12 @@ namespace HeronTools.Services.ModelWalk
             XYZ f = Pose.Feet ?? XYZ.Zero;
             Diag.BoxCalls++;
             Diag.BoxCentre = f;
-            return new Outline(new XYZ(f.X - reach, f.Y - reach, f.Z - WalkTuning.MmToFt(100.0)),
-                               new XYZ(f.X + reach, f.Y + reach, f.Z + height));
+            var outline = new Outline(new XYZ(f.X - reach, f.Y - reach, f.Z - WalkTuning.MmToFt(100.0)),
+                                      new XYZ(f.X + reach, f.Y + reach, f.Z + height));
+            foreach (XYZ[] box in _markers)
+                foreach (XYZ corner in box)
+                    outline.AddPoint(corner);
+            return outline;
         }
 
         public void RenderScene(View dBView, DisplayStyle displayStyle)
@@ -404,9 +445,14 @@ namespace HeronTools.Services.ModelWalk
             try
             {
                 Diag.RenderCalls++;
-                WalkCharacterAnimator animator = _animator;
-                if (!Pose.Visible || animator == null || _buffers == null || !DrawContext.IsAvailable())
+                if (!DrawContext.IsAvailable())
                     return;
+                DrawMarkers(dBView);
+                WalkCharacterAnimator animator = _animator;
+                if (!Pose.Visible || animator == null || _buffers == null)
+                    return;
+                if (Pose.ViewId == null || dBView == null || dBView.Id != Pose.ViewId)
+                    return;   // the markers' view only
                 ReadCamera();
 
                 if (_format == null || !_format.IsValid())
@@ -462,6 +508,87 @@ namespace HeronTools.Services.ModelWalk
                 // Broad on purpose: a failed draw only loses the character for one redraw - never Revit's own redraw.
                 Diag.LastProblem = ex.Message;
             }
+        }
+
+        // The red boxes' buffers, kept between redraws like the character's.
+        private static VertexBuffer _markerVertices;
+        private static IndexBuffer _markerIndices;
+        private static int _markerBuiltVersion = int.MinValue;
+        private static int _markerLineCount;
+        private static VertexFormat _markerFormat;
+        private static EffectInstance _markerEffect;
+
+        // The 12 edges of a box, as corner pairs: corners 0-3 the bottom (min Z), 4-7 the top, in the same order.
+        private static readonly int[] BoxEdges = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+
+        /// <summary>Draws the red boxes round the linked snags (lines, in this redraw's view only). Never throws.</summary>
+        private static void DrawMarkers(View dBView)
+        {
+            try
+            {
+                XYZ[][] markers = _markers;
+                if (markers.Length == 0 || dBView == null || _markerViewId == null || dBView.Id != _markerViewId)
+                    return;
+                if (_markerFormat == null || !_markerFormat.IsValid())
+                {
+                    _markerFormat?.Dispose();
+                    _markerFormat = null;
+                    _markerFormat = new VertexFormat(VertexFormatBits.Position);
+                }
+                if (_markerEffect == null || !_markerEffect.IsValid())
+                {
+                    _markerEffect?.Dispose();
+                    _markerEffect = null;
+                    var red = new Color(230, 30, 30);
+                    _markerEffect = new EffectInstance(VertexFormatBits.Position);
+                    _markerEffect.SetColor(red);
+                    _markerEffect.SetEmissiveColor(red);
+                }
+                if (_markerVertices == null || !_markerVertices.IsValid() || _markerIndices == null || !_markerIndices.IsValid() ||
+                    _markerBuiltVersion != _markersVersion)
+                {
+                    _markerVertices?.Dispose();
+                    _markerVertices = null;
+                    _markerIndices?.Dispose();
+                    _markerIndices = null;
+                    BuildMarkers(markers);
+                    _markerBuiltVersion = _markersVersion;
+                }
+                if (_markerVertices != null && _markerLineCount > 0)
+                    DrawContext.FlushBuffer(_markerVertices, markers.Length * 8, _markerIndices,
+                                            _markerLineCount * IndexLine.GetSizeInShortInts(), _markerFormat, _markerEffect,
+                                            PrimitiveType.LineList, 0, _markerLineCount);
+            }
+            catch (Exception ex)
+            {
+                // Broad on purpose: a failed marker only loses the red box for one redraw - never Revit's own redraw.
+                Diag.LastProblem = "marker: " + ex.Message;
+            }
+        }
+
+        private static void BuildMarkers(XYZ[][] markers)
+        {
+            int count = Math.Min(markers.Length, 65535 / 8);   // 16-bit indices
+            _markerLineCount = count * 12;
+            if (count == 0)
+                return;
+            int floats = count * 8 * VertexPosition.GetSizeInFloats();
+            _markerVertices = new VertexBuffer(floats);
+            _markerVertices.Map(floats);
+            VertexStreamPosition vertices = _markerVertices.GetVertexStreamPosition();
+            for (int m = 0; m < count; m++)
+                foreach (XYZ corner in markers[m])
+                    vertices.AddVertex(new VertexPosition(corner));
+            _markerVertices.Unmap();
+
+            int shorts = _markerLineCount * IndexLine.GetSizeInShortInts();
+            _markerIndices = new IndexBuffer(shorts);
+            _markerIndices.Map(shorts);
+            IndexStreamLine lines = _markerIndices.GetIndexStreamLine();
+            for (int m = 0; m < count; m++)
+                for (int e = 0; e < BoxEdges.Length; e += 2)
+                    lines.AddLine(new IndexLine((m * 8) + BoxEdges[e], (m * 8) + BoxEdges[e + 1]));
+            _markerIndices.Unmap();
         }
 
         /// <summary>Revit's camera for this redraw: its near and far cut and the section box planes - for the F12 line only.</summary>
