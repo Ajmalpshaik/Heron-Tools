@@ -648,7 +648,7 @@ has run in Revit.
 | S7 | Checked, no defect | Server: vertex format, effect and stream are all PositionNormal; index count = triangles x 3 shorts; parts over 65,535 vertices skipped (16-bit indices); every buffer tested with `IsValid()` before use; `CanExecute` needs Visible + view id + document; `RenderScene` and `CanExecute` cannot throw; nothing drawn while hidden (snag pictures). Switch on / off, `Prepare`, `TryRemove` and the end paths are line-for-line the stage 6 code (diffed against `main`). Camera back on the eye at End, wall slide and the 24-ray budget unchanged. | - |
 | S8 | Checked, no defect | The embedded resource `HeronTools.ModelWalk.WalkCharacter.gltf` is in every year's DLL (net472, net48 x4, net8 x2, net10), full 469,422 bytes - read from each DLL's resource table. No `int` element id, no transaction, no window colour, no model change; every new file has its 5-field header; `NOTICE` CC0 entry sits with the Manrope entry and says what the Apache grant does not cover. | - |
 | S9 | Note, not changed | A replaced Revit buffer is disposed on the next redraw after it was drawn. The API notes say nothing about disposing a buffer that was already drawn, so this is not proven. | NEEDS REAL REVIT - step 48. |
-| S10 | Note, not changed | The animator is kept for the Revit session, so a new walk (or Q again) starts from the clip it was in last time and blends 0.2 s into Idle - a short settle, not a snap. | Left - cosmetic, no new behaviour asked for. |
+| S10 | Note | The animator is kept for the Revit session, so a new walk (or Q again) starts from the clip it was in last time and blends 0.2 s into Idle - a short settle, not a snap. | **Fixed** in "Character polish" below - he starts standing. |
 
 Extra Revit test step:
 
@@ -663,6 +663,49 @@ Extra Revit test step:
 | Character resource in all eight DLLs | PASS |
 | Reader + animator outside Revit, en-US / de-DE / fr-FR, 18 broken files, NaN / infinite input | PASS (S1-S3 failed before their fixes) |
 | Buffer reuse and dispose over a long walk and two models (step 48) | NEEDS REAL REVIT |
+
+## Character polish (2026-11-22)
+
+Two small fixes in the character drawing, from the stage 8 review's notes. Builds and an outside-Revit check only.
+
+| # | What was wrong | Fix |
+|---|---|---|
+| P1 | (S10) The animator lives for the Revit session, so a new walk or Q back into third person started from the clip he was in last time (walking or running) and settled 0.2 s into Idle. | `WalkCharacterAnimator.Reset()` - start of Idle, no blend, pose made again (no allocation). `WalkCharacterServer.ResetPose()` calls it on the first third-person frame of a walk and after every Q into third person. |
+| P2 | The frame the blend into Idle finishes asked for no redraw (`IsMoving` had just gone false), so with no camera move he was left on the last blend frame - a few per cent short of standing - until something else redrew the view. | That last frame is redrawn too (the engine remembers he was moving one frame before). Still no redraws once he stands. |
+
+Revit test step:
+
+49. **Starts standing.** In third person, run (Shift + W) and press Q mid-run, wait, press Q again: he appears standing
+    at once, no left-over running pose. Run again, end the walk mid-run, start a new walk in third person: standing at
+    once. Walk, stop, keep the mouse still: he ends fully in the standing pose.
+
+| Check (character polish) | State |
+|---|---|
+| Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| `Reset()` outside Revit (throwaway test): after running, back to Idle, not moving, 1850 mm, the same pose as the first load, 0 bytes allocated | PASS |
+| Step 49 in Revit | NEEDS REAL REVIT |
+
+## File readers review (2026-11-22)
+
+A read of every Model Walk file reader and writer: `ModelWalkSettings.txt` (`WalkSettings`), `ModelWalkKeys.txt`
+(`WalkKeyBindings`), the viewpoint store (`WalkViewpointStore`), and the character reader (`WalkJson`,
+`WalkCharacterModel`, the embedded resource - see "Stage 8 review" above). Run outside Revit in a throwaway .NET test
+(not committed - the repo has no test project) in **de-DE**, with missing, damaged and hand-edited files.
+
+| # | Severity | Finding | State |
+|---|---|---|---|
+| F1 | Medium | Keys: `Save` writes `Action=None` for an action left without a key (its standard key taken by another). The next walk read that as a damaged line - "had a key that cannot be used (None)" - and the HUD shows only the first note, so the true one ("has no key: its standard key is used by another action, press K") was hidden. | **Fixed** (`2171dfe`) - `None` is skipped as "no key saved": the action gets its standard key if free, else the true note. |
+| F2 | Low | Settings: the five speeds were saved rounded to 3 decimals. Two speeds the window accepts (1.0001 and 1.0004 m/s) saved as the same number, the next walk found them not increasing, and all five went back to standard. | **Fixed** (`df6ae57`) - saved exactly (`R`, invariant culture). |
+| F3 | Checked, no defect | All three files: numbers written and read in the invariant culture (de-DE writes `1650.5`, a hand-typed `1,7` is refused, not read as 17); NaN, `1e999`, out-of-range and unknown lines keep the standard value with one plain note; missing file = standard, no note; read refusal (locked, no access) caught; every save goes through a `.tmp` file then `File.Replace` / `File.Move`, and an I/O or access error comes back as a plain message, never an exception. Viewpoints round-trip exactly (`R`), names with tabs / line breaks cleaned, empty names become "Viewpoint", pitch over 90 degrees refused. Swapped keys (W / S) round-trip with no note. | - |
+| F4 | Note, not changed | A viewpoint file name is the model name + a 16-character hash. On Revit 2020-2024 (.NET Framework, 260-character paths) a model name over about 170 characters makes the path too long: the viewpoints cannot be saved, and the walk says so plainly ("could not be saved (... too long ...)"). Shortening the name would move existing viewpoints of long-named models to a new file, so it is left. Revit 2025+ has no such limit. | Left - told here. |
+
+| Check (file readers) | State |
+|---|---|
+| Build Revit 2020-2027 after the fixes | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Settings / keys / viewpoints outside Revit, de-DE, missing + damaged files (F1, F2 failed before their fixes) | PASS |
+| 50. **Keys left without a key.** Close Revit. In `%AppData%\HeronTools\ModelWalkKeys.txt` leave one line, `MoveForward=S`. Start a walk: the note says "Walk back has no key ... press K". Pause, K, Save, end the walk, start again: the same note, not "cannot be used (None)". Delete the file afterwards (standard keys come back). | NEEDS REAL REVIT |
 
 ---
 
@@ -682,7 +725,7 @@ Small defects found - each checked against the code, each in code another sessio
 | Issue | Area | Findings |
 |---|---|---|
 | #79 | HUD, Settings, Key Settings windows | Settings save failure shown as a toast while paused (never seen); an old refused frame can end the walk at once; pause-menu "Clear snag colours (J)" keeps the old key; Settings window names fixed keys; Key Settings text contradicts itself; ribbon tooltip silent on kept colours |
-| #81 | Viewpoint and key files | A viewpoint named "#..." is lost on the next walk; a keyless action warns at every start |
+| #81 | Viewpoint file | A viewpoint named "#..." is lost on the next walk (the keyless-action warning found at the same time was fixed meanwhile in #78, F1) |
 | #82 | Engine, command | Wall slide refused near a linked model (ray budget); clean-up after a failed overlay open is cancelled; 24 rays is a move budget, not a frame cap; end paths redraw only the active view; two wording / silent-failure points |
 | #83 | Third-person camera | Stale wall-slide answer when over budget (camera in the wall for a frame) and after a mode / world change |
 | #84 | Snags | The same linked element can be snagged twice; the CSV "Snag colour" column after a give-back |
