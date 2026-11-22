@@ -148,8 +148,8 @@ namespace HeronTools.Services.ModelWalk
             }
             XYZ direction = offset / length;
 
-            // One ray, and only when the camera moved; past the frame's ray budget the last answer is kept (or the
-            // closest camera, if there is none yet) - never a guess that could put the camera inside a wall.
+            // One cast, and only when the camera moved; past the frame's ray budget the camera stays where it was (or on
+            // the pivot, if there is none yet) - never an old distance from a new place that could put it inside a wall.
             bool moved = _slidePivot == null || _slideAllowedFt < 0 || !_slidePivot.IsAlmostEqualTo(pivot) ||
                          !_slideDirection.IsAlmostEqualTo(direction);
             // CastNear is up to 2 rays (the model and the near links): cast only when both fit in the frame's budget.
@@ -173,9 +173,13 @@ namespace HeronTools.Services.ModelWalk
                 _slideDirection = direction;
                 _slideAllowedFt = allowed;
             }
-            else if (moved && _slideAllowedFt < 0)
+            else if (moved)
             {
-                _slideAllowedFt = WalkTuning.ThirdPersonMinBackFt;
+                // No ray left this frame: an old distance from a new place could go through a wall. Keep the last camera
+                // (it was in the open), or with none yet sit on the pivot above the head; the slide is cast next frame.
+                _thirdEye = _thirdEye ?? pivot;
+                _thirdForward = forward;
+                return _thirdEye;
             }
 
             _thirdEye = pivot + (direction * Math.Min(length, _slideAllowedFt));
