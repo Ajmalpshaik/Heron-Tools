@@ -4,7 +4,10 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
-Planned as 1.2.1: Model Walk fixes from the owner's first test on a big linked model (issue #104).
+## [1.2.1] - 2026-11-22
+
+Model Walk fixes from the owner's first test on a big linked model (issue #104), plus jump. Release notes:
+[docs/releases/1.2.1.md](docs/releases/1.2.1.md). Published as a pre-release: every item below still needs a real Revit test.
 
 ### Fixed - Model Walk (NEEDS A REAL REVIT TEST)
 - **Third-person character missing in a big model far from the origin:** where he stands is now set before Revit's
