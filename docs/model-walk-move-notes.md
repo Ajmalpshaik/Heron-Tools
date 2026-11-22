@@ -412,11 +412,12 @@ from AJ-Tools.
 | 60 No pause / end card in a picture | | | | |
 | 61 Busy end in third person | | | | |
 | 62 Click while turning (third person) | | | | |
+| 63 Viewpoint named "#..." kept | | | | |
 
 ## Extra Revit checks (steps 19-29)
 
 Steps 19 and 20 check issues #41 and #40; steps 21-29 the audit fixes that only Revit can prove. Do them after steps
-1-18. Write PASS / FAIL next to each, with the Revit year. **Every step from 1 to 62 has one row in the results table
+1-18. Write PASS / FAIL next to each, with the Revit year. **Every numbered step (1 to 63 now) has one row in the results table
 above**; steps 30 and later are in the sections that added them, below.
 
 19. **Snags.csv on a ";" Windows region (issue #41).** In Windows Settings, Region, pick a format whose list
@@ -933,3 +934,20 @@ After #74, #75, #76, #78, #80, #87 and #88 merged, the Revit test script was mad
 | Build Revit 2020-2027 on `main` after the last merges | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Every step | NEEDS REAL REVIT - the owner's test, issue #42 |
+
+# Viewpoint named "#..." (2026-11-22, issue #81)
+
+| What was wrong | Now |
+|---|---|
+| The viewpoints file skipped every line starting with `#` as its header comment, but a viewpoint name may start with `#`. A viewpoint named "#2 riser" worked in the walk, then was gone on the next walk, not even counted as skipped. | Only a `#` line with no tab is a comment (the header has none). A viewpoint line always has tabs, so "#2 riser" is read back. A file saved before this fix still has the line, so the viewpoint comes back too. |
+
+### Revit test step
+
+63. **Viewpoint named "#...".** Save a viewpoint and name it "#2 riser". End the walk and start it again: "#2 riser"
+    is still in the viewpoint list and takes you to the same place.
+
+| Check (#81) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Step 63 | NEEDS REAL REVIT |
