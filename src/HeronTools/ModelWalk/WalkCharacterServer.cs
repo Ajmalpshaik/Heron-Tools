@@ -329,8 +329,16 @@ namespace HeronTools.Services.ModelWalk
             {
                 if (!_switchOffPending)
                     return;   // already switched off, or a new walk switched it on again meanwhile
+                Document doc = Pose.Document;   // SwitchOff forgets it
                 SwitchOff();
-                try { app?.ActiveUIDocument?.RefreshActiveView(); }
+                try
+                {
+                    // Every open view of the walk's model: the walk view may be on screen without being the active view.
+                    if (doc != null && doc.IsValidObject)
+                        new UIDocument(doc).UpdateAllOpenViews();
+                    else
+                        app?.ActiveUIDocument?.RefreshActiveView();
+                }
                 catch (Autodesk.Revit.Exceptions.ApplicationException) { /* the next redraw clears it anyway */ }
             }
 

@@ -14,6 +14,7 @@
 // gives them back). An old "AJ Game View" from AJ-Tools is left alone - never reused or renamed.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
@@ -63,14 +64,16 @@ namespace HeronTools.Commands.ModelWalk
                 return Result.Cancelled;
             }
 
+            string madeViewName = null;   // the walk view, if this click made it (it stays even if the start fails)
             try
             {
                 SnagColourMemory.Watch(uiapp);
                 WalkEngine.WatchModelClosing(uiapp);   // the walk ends the moment its model starts to close (once)
                 WalkCharacterServer.Prepare(uiapp);   // the third-person character's switch-off event and model-close watch (once)
                 WalkSettings settings = WalkSettings.Load();
-                if (!settings.KeepSnagColours)
-                    GiveBackLeftovers(doc);   // kept colours stay until Clear snag colours, a save or a sync
+                string leftoverProblem = settings.KeepSnagColours
+                    ? null                       // kept colours stay until Clear snag colours, a save or a sync
+                    : GiveBackLeftovers(doc);
 
                 string viewName = WalkViewName(doc);
                 View3D walkView = FindWalkView(doc, viewName);
@@ -106,6 +109,7 @@ namespace HeronTools.Commands.ModelWalk
                         DialogHelper.ShowError(ToolTitle, "Model Walk could not make its walk view, so nothing was changed.\n\n" + problem);
                         return Result.Cancelled;
                     }
+                    madeViewName = madeName;
                     firstTimeNote = "Model Walk made the view \"" + madeName + "\"" +
                                     (doc.IsWorkshared ? " - others see it after Sync with Central." : ".");
                 }
@@ -136,6 +140,8 @@ namespace HeronTools.Commands.ModelWalk
                 session.ViewpointFile = WalkViewpointStore.ModelFile(doc);
                 session.Viewpoints.AddRange(WalkViewpointStore.Load(session.ViewpointFile, out int skipped, out string viewpointProblem));
                 session.ViewpointsVersion++;
+                if (leftoverProblem != null)
+                    session.Keys.LoadWarnings.Add(leftoverProblem);
                 if (viewpointProblem != null)
                     session.Keys.LoadWarnings.Add(viewpointProblem);
                 else if (skipped > 0)
@@ -154,8 +160,8 @@ namespace HeronTools.Commands.ModelWalk
                 catch (Exception)
                 {
                     // The overlay never came up: nothing is left running, so the next click can start again.
-                    try { hud.Close(); } catch (Exception) { /* already gone */ }
-                    frameEvent.Dispose();
+                    hud.AbortOpen();
+                    try { frameEvent.Dispose(); } catch (Exception) { /* the overlay's clean-up may have done it */ }
                     throw;
                 }
                 if (firstTimeNote != null)
@@ -169,7 +175,10 @@ namespace HeronTools.Commands.ModelWalk
             catch (Exception ex)
             {
                 // Cancelled, not Failed, after our own message - Failed makes Revit add a second, generic box.
-                DialogHelper.ShowError(ToolTitle, "Model Walk could not start, and nothing was changed in the walk.\n\nRevit said: " + ex.Message);
+                // Not "nothing was changed": the walk view may have been made (and committed) before the failure.
+                DialogHelper.ShowError(ToolTitle, "Model Walk could not start." +
+                    (madeViewName != null ? " It had already made the view \"" + madeViewName + "\", which stays in the project for the next walk." : "") +
+                    "\n\nRevit said: " + ex.Message);
                 return Result.Cancelled;
             }
         }
@@ -268,13 +277,21 @@ namespace HeronTools.Commands.ModelWalk
         }
 
         /// <summary>Snag colours an earlier walk in this model could not give back (Revit was busy) - given back now, one Undo step.</summary>
-        private static void GiveBackLeftovers(Document doc)
+        /// <returns>Null, or why some colours are still on (shown when the walk starts - never silent).</returns>
+        private static string GiveBackLeftovers(Document doc)
         {
+            var problems = new List<string>();
             foreach (View3D view in new FilteredElementCollector(doc).OfClass(typeof(View3D)).Cast<View3D>().Where(v => v.IsPerspective))
             {
-                if (SnagColourMemory.Find(doc, view)?.Count > 0)
-                    SnagColourMemory.GiveBack(doc, view, "Model Walk: give back snag colours");
+                if (!(SnagColourMemory.Find(doc, view)?.Count > 0))
+                    continue;
+                string line = SnagColourMemory.GiveBack(doc, view, "Model Walk: give back snag colours");
+                // GiveBack also returns a line when it worked ("3 elements have their own colours back"): only a memory
+                // still holding colours means it did not.
+                if (SnagColourMemory.Find(doc, view)?.Count > 0 && !string.IsNullOrEmpty(line))
+                    problems.Add("Snag colours left from an earlier walk in \"" + view.Name + "\": " + line);
             }
+            return problems.Count > 0 ? string.Join(" ", problems) : null;
         }
 
         /// <summary>Where the walk starts when the walk view is new: from the 3D view the modeller is in.</summary>

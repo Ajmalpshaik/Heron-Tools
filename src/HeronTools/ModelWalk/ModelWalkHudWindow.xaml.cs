@@ -102,6 +102,16 @@ namespace HeronTools.UI.ModelWalk
             Active = this;
         }
 
+        /// <summary>
+        /// The overlay could not come up (ShowWalk threw): close it now. Marked as failing first, or the close would be
+        /// taken for Alt+F4 and cancelled, leaving the window alive with its frame event disposed under it.
+        /// </summary>
+        internal void AbortOpen()
+        {
+            _failing = true;
+            try { Close(); } catch (Exception) { /* already gone */ }
+        }
+
         // ------------------------------------------------------------------ safety
 
         private void Guard(Action action)

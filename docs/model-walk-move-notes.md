@@ -73,7 +73,7 @@ No gun / weapon / shoot wording is left anywhere a modeller sees.
 | GM-A02 | High | Snag overwrote the element's own override, never given back | **Fixed.** `SnagColourMemory` copies each element's own override before colouring; given back on J, at the end of the walk (one Undo step) and before every Save / Save As / Sync with Central. An element whose colour the modeller changed after the snag is left as they set it. Stage 4 added the setting "Keep snag colours after the walk"; on by default since 2026-11-21 (owner). |
 | GM-A03 | High | Ids cut to 32-bit; Heron's helper did the same | **Fixed.** ElementIds compared with `==`, printed with `LongValue()`, categories with `ElementIdHelper.IsCategory`. Heron's `ElementIdHelper.GetIntegerValue` now throws instead of truncating; `IntValue()` removed; its two callers (`SelectionFilters`) use full-value helpers - same results for every real id. All 8 years build. |
 | GM-A04 | High | Levels by `Level.Elevation` (follows Elevation Base) | **Fixed.** `Level.ProjectElevation` for the location line. The start point no longer comes from a plan's level (Model Walk starts from a 3D view). NEEDS REAL REVIT with a moved project base point. |
-| GM-A05 | High | ~19 full-model rays a frame, links on, every frame | **Fixed (measure in Revit).** Collision tests host elements only in a 15 m box round the eye; links only when their box is near (a box filter is checked in the link's own coordinates, per the API note, so it cannot be used on links); readout ray 10 Hz, clear height 4 Hz; no ray while standing still; no `SetOrientation` / redraw when the camera did not change; frames raised only when something can change (4 a second when idle); ray budget 24 a frame - past it a move is refused, not guessed. F12 shows frame ms, average and rays. NEEDS REAL REVIT on a big federated model. |
+| GM-A05 | High | ~19 full-model rays a frame, links on, every frame | **Fixed (measure in Revit).** Collision tests host elements only in a 15 m box round the eye; links only when their box is near (a box filter is checked in the link's own coordinates, per the API note, so it cannot be used on links); readout ray 10 Hz, clear height 4 Hz; no ray while standing still; no `SetOrientation` / redraw when the camera did not change; frames raised only when something can change (4 a second when idle); a move budget of 24 rays a frame (2 kept for the floor under you) - past it a move is refused, not guessed; the readout, door hint and landing checks come on top, so F12 can show about 30-40 on a busy frame (#82). F12 shows frame ms, average and rays. NEEDS REAL REVIT on a big federated model. |
 | GM-A06 | High | No try/catch in WPF handlers | **Fixed.** Timer tick and every key / mouse handler run in `Guard()`: any exception frees the mouse, ends the walk (report written) and closes the overlay; a second failure just closes. The engine frame is guarded as before. |
 | GM-A07 | High | Dozens of non-Heron colours | **Fixed.** Every window brush from `HeronStyles.xaml`; one orange thing (active mode chip; Save in Key Settings). Snag colour is Error #FF5A4E as a model colour. Checked by parsing both XAML files against the theme. |
 | GM-A08 | High | Overlay `Topmost` over Revit dialogs and other apps | **Fixed.** Not Topmost; owned by Revit's main window. NEEDS REAL REVIT that the overlay still stays over the view. |
@@ -412,6 +412,8 @@ from AJ-Tools.
 | 60 No pause / end card in a picture | | | | |
 | 61 Busy end in third person | | | | |
 | 62 Click while turning (third person) | | | | |
+| 67 Slide past a door frame near a link | | | | |
+| 68 Walk view redrawn after switching view (tiled) | | | | |
 | 63 Viewpoint named "#..." kept | | | | |
 | 64 Third-person camera after Pass-through / Hide | | | | |
 
@@ -576,7 +578,7 @@ A fresh read of the whole change (`git diff origin/main...HEAD`), the files it t
 |---|---|---|---|
 | R1 | Important | A walk ended in third person left the walk view's camera 3 m behind and 0.5 m right of the player. `CmdModelWalk` starts the next walk from the walk view's camera, so that walk began 3 m back - possibly in the next room, inside a wall or outside the building. | **Fixed** - `WalkEngine.End` puts the walk view's camera back on the player's eye (same no-transaction camera move as every frame). An end without Revit's thread (Revit busy 3 s, overlay fault) cannot touch the view - fixed later at the next walk's start (camera session, C1). |
 | R2 | Medium | Wall slide: with a surface closer than 550 mm along the camera ray (a duct or slab just above the head while looking down), the camera was still put 300 mm out - past the surface, so the view looked from inside or behind it. | **Fixed** - the camera stops half way to such a surface, always in front of it. |
-| R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. |
+| R3 | Minor | `CastNear` is up to 2 rays (model + near links) but the slide only checked "under 24", so a frame could reach 25 rays. | **Fixed** - cast only when both rays fit in the budget. (The 24 is the move budget, not a hard frame cap - #82.) |
 | R4 | Checked, no defect | `RemoveServer` / `AddServer` / `SetActiveServers`: identical in all eight years' XML; `RemoveServer` throws `ArgumentException` for a server used in an open model and `InvalidOperationException` while the service draws - both caught. Every end path (End walk, Esc Esc, ribbon, Alt+F4, view switch, model switch, model closing, `Guard` fault, Revit busy, Revit closing) reaches `SwitchOff` or `SwitchOffSoon`; a second walk re-uses the registered server and cancels a pending switch-off. `CanExecute` matches view id and document; `GetBoundingBox` and `RenderScene` cannot throw. No transaction, no `int` element id, no new colour, one orange button per window, every new file has its 5-field header. | - |
 | R5 | Checked, no defect | Quick snags: the "One moment" refusal, the picture hand-off (`SnagAwaitingPicture` cleared and `SnagPictureBusy` set in the same UI-thread call, so the figure cannot come back between them), `Snags.csv` rewritten through the temp file with the #41 separator and quoting for commas, quotes and line breaks, comment-box keys (Enter / Esc / repeats), Open still adds to the selection, the setting on = the old box. | - |
 | R6 | Note, not changed | A click uses the previous frame's camera with this frame's look direction; turning fast while clicking in third person can shift the hit by a few centimetres. First person has the same one-frame lag. A snag recorded and then paused within 0.1 s keeps no picture (as before this change). The "One moment" message also shows while a Snapshot (K) is being taken. | Click offset fixed later (camera session, C2); the rest left - no new behaviour asked for. |
@@ -975,3 +977,30 @@ Item 1 of #83 (the camera's old wall distance used from a new place when the fra
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Step 64 | NEEDS REAL REVIT |
 
+# Engine: slide near links, failed open, redraw at the end (2026-11-22, issue #82)
+
+| What was wrong | Now |
+|---|---|
+| Near a linked model each near cast is 2 rays. A diagonal step caught only by a side ray (a door jamb, a column corner) used 12 rays, the X slide 8 more, the Y slide hit 24; the floor check then found no ray left and threw away the X slide already found free. Walking diagonally past a door frame in an MEP model with architecture linked stopped dead. | The move keeps the last 2 rays of its 24 for the floor under you (`FloorRayReserve`): a slide axis that no longer fits is skipped, the one already found is kept. If nothing is near below and the long floor ray does not fit, the floor is checked next frame instead of "no floor". |
+| If the overlay failed to open, its `Close()` was taken for Alt+F4 and cancelled; the frame event was then disposed under a live window. | `AbortOpen()` marks the overlay as failing first, so the close goes through. |
+| "Ray budget 24 a frame" read like a hard cap; the door hint, readout, floor and landing checks are not counted against it. | Called the **move budget** in the notes and the code; F12 shows the real count (about 30-40 on a busy frame). |
+| After "you switched to another view / model", only the now-active view was redrawn: a walk view still on screen (tiled views, a second monitor) kept its last picture with the character. | The end and the late switch-off redraw every open view of the walk's model (`UIDocument.UpdateAllOpenViews`, in all eight years' API). Not while the model is closing. |
+| "Model Walk could not start, and nothing was changed" - false when the walk view had just been made. Snag colours left from an earlier walk that could not be given back at the start said nothing. | The message names the view that was made and says it stays. A give-back that fails at the start is shown when the walk starts. |
+
+Noted, not defects (NEEDS REAL REVIT, already in the script): a transaction inside `DocumentSaving` /
+`DocumentSynchronizingWithCentral` (the give-back before writing), and `SetOrientation` on a walk view that is no longer
+active, at the end.
+
+### Revit test steps
+
+67. **Slide past a door frame near a link.** MEP model with the architecture linked. Walk diagonally into a door frame
+    (jamb) or a column corner: you slide along it, not stop dead. F12: the rays stay at or under about 40.
+68. **Walk view redrawn after switching view.** Third person. Tile two views (View tab > Tile), the walk view and a plan.
+    Click into the plan: the walk ends ("you switched to another view") and the character is gone from the walk view too.
+
+| Check (#82) | State |
+|---|---|
+| Revit API: `UIDocument.UpdateAllOpenViews` and `new UIDocument(Document)` in `Nice3point.Revit.Api` 2020-2027 XML | PASS - present in all eight |
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 67-68; a failed overlay open (cannot be forced in a test) | NEEDS REAL REVIT |
