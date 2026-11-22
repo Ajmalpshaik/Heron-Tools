@@ -821,3 +821,39 @@ Revit test step:
 | The three Model Walk XAML files parse; every StaticResource / DynamicResource and every key named in code exists in `UI/*.xaml` | PASS |
 | Render the windows outside Revit | NOT RUN - WPF cannot render on this Linux build machine |
 | Steps 56-57 in Revit | NEEDS REAL REVIT |
+
+---
+
+# Full audit after quick snags, third person and the character (2026-11-22, final-review session)
+
+A fresh read of every line of `src/HeronTools/ModelWalk/` on `main` (after #72 and #73) and the Model Walk wiring in
+`App/HeronToolsApp.cs`, against the 44 audit findings (GM-A01 to GM-A44), the 19 must-keeps and `AGENTS.md`. Builds and
+reading only - nothing here has run in Revit.
+
+**No important defect and no regression of a GM-A fix or a must-keep was found.** Every GM-A fix listed above still
+holds in the code (A01-A04, A06, A07, A09-A18, A20-A22, A24-A30, A32, A34-A37, A39, A40, A44 read again line by line);
+all 19 must-keeps hold, including through third person (snag pictures hide the character, "where you stood" and Open
+snag use the player's eye) and quick snags (the report is still written once on every end path).
+
+Small defects found - each checked against the code, each in code another session owns, so each is a GitHub issue:
+
+| Issue | Area | Findings |
+|---|---|---|
+| #79 | HUD, Settings, Key Settings windows | Settings save failure shown as a toast while paused (never seen); an old refused frame can end the walk at once; pause-menu "Clear snag colours (J)" keeps the old key; Settings window names fixed keys; Key Settings text contradicts itself; ribbon tooltip silent on kept colours |
+| #81 | Viewpoint file | A viewpoint named "#..." is lost on the next walk (the keyless-action warning found at the same time was fixed meanwhile in #78, F1) |
+| #82 | Engine, command | Wall slide refused near a linked model (ray budget); clean-up after a failed overlay open is cancelled; 24 rays is a move budget, not a frame cap; end paths redraw only the active view; two wording / silent-failure points |
+| #83 | Third-person camera | Stale wall-slide answer when over budget (camera in the wall for a frame) and after a mode / world change |
+| #84 | Snags | The same linked element can be snagged twice; the CSV "Snag colour" column after a give-back |
+| #85 | Character server | A second walk does not cancel a pending switch-off; a failed buffer remake leaves a disposed object |
+| PR #74 comment | Snag pictures | A picture taken after a forced pause, during a Snapshot + Esc, or at the end can show the pause / end card |
+| #77 | Spec item 31 | The optional "one saved 3D view per snag" is not built (owner decision) |
+
+Spec: `docs/game-mode-spec.md` now has section F, "What was built", item by item against the code; issue #44 updated.
+
+| Check (full audit) | State |
+|---|---|
+| Line-by-line read of all 29 Model Walk files + ribbon wiring | PASS |
+| Build Revit 2020-2027 on `main` (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
+| Revit API XML cross-check of new findings | NOT RUN - the `Nice3point.Revit.Api` packages were not in this container's NuGet cache |
+| The defects above, once fixed | NEEDS REAL REVIT - each fix adds its own test step |

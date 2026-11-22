@@ -1,8 +1,11 @@
 # Model Walk: target spec (Game Mode moved from AJ-Tools)
 
-Status: **research spec, no code yet.** Written 2026-11-21 from AJ-Tools `master` `435cd6f`
+Status: **built - still owed a real Revit test.** Written 2026-11-21 from AJ-Tools `master` `435cd6f`
 (`src/GameMode/`, 16 files, about 5,400 lines) and the Revit API notes in the `Nice3point.Revit.Api`
-2024 packages. Nothing here is proven in Revit; every "needs real Revit" line below is still owed.
+2024 packages. Sections A to E below are the original research spec and are kept as written. What was
+actually built, item by item, is in **section F** (updated 2026-11-22 against `main`). Nothing is proven in
+Revit yet: the test script is in [model-walk-move-notes.md](model-walk-move-notes.md), the open points in
+issue #44.
 
 The goal: the AJ-Tools Game Mode becomes a tool a BIM coordinator can open in a client meeting or a
 coordination meeting without apology. Walk the model, point at things, mark issues, hand over a report.
@@ -199,6 +202,66 @@ A "Clean screen" key (default Z) hides everything except the crosshair; Snapshot
 | 10 | **Workshared models.** Creating the walk view is a model change that others see after sync. | Say so the first time; one Undo step "Heron Tools - Model Walk view". |
 | 11 | **Rays through links on 2020-2022.** Link handling differs by year (Quick Clash already found this). | Test Inspect, collision and Snag on a linked model in 2020 and 2024+. |
 
-**State today:** inventory and API notes - PASS (read from source and the API XML notes).
-Every behaviour in section B - NOT RUN (no code yet). Frame rate, mouse capture, field of view,
-rooms in links - NEEDS REAL REVIT.
+**State when this spec was written:** inventory and API notes - PASS (read from source and the API XML
+notes). Every behaviour in section B - NOT RUN (no code yet). For the state now, see section F.
+
+---
+
+## F. What was built (checked against `main`, 2026-11-22)
+
+Code: `src/HeronTools/ModelWalk/` (merged in #39, #45, #46, #47, #72, #73). Every row was checked by reading the
+code, not the notes. **Built = compiles and reads right; none of it has run in a real Revit yet** - every row is
+NEEDS REAL REVIT until the owner's test script passes (issue #42).
+
+| # | Item | Promise | Built |
+|---|---|---|---|
+| 1-3 | Real view, visible-only collision, no Undo for camera | KEEP | Yes. One perspective view "Heron Model Walk" ("- <user>" in a workshared model); `SetOrientation` only, no transaction. |
+| 4 | W A S D, mouse look, Shift run | KEEP | Yes. Left and right Shift are one key. |
+| 5 | Speed steps | CHANGE | Yes - five steps 0.8 / 1.5 / 3.5 / 5.5 / 8 m/s (spec said 0.5-8), + / - or the wheel, "Speed n/5"; each step can be changed in Settings. |
+| 6 | Gravity, step-up, body radius | KEEP | Yes. Step-up (100-450 mm) and eye height are Settings. |
+| 7 | Eye height + low eye | CHANGE | Yes. Eye height 1000-2000 mm (Settings); C toggles the low eye in Walk, holds "down" in Fly. |
+| 8 | Fly (F) | KEEP | Yes. Space up, C down. F turns Fly on from any mode. |
+| 9 | Pass-through (G) | KEEP | Yes, renamed. |
+| 10 | Doors (E) | KEEP | Yes. The far side is checked first (floor, head room, body). |
+| 11 | Jump | DROP | Dropped. Space is "up" in Fly / Pass-through only. |
+| 12 | Back to start (R) | CHANGE | Yes. |
+| 13 | Go to point (T) | CHANGE | Yes. A ring at the landing spot, no arc; lands on the floor below the aim, needs head and body room. |
+| 14 | Viewpoints (B, 1-9) | CHANGE | Yes. Named, kept per model per user (`%AppData%\HeronTools\ModelWalk Viewpoints\`), Save as 3D view from the pause menu. |
+| 15 | Play viewpoints (O) | CHANGE | Yes. Eased move, 1.6 s at each, turns smoothly. Stopped by **any move key or O** (spec said "any key"). |
+| 16-19 | Gun, pictures, sound, professional mode, night mode | DROP | Dropped. No gun / game / shoot wording anywhere a modeller sees. |
+| 20 | Inspect (default mode) | CHANGE | Yes. Category, family : type, size, system, level, 64-bit ID, link; distance from the player. |
+| 21 | Hide / Show hidden (U) | CHANGE | Yes. Refused while the modeller's own Temporary Hide/Isolate is on; U and the end of the walk end Model Walk's own. |
+| 22 | Snag colour with a way back | CHANGE | Yes. Each element's own override remembered and given back on J, before every Save / Sync, and at the end unless **Keep snag colours after the walk** is on (on by default - owner, 2026-11-21). One Undo step per snag. Linked elements recorded, not coloured. |
+| 23 | J reset-all | DROP | Dropped as "reset all". **J kept as "Clear my snag colours"** (owner request) - gives back only what Model Walk coloured. |
+| 24 | Select | KEEP | Yes. Selection kept after the walk. |
+| 25, 30 | Snag record / report | CHANGE / ADD | Yes. `Snags.csv` (UTF-8, the Windows list separator, #41) plus one picture per snag, one folder per walk next to the model. Every column the spec lists, with shared coordinates. **Changed by the owner:** the comment box after each snag is now a setting (**Ask for a comment at each snag**, off by default) - by default you snag one after another and write the comments in the pause menu. |
+| 26 | Snapshot (K) | CHANGE | Yes. Saved in the walk's report folder. Snag pictures hide the HUD and the third-person character; Snapshots hide the HUD and show the character. |
+| 27 | Key settings | KEEP | Yes. `%AppData%\HeronTools\ModelWalkKeys.txt`, Heron window style, reset and swap. Opened from the pause menu (Keys, or K while paused). |
+| 28 | Help (H), pause (P / Esc) | KEEP | Yes. Pause is a small menu at the top of the view; Revit is usable while paused. |
+| 29, 32 | Location block, rooms | KEEP / ADD | Yes. "Level - Room", facing (project north), move mode, speed step, first / third person. Rooms in links are read too - NEEDS REAL REVIT (#44). |
+| 31 | Open snag | ADD | Yes - from the pause menu snag list: camera back, element **added** to the selection (owner). **Not built:** the optional "one saved 3D view per snag" - issue #77. Save as 3D view exists for viewpoints only. |
+| 33 | Measure (M) | ADD | Yes. Two hits, distance + horizontal + vertical in mm, text only. |
+| 34 | Mouse sensitivity, invert, speeds, eye, step-up | ADD | Yes - Settings window (`%AppData%\HeronTools\ModelWalkSettings.txt`). |
+| 35 | Smooth camera | ADD | Yes. Moves ease in and out (0.12 s); look stays direct. |
+| 36 | Field of view | ADD only if proven | **Not built** - needs Crop View on and a transaction per change, and could break the aim fix. Still open in #44. |
+| 37, 38 | Minimap, section box tool | DROP | Not built. |
+| D | Clean screen (Z), brand font, palette only | - | Yes. Every window brush from `HeronStyles.xaml`; one orange thing per window. |
+
+**Added after this spec (owner requests, not in section B):**
+
+| Item | Built |
+|---|---|
+| Quick snags | Snag after snag with no box; comments written, changed or removed later in the pause menu snag list ("No comment yet" in Warning). |
+| Third-person view (Q, setting) | Camera 3 m behind the player, slides in at walls; clicks still land on the crosshair. Off by default. |
+| The character | An animated site worker (Idle / Walk / Run), drawn with Revit's DirectContext3D - no element, no transaction, nothing saved in the model. CC0 asset, recorded in `NOTICE`. |
+| Frame timing (F12) | Frame ms, average and ray count - for the big-model test (risk 1). |
+
+**Risks (section E), now:** 1 frame rate - throttled (no raise while still, ray budget 24 a frame, 4 Hz idle),
+still NEEDS REAL REVIT; 2 late events - moves use real elapsed time; 3 temporary hide - only in the walk's own view;
+4 camera - viewpoints and the last position live in the user's own files and the walk view's camera, never
+`SaveOrientation` on the walk view; 5 overrides - remembered and given back, also before Save and Sync;
+6 ids - `ElementId` / `LongValue()` and unique ids, no `int`; 7 overlay - not Topmost, focus loss pauses, DPI-scaled
+pause menu, NEEDS REAL REVIT on two screens; 8 field of view - not built; 9 both add-ins - different view name and
+settings folder, so they never share a view; 10 workshared - the start message says "others see it after Sync with
+Central"; 11 links on 2020-2022 - NEEDS REAL REVIT.
+
