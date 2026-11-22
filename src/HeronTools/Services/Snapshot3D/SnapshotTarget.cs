@@ -95,13 +95,6 @@ namespace HeronTools.Services.Snapshot3D
             if (z > _maxZ) _maxZ = z;
         }
 
-        /// <summary>Stretches the box's height to cover the elevations given (internal feet, model Z).</summary>
-        internal void IncludeElevation(double z)
-        {
-            if (z < _minZ) _minZ = z;
-            if (z > _maxZ) _maxZ = z;
-        }
-
         /// <summary>
         /// The section box for a 3D view: this box grown by <paramref name="padding"/> on every side -
         /// except in front of a section's cut, which stays exactly on the cut ("same cut as the section").
