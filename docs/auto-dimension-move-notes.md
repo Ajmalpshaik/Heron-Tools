@@ -7,6 +7,8 @@ read; nothing there was changed.
 
 Nothing here has run in a real Revit yet - the tool **needs a real Revit test** (steps at the end).
 
+![The Auto Dimension settings window](auto-dimension-window.png)
+
 ## Ribbon
 
 Datums panel, large drop-down **Auto Dimension**: **Grids** · **Levels** · **Grids and Levels** · **Settings**.
@@ -40,9 +42,10 @@ row does not stop the others; a dimension type saved in another project is kept 
 
 | # | Test | Expect |
 |---|---|---|
-| 1 | Floor plan, cropped, grids A-F and 1-8, bubbles at top and left: **Grids** | Overall + chain just inside the top heads and inside the left heads; one Undo step |
+| 1 | Floor plan, cropped, grids A-F and 1-8, bubbles at top and left: **Grids** | Chain just inside the top heads and inside the left heads, overall one gap further in; one Undo step |
+| 1b | Grids with bubbles at the bottom and right only | Rows at the bottom and right (checks the bubble end is read right) |
 | 2 | Same view, run **Grids** again | Nothing new; "already in the view" in the report |
-| 3 | Settings: Both ends; run in a fresh plan | Rows at both ends of each set |
+| 3 | Settings: Both ends; run in a fresh plan | Rows at both ends of each set (both ends really placed) |
 | 4 | Plan with a wing of grids at 30 degrees | The angled set gets its own rows, square to the grids |
 | 5 | Section with levels and grids: **Grids and Levels** | Level rows inside the level heads, grid rows inside the grid heads |
 | 6 | Callout of that section | Same as 5 |

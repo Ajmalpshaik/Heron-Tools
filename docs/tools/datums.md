@@ -73,7 +73,7 @@ that a view template controls is not counted as flipped.
 ## Auto Dimension
 
 **What it does:** places dimension rows across the grids and levels of the active view - for each set of parallel
-grids (or levels) an **overall** (first to last) and a **chain** (every one in turn), **just inside their heads**, the
+grids (or levels) a **chain** (every one in turn) and an **overall** (first to last), **just inside their heads**, the
 way you would place them by hand.
 
 **Buttons in the drop-down:**
@@ -90,8 +90,8 @@ way you would place them by hand.
 1. Open the plan, section or elevation. To dimension only some grids or levels, **select them first**.
 2. **Auto Dimension >** the button you want. The rows appear; when everything was placed, nothing pops up.
 
-**Where the rows sit:** measured in from the outermost grid (or level) head on the chosen end: the overall at the
-first gap, the chain one gap further in. The heads are read as drawn in this view, so grids cut short in the view or by
+**Where the rows sit:** measured in from the outermost grid (or level) head on the chosen end: the chain at the
+first gap, the overall one gap further in. The heads are read as drawn in this view, so grids cut short in the view or by
 a scope box are followed. A row never goes outside the crop region. Gaps are sheet millimetres (8 and 6 by default),
 so the look is the same at 1:50 and 1:200.
 
@@ -106,7 +106,7 @@ so the look is the same at 1:50 and 1:200.
 | Grids from, Levels from | Do not dimension / This model / Linked models / This model and linked models | This model |
 | Only levels ticked Building Story | on / off | off |
 | Leave out these names | whole names separated by `;`, `*` for any text, `?` for one character (`1` leaves out grid 1 only, not 10) | empty |
-| Skip a row already in the view | a dimension on exactly the same grids or levels is not made again | on |
+| Skip a row already in the view | a dimension on exactly the same grids or levels, made before this run, is not made again | on |
 | Tell me what was left out | a short report after a run that left something out | on |
 
 The window shows a small sketch of the rows as you change the choices. A dimension type saved in another project is
@@ -128,6 +128,8 @@ A row Revit refuses is left out on its own and named in the report; the other ro
 - Linked grids and levels: only links shown in the view, limited to the crop region (with no crop, to the span of this
   model's own datums). A dimension to a linked datum goes if the link is unloaded - that is Revit's behaviour.
 - With grids or levels selected, only this model's selected datums are used (no linked ones).
+- Adding a grid and running again makes a new chain and overall (the old ones are not the same set of grids, so they are
+  kept): delete the old rows first.
 
 ---
 

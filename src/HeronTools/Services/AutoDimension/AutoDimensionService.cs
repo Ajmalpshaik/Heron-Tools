@@ -388,13 +388,13 @@ namespace HeronTools.Services.AutoDimension
             if (settings.OverallRow && !overall)
                 report.Note("Where only two " + set.Kind + " are in line the overall was left out - it would repeat the chain.");
 
-            // Nearest the heads first: the overall, then the chain - as drawn by hand.
+            // Nearest the heads first: the chain, then the overall one gap further in (as agreed with the owner).
             var rows = new List<KeyValuePair<List<DatumLine>, DimensionType>>();
+            if (settings.ChainRow)
+                rows.Add(new KeyValuePair<List<DatumLine>, DimensionType>(set.Members, chainType));
             if (overall)
                 rows.Add(new KeyValuePair<List<DatumLine>, DimensionType>(
                     new List<DatumLine> { set.Members.First(), set.Members.Last() }, overallType));
-            if (settings.ChainRow)
-                rows.Add(new KeyValuePair<List<DatumLine>, DimensionType>(set.Members, chainType));
 
             var ends = new List<bool>(); // true = the + end
             bool bubblePlus = set.BubblesPlus >= set.BubblesMinus;
@@ -427,6 +427,8 @@ namespace HeronTools.Services.AutoDimension
         private static void MakeRow(Document doc, View view, ViewPlane plane, DatumSet set, List<DatumLine> stops,
             DimensionType type, double at, HashSet<string> existingRows, AutoDimensionReport report)
         {
+            // Compared only with what was in the view BEFORE this run: the same grids at the other end (Both ends),
+            // or a chain equal to an overall, are rows this run was asked to make.
             string rowKey = RowKey(stops.Select(s => s.Key));
             if (existingRows.Contains(rowKey))
             {
@@ -464,7 +466,6 @@ namespace HeronTools.Services.AutoDimension
 
                     doc.Regenerate(); // a problem with the new dimension shows here, while it can still be taken back alone
                     step.Commit();
-                    existingRows.Add(rowKey);
                     report.RowMade();
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException ex)

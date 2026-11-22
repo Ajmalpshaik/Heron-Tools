@@ -124,7 +124,7 @@
                                         <TextBlock Text="Between rows (mm)" Style="{StaticResource FieldLabel}"/>
                                         <TextBox x:Name="RowGapBox" Style="{StaticResource ModernTextBox}"
                                                  TextChanged="OnTextChanged"
-                                                 ToolTip="Millimetres on the printed sheet, from the overall to the chain"/>
+                                                 ToolTip="Millimetres on the printed sheet, from the chain to the overall"/>
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Text="Sheet millimetres - the same look at 1:50 and 1:200."
@@ -154,16 +154,16 @@
                                     <TextBlock Canvas.Left="191" Canvas.Top="7" Width="18" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" Text="D"/>
 
                                     <Path x:Name="TopOverall" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
-                                          Data="M40,38 L200,38 M36,42 L44,34 M196,42 L204,34"/>
+                                          Data="M40,52 L200,52 M36,56 L44,48 M196,56 L204,48"/>
                                     <Path x:Name="TopChain" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
-                                          Data="M40,52 L200,52 M36,56 L44,48 M86,56 L94,48 M146,56 L154,48 M196,56 L204,48"/>
+                                          Data="M40,38 L200,38 M36,42 L44,34 M86,42 L94,34 M146,42 L154,34 M196,42 L204,34"/>
                                     <Path x:Name="BottomChain" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
-                                          Data="M40,138 L200,138 M36,142 L44,134 M86,142 L94,134 M146,142 L154,134 M196,142 L204,134"/>
+                                          Data="M40,152 L200,152 M36,156 L44,148 M86,156 L94,148 M146,156 L154,148 M196,156 L204,148"/>
                                     <Path x:Name="BottomOverall" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
-                                          Data="M40,152 L200,152 M36,156 L44,148 M196,156 L204,148"/>
+                                          Data="M40,138 L200,138 M36,142 L44,134 M196,142 L204,134"/>
                                 </Canvas>
                             </Viewbox>
-                            <TextBlock Text="Nearest the heads: the overall, then the chain."
+                            <TextBlock Text="Nearest the heads: the chain, then the overall."
                                        Style="{StaticResource HelpText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                         </StackPanel>
                     </Border>

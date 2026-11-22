@@ -150,8 +150,8 @@ namespace HeronTools.UI.AutoDimension
             BottomOverall.Visibility = bottom && overall ? Visibility.Visible : Visibility.Collapsed;
             BottomChain.Visibility = bottom && chain ? Visibility.Visible : Visibility.Collapsed;
             // With one row only, it sits at the first gap from the heads.
-            TopChain.Margin = top && chain && !overall ? new Thickness(0, -14, 0, 0) : new Thickness(0);
-            BottomChain.Margin = bottom && chain && !overall ? new Thickness(0, 14, 0, 0) : new Thickness(0);
+            TopOverall.Margin = top && overall && !chain ? new Thickness(0, -14, 0, 0) : new Thickness(0);
+            BottomOverall.Margin = bottom && overall && !chain ? new Thickness(0, 14, 0, 0) : new Thickness(0);
 
             DatumSourceScope grids = ScopeAt(GridsFromCombo);
             DatumSourceScope levels = ScopeAt(LevelsFromCombo);
