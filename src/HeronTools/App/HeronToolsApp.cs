@@ -220,6 +220,33 @@ namespace HeronTools.App
                 "Stretch every level's 3D extents to the active 3D view's section box.",
                 "Open a 3D view with a section box first. Level ends made 2D in a view stay 2D. One Undo step."));
 
+            // Auto Dimension: chain + overall rows across grids and levels, just inside their heads.
+            var autoDimension = new PulldownButtonData("HeronTools_AutoDimensionGroup", "Auto\nDimension")
+            {
+                ToolTip = "Dimension the grids and levels of this view in rows, just inside their heads.",
+                Image = BrandImages.Load("AutoDimension16.png"),
+                LargeImage = BrandImages.Load("AutoDimension32.png"),
+            };
+            var autoDimensionButton = (PulldownButton)datums.AddItem(autoDimension);
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionGrids", "Grids",
+                typeof(CmdAutoDimensionGrids), typeof(CmdAutoDimensionAvailability), "AutoDimension",
+                "Dimension the grids of this plan, section or elevation: a chain and an overall for each set of parallel grids.",
+                "Rows sit just inside the grid heads (and inside the crop). Grids at an angle get their own rows. Select grids " +
+                "first to dimension only those. A row already in the view is not made again. One Undo step."));
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionLevels", "Levels",
+                typeof(CmdAutoDimensionLevels), typeof(CmdAutoDimensionAvailability), "AutoDimension",
+                "Dimension the levels of this section or elevation: a chain and an overall.",
+                "Rows sit just inside the level heads (and inside the crop). Select levels first to dimension only those. " +
+                "One Undo step."));
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionGridsLevels", "Grids and Levels",
+                typeof(CmdAutoDimensionGridsLevels), typeof(CmdAutoDimensionAvailability), "AutoDimension",
+                "Plans: dimension the grids. Sections and elevations: the grids and the levels.",
+                "Uses Auto Dimension Settings. One Undo step for the whole run."));
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionSettings", "Settings",
+                typeof(CmdAutoDimensionSettings), null, "AutoDimension",
+                "Choose the rows, where they sit, the dimension types and which grids and levels are used.",
+                "Saved for you in every project. Changes nothing in the model."));
+
             // ---- Modify
             var modify = app.CreateRibbonPanel(TabName, ModifyPanelName);
             var matchElevation = new PulldownButtonData("HeronTools_MatchElevationGroup", "Match Elevation")
