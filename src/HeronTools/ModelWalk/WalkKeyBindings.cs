@@ -69,7 +69,7 @@ namespace HeronTools.Services.ModelWalk
             new WalkKeyAction(StrafeLeft,     "Step left",                                  Key.A),
             new WalkKeyAction(StrafeRight,    "Step right",                                 Key.D),
             new WalkKeyAction(Run,            "Run (hold)",                                 Key.LeftShift),
-            new WalkKeyAction(Up,             "Up, in Fly and Pass-through (hold)",         Key.Space),
+            new WalkKeyAction(Up,             "Jump (Walk), up in Fly / Pass-through (hold)", Key.Space),
             new WalkKeyAction(DownOrLowEye,   "Low eye on / off (Walk), down (Fly, hold)",  Key.C),
             new WalkKeyAction(Door,           "Go through the door",                        Key.E),
             new WalkKeyAction(Fly,            "Fly on / off",                               Key.F),

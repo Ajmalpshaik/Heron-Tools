@@ -70,6 +70,7 @@ namespace HeronTools.Services.ModelWalk
         public const double FlyFactor = 2.0;
         public const double RunFactor = 3.0;          // Shift held
         public const double GravityMmPerSec2 = 9810.0;
+        public const double HeadAboveEyeMm = 150.0;          // top of the head over the eye: a jump stops this far under a slab or duct
         public const double MaxFallMmPerSec = 15000.0;
 
         // --- Reach ---
@@ -107,6 +108,7 @@ namespace HeronTools.Services.ModelWalk
 
         public static double BodyRadiusFt => BodyRadiusMm * FtPerMm;
         public static double GravityFtPerSec2 => GravityMmPerSec2 * FtPerMm;
+        public static double HeadAboveEyeFt => HeadAboveEyeMm * FtPerMm;
         public static double MaxFallFtPerSec => MaxFallMmPerSec * FtPerMm;
         public static double DoorReachFt => DoorReachMm * FtPerMm;
         public static double DoorPassExtraFt => DoorPassExtraMm * FtPerMm;
@@ -166,6 +168,7 @@ namespace HeronTools.Services.ModelWalk
         public bool FlyToggleQueued;
         public bool PassThroughToggleQueued;
         public bool LowEyeToggleQueued;
+        public bool JumpQueued;            // Walk: a press of the Up key (Space) - jump if standing on a floor
         public bool GoToPointAimHold;      // held: the landing ring shows
         public bool GoToPointQueued;       // released: go
         public bool SaveViewpointQueued;
@@ -186,7 +189,7 @@ namespace HeronTools.Services.ModelWalk
 
         /// <summary>True while any one-shot is waiting for the engine.</summary>
         public bool AnyQueued =>
-            DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued ||
+            DoorQueued || BackToStartQueued || FlyToggleQueued || PassThroughToggleQueued || LowEyeToggleQueued || JumpQueued ||
             GoToPointQueued || SaveViewpointQueued || JumpViewpoint > 0 || ClickQueued || MeasureQueued || ShowHiddenQueued ||
             ClearSnagsQueued || PlayViewpointsQueued || ResyncViewQueued || SettingsChangedQueued || OpenSnag > 0 || SaveViewpointAsView > 0 ||
             SaveSnagAsView > 0;

@@ -36,6 +36,10 @@ namespace HeronTools.Services.ModelWalk
         public const double MinStepUpMm = 100.0;
         public const double MaxStepUpMm = 450.0;
 
+        public const double StandardJumpHeightMm = 500.0;
+        public const double MinJumpHeightMm = 0.0;      // 0 = jump off
+        public const double MaxJumpHeightMm = 1000.0;
+
         public const double MinSpeedMetresPerSec = 0.2;
         public const double MaxSpeedMetresPerSec = 20.0;
         public static readonly double[] StandardSpeedsMetresPerSec = { 0.8, 1.5, 3.5, 5.5, 8.0 };
@@ -60,6 +64,7 @@ namespace HeronTools.Services.ModelWalk
 
         public double EyeHeightMm = StandardEyeHeightMm;
         public double StepUpMm = StandardStepUpMm;
+        public double JumpHeightMm = StandardJumpHeightMm;
 
         /// <summary>
         /// On (standard - Ajmal, 2026-11-21): snag colours stay in the walk view after the walk. Off: they are given
@@ -91,6 +96,9 @@ namespace HeronTools.Services.ModelWalk
         public double LowEyeHeightMm => Math.Min(LowEyeMm, EyeHeightMm - LowEyeBelowEyeMm);
         public double LowEyeHeightFt => WalkTuning.MmToFt(LowEyeHeightMm);
         public double StepUpFt => WalkTuning.MmToFt(StepUpMm);
+
+        /// <summary>The take-off speed that lifts the feet <see cref="JumpHeightMm"/> under gravity (v = sqrt(2 g h)); 0 = jump off.</summary>
+        public double JumpSpeedFtPerSec => JumpHeightMm <= 0 ? 0.0 : Math.Sqrt(2.0 * WalkTuning.GravityFtPerSec2 * WalkTuning.MmToFt(JumpHeightMm));
         public int SpeedStepCount => SpeedsMetresPerSec.Length;
 
         public int ClampSpeedStep(int step)
@@ -174,6 +182,9 @@ namespace HeronTools.Services.ModelWalk
                     case "stepupmm":
                         damaged |= !ReadNumber(value, MinStepUpMm, MaxStepUpMm, ref s.StepUpMm);
                         break;
+                    case "jumpheightmm":
+                        damaged |= !ReadNumber(value, MinJumpHeightMm, MaxJumpHeightMm, ref s.JumpHeightMm);
+                        break;
                     case "speedsmetrespersec":
                         string[] parts = value.Split(';');
                         var speeds = new double[parts.Length];
@@ -226,6 +237,7 @@ namespace HeronTools.Services.ModelWalk
                     "SpeedsMetresPerSec=" + string.Join(";", speeds),
                     "EyeHeightMm=" + EyeHeightMm.ToString("0.###", CultureInfo.InvariantCulture),
                     "StepUpMm=" + StepUpMm.ToString("0.###", CultureInfo.InvariantCulture),
+                    "JumpHeightMm=" + JumpHeightMm.ToString("0.###", CultureInfo.InvariantCulture),
                     "KeepSnagColours=" + KeepSnagColours,
                     "AskSnagComment=" + AskSnagComment,
                     "ThirdPerson=" + ThirdPerson

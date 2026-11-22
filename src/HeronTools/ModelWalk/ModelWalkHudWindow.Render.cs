@@ -192,6 +192,7 @@ namespace HeronTools.UI.ModelWalk
                 "Walk\t" + k(WalkKeyBindings.MoveForward) + " " + k(WalkKeyBindings.StrafeLeft) + " " + k(WalkKeyBindings.MoveBack) + " " +
                     k(WalkKeyBindings.StrafeRight) + " or the arrow keys  -  look with the mouse  -  hold " + k(WalkKeyBindings.Run) + " to go faster",
                 "Speed\t" + k(WalkKeyBindings.SpeedUp) + " / " + k(WalkKeyBindings.SpeedDown) + " or the mouse wheel (" + _session.Settings.SpeedStepCount + " steps)",
+                "Jump\t" + k(WalkKeyBindings.Up) + " in Walk (" + (_session.Settings.JumpHeightMm > 0 ? _session.Settings.JumpHeightMm.ToString("N0") + " mm" : "off in Settings") + ")",
                 "Low eye\t" + k(WalkKeyBindings.DownOrLowEye) + " on / off (" + _session.Settings.LowEyeHeightMm.ToString("N0") + " mm) - to look under ducts and into ceiling voids",
                 "Fly\t" + k(WalkKeyBindings.Fly) + " on / off  -  hold " + k(WalkKeyBindings.Up) + " to rise, " + k(WalkKeyBindings.DownOrLowEye) + " to sink  -  walls and slabs still stop you",
                 "Pass-through\t" + k(WalkKeyBindings.PassThrough) + " on / off  -  nothing stops you; rise and sink as in Fly",
