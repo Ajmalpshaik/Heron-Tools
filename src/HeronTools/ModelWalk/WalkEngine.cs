@@ -58,6 +58,7 @@ namespace HeronTools.Services.ModelWalk
         // Floor must be checked again after the world changed (hide, VG) even when standing still.
         private bool _forceFloorCheck = true;
         private bool _hovering;
+        private bool _jumping;   // in the air after a jump (status line), until landing
 
         // The last floor ray landed on a roof (outside the building): shown on the location line, explained once a walk.
         private bool _groundIsRoof;
@@ -255,7 +256,11 @@ namespace HeronTools.Services.ModelWalk
             position = HandlePlayViewpoints(input, hud, position, dt);
             bool playing = hud.PlayingViewpoints;
             if (playing || !position.IsAlmostEqualTo(beforeActions))
+            {
                 StopMotion();   // a jump (viewpoint, go to point, door, open snag) starts from standing
+                if (_session.VerticalSpeedFtPerSec > 0)
+                    _session.VerticalSpeedFtPerSec = 0;   // and does not carry on rising from a Space jump
+            }
 
             // --- Move: eased in and out (time-based), so the picture never jolts on a key press or release. The
             //     look stays direct. The same rays per frame as an un-eased move; a blocked part of the move is
@@ -311,10 +316,13 @@ namespace HeronTools.Services.ModelWalk
             // --- Gravity (Walk only) ---
             if (!playing && _session.Mode == WalkMoveMode.Walk)
             {
+                TryJump(input);
                 position = ApplyGravity(before, position, dt);
             }
             else
             {
+                input.JumpQueued = false;
+                _jumping = false;
                 _session.VerticalSpeedFtPerSec = 0;
                 _session.Grounded = false;
             }
@@ -514,7 +522,7 @@ namespace HeronTools.Services.ModelWalk
                 case WalkMoveMode.Fly: mode = "Fly"; break;
                 case WalkMoveMode.PassThrough: mode = "Pass-through"; break;
                 default:
-                    mode = hud.Hovering ? "Walk - no floor below" : (_session.Grounded ? "Walk" : "Walk - dropping to the floor");
+                    mode = hud.Hovering ? "Walk - no floor below" : (_session.Grounded ? "Walk" : _jumping ? "Walk - jumping" : "Walk - dropping to the floor");
                     if (_session.LowEye) mode += " - low eye";
                     break;
             }

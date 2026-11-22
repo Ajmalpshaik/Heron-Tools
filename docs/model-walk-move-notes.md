@@ -1270,3 +1270,38 @@ API: `DirectContext3D` lines (`VertexFormatBits.Position`, `VertexStreamPosition
 | Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
 | Steps 80-81 | NEEDS REAL REVIT |
+
+## Jump (owner's request D)
+
+The owner: "also jumping I can do it, add that also". AJ-Tools Game Mode had jump (read only:
+`GameMotionEngine.Movement.cs` `ApplyGravity` - take-off speed when grounded, gravity, a ray up on the way up, the landing
+ray from before the step); it was left out of the Heron port. Window climbing stays out.
+
+| What | How |
+|---|---|
+| Key | The **Up** key (standard Space): in **Walk** a press jumps; in Fly and Pass-through it still rises while held. Remappable in Key Settings ("Jump (Walk), up in Fly / Pass-through (hold)"); the help card shows it. |
+| Height | Settings > **Jump height (mm)**: standard 500, 0 to 1000, **0 = jump off**. Take-off speed v = sqrt(2 g h), so the feet lift that height. Saved with the other settings. |
+| Physics | Time-based, the same clamped dt as walking. No jump in mid-air (only when standing on a floor), none over "no floor below". |
+| Ceiling | While rising only: one near cast up (up to 2 rays) over this frame's rise plus 150 mm of head. A slab or duct there stops the rise under it - never through it - and gravity brings you down. No ray left in the frame's budget counts as blocked. No new rays when not jumping; the 24-ray budget holds. |
+| Landing | The existing landing check (the ray from before the step, over the whole drop plus eye height): jump forward onto a 300 mm step and you land on it. |
+| Status line | "Walk - jumping" in the air. |
+| Third person | The camera follows the player (no extra smoothing needed - the jump itself is smooth). The character keeps his stand / walk / run pose by horizontal speed - there is no jump clip, none invented. |
+| Teleports | Go to point, a door, a viewpoint or Open snag in mid-jump stop the rise. |
+| Model | Nothing added, no transaction. |
+
+### Revit test steps
+
+82. **Jump on a floor.** Walk, press Space: you rise about 500 mm and land back on the floor; the status line says
+    "Walk - jumping" in the air. Press Space again in mid-air: nothing (no double jump).
+83. **Under a low duct.** Stand under a duct about 300 mm above your head, press Space: the rise stops under the duct,
+    never through it, and you come down.
+84. **Onto a step.** Face a 300 mm step (higher than nothing, lower than the jump), hold W and press Space: you land on it.
+85. **Third person.** Q, then jump: the camera follows smoothly, the character goes up and down with you.
+86. **Jump off.** Settings > Jump height 0, OK: Space does nothing in Walk; Fly still rises with Space. Change the key in
+    Key Settings: the new key jumps, and the help card shows it.
+
+| Check (jump) | State |
+|---|---|
+| Build Revit 2020-2027 | PASS - 0 warnings, 0 errors each |
+| Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS |
+| Steps 82-86 | NEEDS REAL REVIT |

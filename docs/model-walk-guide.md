@@ -35,6 +35,7 @@ floor inside and let go (Go to point), or **F** to fly down - or start the walk 
 | Shift (hold) | Go three times faster |
 | + / - or the mouse wheel | Speed step 1 to 5 (shown as "Speed 3/5") |
 | C | Low eye on / off (1000 mm, or 300 mm under your eye height if that is lower) - look under ducts and into ceiling voids. In Fly and Pass-through: hold to sink |
+| Space | Jump (Walk) - see Jump height in Settings |
 | F | Fly on / off. Space (hold) rises, C (hold) sinks. Walls and slabs still stop you |
 | G | Pass-through on / off - nothing stops you (past a locked room or a clash). Space rises, C sinks, as in Fly |
 | E | Go through the door you look at (when the door hint shows) - doors in linked models too |
@@ -195,6 +196,7 @@ Nothing is drawn on the model. M again starts a new measure.
 | Mouse sensitivity | 100 % | 25 - 250 % (lower it if fast turning makes you feel unwell) |
 | Invert look | off | mouse forward looks down |
 | Third-person view (show a character) | off | start each walk in third person; Q switches during the walk |
+| Jump height | 500 mm | 0 - 1000 mm, 0 = jump off (Space in Walk) |
 | Walk speeds, slowest first | 0.8, 1.5, 3.5, 5.5, 8 m/s | 0.2 - 20 m/s, each faster than the last. Every walk starts on step 3. Fly and Pass-through x2, Shift x3 |
 | Eye height | 1700 mm | 1000 - 2000 mm (low eye = 1000 mm, or 300 mm under the eye) |
 | Step-up height | 350 mm | 100 - 450 mm - the highest stair or step you walk up |

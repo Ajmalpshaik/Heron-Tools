@@ -119,6 +119,7 @@ namespace HeronTools.Services.ModelWalk
                 // Nothing to stand on anywhere below (an open shaft, or a model with no floors - an MEP-only file).
                 // Hover where you are instead of falling for ever.
                 _hovering = true;
+                _jumping = false;
                 _session.Grounded = true;
                 _session.VerticalSpeedFtPerSec = 0;
                 return position;
@@ -140,10 +141,24 @@ namespace HeronTools.Services.ModelWalk
                 return moved ? before : new XYZ(position.X, position.Y, position.Z - gap);
             }
 
-            // Dropping: integrate gravity, fall speed capped.
+            // In the air: integrate gravity, fall speed capped.
             _session.VerticalSpeedFtPerSec -= WalkTuning.GravityFtPerSec2 * dt;
             if (_session.VerticalSpeedFtPerSec < -WalkTuning.MaxFallFtPerSec)
                 _session.VerticalSpeedFtPerSec = -WalkTuning.MaxFallFtPerSec;
+
+            if (_session.VerticalSpeedFtPerSec > 0)
+            {
+                // Rising (a jump): a ray up over this step plus the head. Something there (a slab, a duct) stops the
+                // rise under it - never through it - and gravity brings you down. Rays only while rising.
+                double rise = _session.VerticalSpeedFtPerSec * dt;
+                if (_collision.RaysThisFrame + 2 > WalkTuning.RayBudgetPerFrame ||
+                    _collision.CastNear(position, XYZ.BasisZ, rise + WalkTuning.HeadAboveEyeFt) != null)
+                {
+                    _session.VerticalSpeedFtPerSec = 0;   // no ray left counts as blocked: never a guess
+                    return position;
+                }
+                return new XYZ(position.X, position.Y, position.Z + rise);
+            }
             double fall = Math.Abs(_session.VerticalSpeedFtPerSec * dt);
 
             // Landing check from where the eye was BEFORE this drop, over the whole drop plus the eye height: a fast
@@ -151,6 +166,7 @@ namespace HeronTools.Services.ModelWalk
             // old tool's 2026-10-12 fix.)
             if (ground.DistanceFt <= fall + eye)
             {
+                _jumping = false;
                 _session.Grounded = true;
                 _session.VerticalSpeedFtPerSec = 0;
                 return new XYZ(position.X, position.Y, position.Z - ground.DistanceFt + eye);
@@ -165,6 +181,23 @@ namespace HeronTools.Services.ModelWalk
                 return _session.StartPosition;
             }
             return dropped;
+        }
+
+        /// <summary>
+        /// A press of the Up key (Space) in Walk: jump, when standing on a floor (no jump in mid-air, none with no floor
+        /// below, none when Settings has 0 mm). Plain state only - the rise and its ceiling ray are in ApplyGravity.
+        /// </summary>
+        private void TryJump(WalkInput input)
+        {
+            if (!input.JumpQueued)
+                return;
+            input.JumpQueued = false;
+            double speed = _session.Settings.JumpSpeedFtPerSec;
+            if (_session.Mode != WalkMoveMode.Walk || speed <= 0 || !_session.Grounded || _hovering)
+                return;
+            _session.Grounded = false;
+            _session.VerticalSpeedFtPerSec = speed;
+            _jumping = true;
         }
 
         /// <summary>

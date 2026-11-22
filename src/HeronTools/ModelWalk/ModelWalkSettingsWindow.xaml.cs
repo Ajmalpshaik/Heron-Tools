@@ -57,6 +57,7 @@ namespace HeronTools.UI.ModelWalk
             ThirdPersonBox.IsChecked = s.ThirdPerson;
             EyeHeightBox.Text = Number(s.EyeHeightMm);
             StepUpBox.Text = Number(s.StepUpMm);
+            JumpHeightBox.Text = Number(s.JumpHeightMm);
             for (int i = 0; i < _speedBoxes.Length; i++)
                 _speedBoxes[i].Text = i < s.SpeedsMetresPerSec.Length ? s.SpeedsMetresPerSec[i].ToString("0.0##", CultureInfo.CurrentCulture) : "";
             KeepSnagColoursBox.IsChecked = s.KeepSnagColours;
@@ -111,6 +112,13 @@ namespace HeronTools.UI.ModelWalk
             {
                 problem = "Step-up height is 100 to 450 mm.";
                 StepUpBox.Focus();
+                return null;
+            }
+            if (!TryRead(JumpHeightBox.Text, out s.JumpHeightMm) ||
+                !WalkSettings.InRange(s.JumpHeightMm, WalkSettings.MinJumpHeightMm, WalkSettings.MaxJumpHeightMm))
+            {
+                problem = "Jump height is 0 to 1000 mm (0 = jump off).";
+                JumpHeightBox.Focus();
                 return null;
             }
 

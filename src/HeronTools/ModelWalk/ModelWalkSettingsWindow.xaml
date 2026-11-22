@@ -118,6 +118,19 @@
                         </Grid>
                         <TextBlock x:Name="LowEyeNote" Style="{StaticResource HelpText}" Margin="0,8,0,0"/>
 
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Jump height (mm)" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="JumpHeightBox" Style="{StaticResource ModernTextBox}"
+                                         ToolTip="How high the feet lift on a jump in Walk: 0 to 1000 mm, 0 = jump off. Standard 500 mm."/>
+                            </StackPanel>
+                        </Grid>
+
                         <TextBlock Text="Walk speeds (m/s), slowest first" Style="{StaticResource FieldLabel}" Margin="0,16,0,5"/>
                         <UniformGrid Rows="1" Columns="5">
                             <TextBox x:Name="Speed1Box" Style="{StaticResource ModernTextBox}" Margin="0,0,6,0" ToolTip="Step 1 - the slowest"/>

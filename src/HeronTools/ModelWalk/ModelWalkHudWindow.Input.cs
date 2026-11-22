@@ -264,7 +264,11 @@ namespace HeronTools.UI.ModelWalk
                 case WalkKeyBindings.StrafeLeft: input.StrafeLeft = true; AutoHideHelp(); break;
                 case WalkKeyBindings.StrafeRight: input.StrafeRight = true; AutoHideHelp(); break;
                 case WalkKeyBindings.Run: input.Run = true; break;
-                case WalkKeyBindings.Up: input.UpKey = true; break;
+                case WalkKeyBindings.Up:
+                    // Walk: a press jumps. Fly and Pass-through: held = up.
+                    if (_session.Mode == WalkMoveMode.Walk) { if (first) input.JumpQueued = true; }
+                    else input.UpKey = true;
+                    break;
                 case WalkKeyBindings.DownOrLowEye:
                     // Walk: a press toggles the low eye. Fly and Pass-through: held = down.
                     if (_session.Mode == WalkMoveMode.Walk) { if (first) input.LowEyeToggleQueued = true; }
