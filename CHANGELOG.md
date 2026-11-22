@@ -31,6 +31,7 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - Hiding the floor you stand on (or showing it again) now finds the floor again straight away.
 - E (door) while looking down at the door lands 900 mm past it, as when looking straight at it.
 - The walk view is found again by number ("(2)" before "(10)").
+- In a workshared model, a Revit user name with a character Revit refuses in view names no longer stops the walk view being made.
 
 ### Fixed (from a full code review - every item still NEEDS A REAL REVIT TEST)
 - **Flip Bubbles** (window select): a grid Revit refused half-way through a flip is now put back whole in its own

@@ -688,7 +688,7 @@ Revit test step:
 
 ## Walk engine review (2026-11-22)
 
-A read of the core walk - movement, gravity, collision, doors, the frame loop and every way a walk ends. Five fixes,
+A read of the core walk - movement, gravity, collision, doors, the frame loop and every way a walk ends. Six fixes,
 each built for Revit 2020-2027. **Nothing here has run in Revit.**
 
 | # | What was wrong | Now |
@@ -698,6 +698,7 @@ each built for Revit 2020-2027. **Nothing here has run in Revit.**
 | E3 | Hide (click), Show hidden (U) and Revit's own Reset Temporary Hide/Isolate did not look for the floor again: hide the floor you stand on and you stayed in the air until you moved. | Each of them looks for the floor again on the next frame. |
 | E4 | E (door) measured the door's distance along the slanted look. Looking down at a door, the step landed further past it than meant. | The distance is measured across the floor; you land 900 mm past the door face as meant. |
 | E5 | The walk view found again as "Heron Model Walk (10)" before "(2)" (sorted as text). | Sorted by number: "(2)" comes first. |
+| E6 | In a workshared model the walk view is named after the Revit user name. A user name with a character Revit refuses in a view name (`\`, `:`, `;` ...) meant the walk view could never be made. | Those characters become "-" in the view name. A name with one could never be made before, so no existing walk view is lost. |
 
 Checked and left as is: ids are compared as `ElementId` or `LongValue()` (no `int`); levels by `ProjectElevation`;
 every transaction is named and its `Commit()` checked; no transaction outside the frame's ExternalEvent or the command;
@@ -716,6 +717,8 @@ Revit refusing frames for 5 s still ends the walk; Alt+F4 still ends the walk th
     (or "no floor below"). Press U: back on the floor.
 53. **Door while looking down.** Stand 1 m from a door, look down at about 30 degrees at it, press E. Expect to land
     about 900 mm past the door, the same as looking straight at it.
+54. **Odd user name.** In Options > General set the user name to `test:user`, open a workshared model, start Model Walk.
+    Expect a walk view "Heron Model Walk - test-user" and a normal walk. Put the user name back.
 
 ### Results (walk engine review)
 
@@ -723,4 +726,4 @@ Revit refusing frames for 5 s still ends the walk; Alt+F4 still ends the walk th
 |---|---|
 | Build Revit 2020-2027 (Linux, `-p:EnableWindowsTargeting=true`) | PASS - 0 warnings, 0 errors each |
 | Metadata rules (Python copy of `build/check-metadata.ps1`) | PASS - 214 files |
-| Steps 50-53 | NEEDS REAL REVIT |
+| Steps 50-54 | NEEDS REAL REVIT |

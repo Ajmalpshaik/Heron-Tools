@@ -174,7 +174,14 @@ namespace HeronTools.Commands.ModelWalk
         private static string WalkViewName(Document doc)
         {
             string user = doc.Application?.Username;
-            return doc.IsWorkshared && !string.IsNullOrWhiteSpace(user) ? ViewBaseName + " - " + user.Trim() : ViewBaseName;
+            if (!doc.IsWorkshared || string.IsNullOrWhiteSpace(user))
+                return ViewBaseName;
+            // A Revit user name can hold a character Revit refuses in a view name (DOMAIN\name, a colon): the view
+            // could then never be made. Those characters become "-" (a name that had one was never made before).
+            var clean = new System.Text.StringBuilder();
+            foreach (char c in user.Trim())
+                clean.Append("\\:{}[]|;<>?`~".IndexOf(c) >= 0 ? '-' : c);
+            return ViewBaseName + " - " + clean;
         }
 
         /// <summary>The walk view: a perspective 3D view named exactly so, or "name (2)", "name (3)"... from an earlier clash of names.</summary>
