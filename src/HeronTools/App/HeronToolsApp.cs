@@ -116,25 +116,15 @@ namespace HeronTools.App
                 "a new set. The colour replaces the elements' own overrides until you click Restore original, which puts " +
                 "them back. Each run is one Undo step.");
 
-            // View Crop: two related tools under one button.
-            var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View Crop")
-            {
-                ToolTip = "Fit crop regions and annotation crops of plan views.",
-                Image = BrandImages.Load("ViewCrop16.png"),
-                LargeImage = BrandImages.Load("ViewCrop32.png"),
-            };
-
-            IList<RibbonItem> viewStack = panel.AddStackedItems(filterPro, colorize, viewCrop);
-            var viewCropButton = (PulldownButton)viewStack[2];
-            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_CropByElements", "Crop View\nby Elements",
+            // View Crop: one button. The annotation crop is a tick box in its window (no separate button).
+            var viewCrop = Button(assemblyPath, "HeronTools_ViewCrop", "View Crop",
                 typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
-                "Fit the crop region of plan views around their elements.",
-                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the offset. " +
-                "Each run is one Undo step."));
-            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_AnnotationCrop", "Annotation Crop\nby View Crop",
-                typeof(CmdSetAnnotationCropByViewCrop), typeof(CmdPlanViewAvailability), "AnnotationCrop",
-                "Turn on the annotation crop in the picked views and set an equal offset from each view's crop region.",
-                "Pick the views and the offset. Revit's own limits on the annotation crop are respected. Each run is one Undo step."));
+                "Fit the crop region of plan views around their elements - and, if you tick it, the annotation crop too.",
+                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the margin. " +
+                "Tick \"Also turn on the annotation crop\" to set it the same distance outside the new crop on all four sides " +
+                "(an offset on paper; Revit's own limits on the annotation crop are respected). Each run is one Undo step.");
+
+            panel.AddStackedItems(filterPro, colorize, viewCrop);
 
             // Reset: clear graphic overrides - the selection in one click, or a view / many views in the window -
             // and bring the last reset back. Each keeps a copy first, so nothing set by hand is lost.

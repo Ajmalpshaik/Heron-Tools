@@ -5,14 +5,14 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Stores annotation crop offset (mm) used by the annotation crop tool.
+// Stores the annotation crop offset (mm, on paper) used by View Crop's "Also turn on the annotation crop".
 
 using HeronTools.Utils;
 
 namespace HeronTools.Models.ViewCrop
 {
     /// <summary>
-    /// Contains configurable options for the Annotation Crop tool.
+    /// The annotation crop option of View Crop (filled from ViewCropSettings for each run).
     /// </summary>
     internal sealed class ViewCropAnnotationSettings
     {
@@ -24,9 +24,6 @@ namespace HeronTools.Models.ViewCrop
 
         internal double OffsetMm { get; set; } = DefaultOffsetMm;
 
-        /// <summary>"Active view" (true, the default) or "Pick several views" (false) - remembered for next time.</summary>
-        internal bool ApplyToActiveViewOnly { get; set; } = true;
-
         /// <summary>The offset in feet ON PAPER, never below Revit's minimum.</summary>
         internal double OffsetInternal => System.Math.Max(OffsetMm * Constants.MM_TO_FEET, 1.0 / 96.0);
 
@@ -34,8 +31,7 @@ namespace HeronTools.Models.ViewCrop
         {
             return new ViewCropAnnotationSettings
             {
-                OffsetMm = OffsetMm,
-                ApplyToActiveViewOnly = ApplyToActiveViewOnly
+                OffsetMm = OffsetMm
             };
         }
     }

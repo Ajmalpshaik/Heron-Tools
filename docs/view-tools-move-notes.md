@@ -11,6 +11,13 @@ needed (a false link in the first file count).
 `Filter Pro` · `Colorize` · `View Crop` (pulldown: Crop View by Elements, Annotation Crop by View Crop) ·
 a stack of `Unhide All` / `Toggle Links` / `Highlight`. New brand icons for every button.
 
+**2026-11-22, owner's decision:** the separate `Annotation Crop by View Crop` button was removed. View Crop is now one
+push button (Crop View by Elements); its window's **Also turn on the annotation crop** tick box does the same job in
+the same run and Undo step. Removed with it: `CmdSetAnnotationCropByViewCrop`, `ViewCropAnnotationCommandService`,
+`ViewCropAnnotationOptionsWindow` and `ViewCropAnnotationSettingsTracker` (nothing else used them). Kept:
+`ViewCropAnnotationService` and `ViewCropAnnotationSettings`, which the tick box uses. Lost on purpose: setting only
+the annotation crop without refitting the crop (Revit's own Annotation Crop in Properties does that).
+
 ## Defects found and fixed
 
 | Tool | Problem in the AJ-Tools version | Fix |

@@ -177,14 +177,14 @@
                         <CheckBox x:Name="ApplyAnnotationCheckBox" Content="Also turn on the annotation crop"
                                   Style="{StaticResource ModernCheckBox}"
                                   Checked="OnApplyAnnotationToggled" Unchecked="OnApplyAnnotationToggled"/>
-                        <TextBlock Text="Sets the annotation crop just outside the new view crop, in the same run."
+                        <TextBlock Text="Sets it the same distance outside the new view crop on all four sides, in the same run and the same Undo. Revit's minimum is 3.2 mm."
                                    Style="{StaticResource OptionHelp}" Margin="28,0,0,0"/>
                     </StackPanel>
                     <TextBlock x:Name="AnnotationOffsetLabel" Grid.Column="2" Text="Offset on paper (mm)"
                                Style="{StaticResource ToggleFieldLabel}" VerticalAlignment="Center"
                                Margin="0,0,10,0" IsEnabled="False"/>
                     <TextBox x:Name="AnnotationOffsetTextBox" Grid.Column="3" Text="25"
-                             Style="{StaticResource ModernTextBox}" IsEnabled="False"
+                             Style="{StaticResource ModernTextBox}" IsEnabled="False" VerticalAlignment="Center"
                              ToolTip="How far outside the view crop the annotation crop sits, in millimetres"/>
                 </Grid>
             </Border>

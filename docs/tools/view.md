@@ -8,7 +8,7 @@ Tools for what a view shows and how it looks: view filters, colours, crops, hidd
 |---|---|
 | Filter Pro, Colorize | Floor, ceiling, structural and area plans, sections, detail views, elevations and 3D views that take graphic overrides (not view templates) |
 | Reset Graphics (all three), Unhide All, Highlight | Any view that takes graphic overrides (not view templates) |
-| View Crop (both) | Floor, ceiling, structural and area plans |
+| View Crop | Floor, ceiling, structural and area plans |
 | 3D Section Box | Floor, ceiling, structural and area plans, sections, elevations and detail views |
 | Toggle Links | Any view where the RVT Links category can be hidden |
 
@@ -124,20 +124,20 @@ Screenshot needed: the Reset Graphics window showing the counts.
 
 ## View Crop
 
-A drop-down with two buttons. Both work in floor, ceiling, structural and area plans.
-
-### Crop View by Elements
+One button. Works in floor, ceiling, structural and area plans.
 
 **What it does:** fits the crop region of the picked plan views around their elements, with a margin (300 mm
-as standard).
+as standard). If you tick **Also turn on the annotation crop**, the same run also turns on the annotation crop and
+sets it the same distance outside the new crop on all four sides. That offset is measured **on paper** (25 mm as
+standard, never below 3.2 mm), as Revit does.
 
 **How to use it:**
 
-1. **View Crop > Crop View by Elements.**
-2. Pick the views.
-3. Choose whether the crop fits the **visible elements** or **all model elements**, and set the offset. Tick
+1. **View Crop** (the window is called Crop View by Elements).
+2. Choose whether the crop fits the **visible elements** or **all model elements**, and set the margin. Tick
    **Levels, grids and reference planes** if they should push the crop out too.
-4. Run.
+3. Optional: tick **Also turn on the annotation crop** and type its offset on paper.
+4. Choose **Active view** or **Pick several views**, then run (with several views, the next window lists them).
 
 **Limits:**
 
@@ -145,19 +145,14 @@ as standard).
 - Survey Point, Project Base Point and Internal Origin are never counted.
 - Revit 2024 and later measures only the linked elements each view shows. Revit 2020-2023 cannot ask that, so a
   visible link is measured whole.
+- The annotation crop is set only on views whose crop this run fitted. A view whose template controls the
+  annotation crop is skipped and listed with the reason.
+- There is no separate annotation-crop-only button any more (it was removed in favour of the tick box): to set
+  only the annotation crop on a view, use Revit's own **Annotation Crop** in the view's Properties.
 
-### Annotation Crop by View Crop
+**What it changes in the model:** the crop region (and, when ticked, the annotation crop) of the picked views.
 
-**What it does:** turns on the annotation crop in the picked views and sets an equal offset from each view's
-crop region. The offset is measured **on paper** (25 mm as standard, never below 3.2 mm), as Revit does.
-
-**How to use it:** **View Crop > Annotation Crop by View Crop**, pick the views and the offset, run.
-
-**Limits:** a view with **Crop View** off is skipped with "turn on Crop View first".
-
-**What these change in the model:** the crop region and annotation crop of the picked views.
-
-**Undo:** each run is one Undo step - **Ctrl+Z**.
+**Undo:** each run - crop and annotation crop together - is one Undo step: **Ctrl+Z**.
 
 ---
 

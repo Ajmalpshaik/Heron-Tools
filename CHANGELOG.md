@@ -32,6 +32,12 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
   section box of Revit's own 3D view, it does not take a picture. The button id and command class stay the same,
   so keyboard shortcuts and Quick Menu slots keep working.
 
+### Changed - View panel (NEEDS A REAL REVIT TEST)
+- **View Crop is one button now.** The separate "Annotation Crop by View Crop" button is gone; its job is the
+  **Also turn on the annotation crop** tick box in the View Crop window, which sets the annotation crop the same
+  distance (on paper) outside the new crop on all four sides, in the same run and the same one Undo step. To set only
+  the annotation crop on a view, use Revit's own Annotation Crop in the view's Properties.
+
 ## [1.2.1] - 2026-11-22
 
 Model Walk fixes from the owner's first test on a big linked model (issue #104), plus jump. Release notes:
