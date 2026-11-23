@@ -21,6 +21,8 @@ namespace HeronTools.UI
     {
         private const string HeronToolsUrl = "https://github.com/Ajmalpshaik/Heron-Tools";
         private const string HeronAiUrl = "https://github.com/Ajmalpshaik/Heron-AI";
+        private const string PrivacyUrl = "https://github.com/Ajmalpshaik/Heron-Tools/blob/main/PRIVACY.md";
+        private const string LicenceUrl = "https://github.com/Ajmalpshaik/Heron-Tools/blob/main/LICENSE";
 
         private readonly string _details;
 
@@ -47,6 +49,8 @@ namespace HeronTools.UI
 
             tools_link_button.Click += (s, e) => Open(HeronToolsUrl);
             ai_link_button.Click += (s, e) => Open(HeronAiUrl);
+            privacy_link_button.Click += (s, e) => Open(PrivacyUrl);
+            licence_link_button.Click += (s, e) => Open(LicenceUrl);
             copy_button.Click += (s, e) => CopyDetails();
             close_button.Click += (s, e) => Close();
         }
