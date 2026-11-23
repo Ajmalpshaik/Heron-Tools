@@ -12,6 +12,15 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 - Grids at an angle to the screen get their own rows; callouts of sections are allowed; select grids or levels first
   to dimension only those; "leave out" names are whole names (`1` no longer leaves out 10 and 21), with `*` and `?`.
 
+### Added - Quick Menu look (NEEDS A REAL REVIT TEST)
+- **Colour and Effect for the wheel:** every one of the six designs now comes in **Dark** or **Light**, and **Flat**,
+  **Soft** (neumorphism: soft raised buttons on a plate, the pointed one presses in) or **Clay** (soft 3D clay: rounded
+  buttons, the pointed one pops out in orange with a white icon). Flat and Dark are the standard, so a wheel saved
+  before looks exactly as it did. The soft shadows are drawn once when the wheel opens, never live.
+- **Quick Menu Settings has two tabs:** **Slots** (which tool sits where, as before) and **Look** (design, colour,
+  effect, names, opening and size), with the real wheel shown live on the Look tab - point at it to see a tool light up.
+- The layout file gains two lines, `Colour=` and `Effect=`; an older file without them still reads fine.
+
 ### Changed
 
 - **New ribbon icons (in progress):** Quick Menu and Quick Menu Settings in a soft white 3D look; Filter Pro,

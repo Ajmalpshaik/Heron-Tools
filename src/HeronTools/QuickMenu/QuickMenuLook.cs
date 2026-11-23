@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// The Quick Menu wheel's look as the modeller chooses it in the settings window: which of the six designs, whether tool names are written on the wheel, and which of the four ways it opens. Chosen 2026-11-13 from the design page with Ajmal.
+// The Quick Menu wheel's look as the modeller chooses it in the settings window: which of the six designs, whether tool names are written on the wheel, which of the four ways it opens (chosen 2026-11-13 from the design page with Ajmal), and its colour and effect (Dark / Light, Flat / Soft / Clay - chosen 2026-11-22).
 
 using System;
 
@@ -47,6 +47,29 @@ namespace HeronTools.Services.QuickMenu
 
         /// <summary>Then the slots grow out one by one with a twist and a small bounce.</summary>
         IrisPop = 3
+    }
+
+    /// <summary>The wheel's colour (chosen 2026-11-22 with Ajmal). Every design comes in both.</summary>
+    internal enum QuickMenuColour
+    {
+        /// <summary>Ink and Surface with Mist text - the Heron dark look.</summary>
+        Dark = 0,
+
+        /// <summary>Mist with Ink text.</summary>
+        Light = 1
+    }
+
+    /// <summary>How the slots and the centre are shaded (chosen 2026-11-22 with Ajmal). Every design takes all three.</summary>
+    internal enum QuickMenuEffect
+    {
+        /// <summary>Today's look: flat slots with a thin edge; the pointed slot lights orange.</summary>
+        Flat = 0,
+
+        /// <summary>Neumorphism: soft raised buttons on a plate; the pointed one presses in.</summary>
+        Soft = 1,
+
+        /// <summary>Soft 3D clay: separate rounded buttons; the pointed one pops out in orange clay.</summary>
+        Clay = 2
     }
 
     /// <summary>What the centre of the wheel holds.</summary>
@@ -182,6 +205,14 @@ namespace HeronTools.Services.QuickMenu
         internal const QuickMenuStyle DefaultStyle = QuickMenuStyle.HeronRing;
         internal const QuickMenuOpening DefaultOpening = QuickMenuOpening.Unfold;
 
+        /// <summary>Dark and Flat: a wheel saved before Colour and Effect existed opens exactly as it did.</summary>
+        internal const QuickMenuColour DefaultColour = QuickMenuColour.Dark;
+        internal const QuickMenuEffect DefaultEffect = QuickMenuEffect.Flat;
+
+        internal static readonly QuickMenuColour[] Colours = { QuickMenuColour.Dark, QuickMenuColour.Light };
+
+        internal static readonly QuickMenuEffect[] Effects = { QuickMenuEffect.Flat, QuickMenuEffect.Soft, QuickMenuEffect.Clay };
+
         internal static readonly QuickMenuStyle[] Styles =
         {
             QuickMenuStyle.HeronRing,
@@ -222,6 +253,39 @@ namespace HeronTools.Services.QuickMenu
                 case QuickMenuOpening.IrisPop: return "Iris Pop";
                 default: return "Unfold";
             }
+        }
+
+        internal static string ColourName(QuickMenuColour colour)
+        {
+            return colour == QuickMenuColour.Light ? "Light" : "Dark";
+        }
+
+        internal static string EffectName(QuickMenuEffect effect)
+        {
+            switch (effect)
+            {
+                case QuickMenuEffect.Soft: return "Soft (neumorphism)";
+                case QuickMenuEffect.Clay: return "Clay (soft 3D)";
+                default: return "Flat";
+            }
+        }
+
+        /// <summary>Reads a saved colour; anything unknown or missing gives Dark.</summary>
+        internal static QuickMenuColour ParseColour(string text)
+        {
+            QuickMenuColour value;
+            return Enum.TryParse(text ?? string.Empty, true, out value) && Enum.IsDefined(typeof(QuickMenuColour), value)
+                ? value
+                : DefaultColour;
+        }
+
+        /// <summary>Reads a saved effect; anything unknown or missing gives Flat.</summary>
+        internal static QuickMenuEffect ParseEffect(string text)
+        {
+            QuickMenuEffect value;
+            return Enum.TryParse(text ?? string.Empty, true, out value) && Enum.IsDefined(typeof(QuickMenuEffect), value)
+                ? value
+                : DefaultEffect;
         }
 
         /// <summary>Reads a saved style name; anything unknown (an older or edited file) gives the default.</summary>
