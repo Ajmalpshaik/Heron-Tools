@@ -4,6 +4,14 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Added - Auto Dimension (Datums panel) (NEEDS A REAL REVIT TEST)
+- **Auto Dimension** drop-down: **Grids**, **Levels**, **Grids and Levels**, **Settings**. Moved from AJ-Tools'
+  Automatic Dimension and rebuilt: each set of parallel grids or levels gets a chain and an overall, **just inside the
+  grid and level heads** (and always inside the crop), at the bubble end, the other end or both. One Undo step per run;
+  a run that places everything ends quietly. Notes on what was fixed: [docs/auto-dimension-move-notes.md](docs/auto-dimension-move-notes.md).
+- Grids at an angle to the screen get their own rows; callouts of sections are allowed; select grids or levels first
+  to dimension only those; "leave out" names are whole names (`1` no longer leaves out 10 and 21), with `*` and `?`.
+
 ### Changed
 
 - **New ribbon icons (in progress):** Quick Menu and Quick Menu Settings in a soft white 3D look; Filter Pro,

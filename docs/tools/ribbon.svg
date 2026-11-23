@@ -34,6 +34,11 @@
 <text x="474" y="167" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Match Level Extents</text>
 <text x="474" y="186" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Levels to Section Box</text>
 <text x="460" y="205" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Flip Bubbles</text>
+<text x="460" y="224" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Auto Dimension ▾</text>
+<text x="474" y="243" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Grids</text>
+<text x="474" y="262" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Levels</text>
+<text x="474" y="281" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Grids and Levels</text>
+<text x="474" y="300" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Settings</text>
 <line x1="458" y1="327" x2="644" y2="327" stroke="#F7F5F2" stroke-opacity="0.14"/>
 <text x="551" y="345" font-size="13" font-weight="700" text-anchor="middle" fill="#FD641A">Datums</text>
 <rect x="664" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>

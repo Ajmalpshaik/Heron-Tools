@@ -36,7 +36,7 @@ Keep a 16 px drawing simpler than the 32 px one.
 |---|---|
 | Quick Menu, Quick Menu Settings (white soft 3D) | Unhide All (options A eye / B eye + elements / C eye + rays drawn; owner had not chosen) |
 | Filter Pro, Colorize (roller), Reset Graphics (ring arrow) | Toggle Links, Highlight |
-| View Crop (crop tool), 3D Section Box (camera) | Reset Datums, Level Extents, Flip Bubbles, Auto Dimension |
+| View Crop (crop tool), 3D Section Box (camera) | Reset Datums, Level Extents, Flip Bubbles, Auto Dimension (new on main, its own flat icon) |
 | | Match Elevation, Reassign Level, Pin / Unpin, Smart Selection |
 | | Quick Clash, Model Walk, Element ID, Find by ID, 3D Views by Workset, Link Workset |
 | | About Heron (the Heron app mark - probably keep) |
