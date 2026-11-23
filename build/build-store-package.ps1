@@ -288,7 +288,7 @@ $xml = New-Object System.Text.StringBuilder
 [void]$xml.AppendLine('<!-- Made by build/build-store-package.ps1 - do not edit by hand. See docs/store/package.md. -->')
 # (Each line is formatted first, then appended: inside AppendLine( ) the commas of -f would become its arguments.)
 $root = ('<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="Revit" ProductType="Application" ' +
-    'Name="Heron Tools" AppVersion="{0}" FriendlyVersion="{0}" Description="{1}" Author="Ajmal PS" ' +
+    'Name="Heron Tools" AppVersion="{0}" Description="{1}" Author="Ajmal PS" ' +
     'Icon="./Contents/Resources/{2}" AppNameSpace="appstore.exchange.autodesk.com" OnlineDocumentation="{3}" ' +
     'HelpFile="./Contents/Resources/{4}" ProductCode="{5}" UpgradeCode="{6}" SupportedLocales="Enu">') -f
     (Esc $version), (Esc $description), $iconName, (Esc $repoUrl), $helpName, $productCode, $upgradeCode

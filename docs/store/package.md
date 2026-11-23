@@ -53,6 +53,10 @@ That file has one year; putting **several years** in one bundle this way follows
 post (blog.autodesk.io, "Understanding the role of SeriesMin and SeriesMax", 2025), which says Revit reads only
 `SeriesMin`, so one block per year is the reliable way. Only a real install proves it (below).
 
+Not from Autodesk's file: the package-level `<RuntimeRequirements>` spans R2022 to R2027 (Autodesk's has one year
+there; the blog's several-year example has none). **If a Revit year does not load the bundle, remove that line
+first.** The `Email` in `CompanyDetails` is filled from `-SupportEmail`.
+
 **Fixed codes.** `UpgradeCode` `{57635C9D-886C-474D-8845-A71D1D68C10C}` is fixed for the life of the product
 (never change it; the GitHub installer and `build.ps1` also use it to find the Store version). `ProductCode`
 is made from it and the version, so it is the same every time for one version and new for every new version.
@@ -80,6 +84,14 @@ To look yourself: unzip it into an empty folder (never into Revit's folders) and
 `%AppData%\Autodesk\ApplicationPlugins`, with the GitHub version removed first, then open Revit 2022 and 2027
 (and any other year you can): the Heron tab shows every tool except Model Walk, with no message at start.
 Remove the bundle folder afterwards.
+
+Also still to see for real: that Revit gives the "duplicate add-in" message when both versions are there (the
+reason for the check below), and that Autodesk's Store installer keeps the `HeronTools.bundle` folder name or
+our `UpgradeCode` (the GitHub installer finds the Store version by them).
+
+**Before submitting:** raise `<Version>` in `src\HeronTools\HeronTools.csproj` (the zip carries Unreleased work,
+but is named after the last release until then). `NOTICE.txt` in the zip still names Model Walk's character
+(public domain, CC0); harmless, but a Store-specific line could be added later.
 
 ## The Store version and the GitHub version together
 
