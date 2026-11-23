@@ -19,7 +19,7 @@ body:
         - Reset Graphics (Reset Selected / Reset Graphics / Restore Last Reset)
         - Crop View by Elements
         - Annotation Crop by View Crop
-        - 3D Snapshot
+        - 3D Section Box
         - Unhide All
         - Toggle Links
         - Highlight Selection

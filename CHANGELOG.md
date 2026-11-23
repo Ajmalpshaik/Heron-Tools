@@ -4,6 +4,17 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Changed
+
+- **New ribbon icons (in progress):** Quick Menu and Quick Menu Settings in a soft white 3D look; Filter Pro,
+  Colorize (now a paint roller), Reset Graphics (a ring arrow) and View Crop in orange 3D clay. The rest of the
+  icons follow. Needs a real Revit look on the light and dark ribbon.
+- **View panel layout:** Filter Pro, Colorize and View Crop are now one stack of three small buttons (like Unhide
+  All / Toggle Links / Highlight); Reset Graphics and 3D Section Box stay big buttons. Needs a real Revit look.
+- **3D Snapshot is now called 3D Section Box** (button text, tooltips, messages, Undo name, docs): it fits the
+  section box of Revit's own 3D view, it does not take a picture. The button id and command class stay the same,
+  so keyboard shortcuts and Quick Menu slots keep working.
+
 ## [1.2.1] - 2026-11-22
 
 Model Walk fixes from the owner's first test on a big linked model (issue #104), plus jump. Release notes:

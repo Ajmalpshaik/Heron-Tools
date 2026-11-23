@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heron Icon Studio</title>
+<style>
+  :root { --ink: #0F0F10; --mist: #F7F5F2; --ribbon-light: #F5F5F5; --ribbon-dark: #2E3440; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: var(--mist); color: var(--ink); }
+  header { padding: 20px 24px 12px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 0; color: rgba(15,15,16,.72); font-size: 14px; max-width: 900px; }
+  .icon { border-top: 1px solid rgba(15,15,16,.14); }
+  /* ---- Revit ribbon preview (copy of the Heron tab, from Ajmal's Revit screenshot) ---- */
+  #ribbons { padding: 4px 24px 18px; display: grid; gap: 14px; }
+  #ribbons h2 { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: rgba(15,15,16,.72); }
+  .rv { font: 12px "Segoe UI", sans-serif; border: 1px solid #c9c9c9; overflow-x: auto; max-width: 100%; }
+  .rv-tabs { display: flex; height: 22px; align-items: end; padding-left: 6px; }
+  .rv-tab { padding: 2px 12px 3px; border: 1px solid transparent; border-bottom: none; }
+  .rv-tab.on { border-color: inherit; }
+  .rv-body { display: flex; align-items: stretch; width: max-content; }
+  .rv-panel { display: flex; flex-direction: column; border-right: 1px solid; }
+  .rv-items { display: flex; align-items: flex-start; gap: 2px; padding: 3px 4px 2px; height: 76px; }
+  .rv-title { text-align: center; padding: 1px 6px 2px; }
+  .rv-big { display: flex; flex-direction: column; align-items: center; padding: 2px 4px; min-width: 40px; text-align: center; line-height: 1.2; white-space: pre; }
+  .rv-big img { width: 32px; height: 32px; margin-bottom: 2px; }
+  .rv-stack { display: flex; flex-direction: column; gap: 3px; padding: 2px 4px; }
+  .rv-row { display: flex; align-items: center; gap: 5px; height: 20px; white-space: nowrap; }
+  .rv-row img { width: 16px; height: 16px; }
+  .rv-drop { font-size: 8px; margin-left: 2px; }
+  .rv-off { opacity: .4; }
+  .rv.light { background: #F0F0F0; color: #1b1b1b; border-color: #c9c9c9; }
+  .rv.light .rv-tabs { background: #DCDCDC; } .rv.light .rv-tab.on { background: #F0F0F0; border-color: #c9c9c9; }
+  .rv.light .rv-panel { border-color: #d0d0d0; } .rv.light .rv-title { background: #E1E1E1; color: #333; }
+  .rv.dark { background: #3B4252; color: #E6E6E6; border-color: #2a2f3a; }
+  .rv.dark .rv-tabs { background: #2E3440; } .rv.dark .rv-tab.on { background: #3B4252; border-color: #2a2f3a; }
+  .rv.dark .rv-panel { border-color: #2f3542; } .rv.dark .rv-title { background: #343A47; color: #cfd3da; }
+  .title { padding: 14px 24px 4px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .title b { font-size: 16px; }
+  .title .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(15,15,16,.08); }
+  .title .tag.done { background: #3ECF8E; color: #0F0F10; }
+  .title .what { font-size: 13px; color: rgba(15,15,16,.72); flex-basis: 100%; }
+  .row { display: grid; grid-template-columns: 90px 1fr 1fr; }
+  .lbl { padding: 14px 0 0 24px; font-size: 12px; font-weight: 600; }
+  .side { display: flex; align-items: center; gap: 20px; padding: 10px 16px; min-height: 120px; }
+  .side.light { background: var(--ribbon-light); } .side.dark { background: var(--ribbon-dark); color: #fff; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; }
+  .cell canvas, .cell img { display: block; image-rendering: pixelated; }
+  button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(15,15,16,.25); background: #fff; cursor: pointer; }
+  #export { display: none; }
+  @media (max-width: 760px) { .row { grid-template-columns: 1fr; } .side { flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Heron Icon Studio - ribbon icons</h1>
+  <p>One block per ribbon button, in ribbon order. "Today" is the icon in the add-in now; "New" rows are the new drawings.
+     Left a light Revit ribbon, right a dark one. "32 as Revit shows it" = a plain 32 px file stretched by your Windows display
+     scale (as Revit does today); "sharp" = drawn for your screen; "big" = the drawing itself, large. Style rule: STYLE.md.</p>
+</header>
+<section id="ribbons"></section>
+<main id="icons"></main>
+<pre id="export"></pre>
+
+<script>
+const ACCENT = '#FD641A', ACCENT_LIGHT = '#FF9A5C', INK = '#0F0F10';
+const TODAY_DIR = '../../src/HeronTools/Resources/Icons/';
+
+// ---- The Soft 3D kit: every icon is drawn with these, so the set stays one family -------
+function kit(size) {
+  const sh = size === 16 ? .5 : .7;
+  return {
+    defs: `<defs>
+      <linearGradient id="lit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ACCENT_LIGHT}"/><stop offset="1" stop-color="${ACCENT}"/></linearGradient>
+      <linearGradient id="dim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ACCENT_LIGHT}" stop-opacity=".75"/><stop offset="1" stop-color="${ACCENT}" stop-opacity=".75"/></linearGradient>
+      <linearGradient id="litU" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="30"><stop offset="0" stop-color="${ACCENT_LIGHT}"/><stop offset="1" stop-color="${ACCENT}"/></linearGradient>
+      <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <filter id="lift" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="${sh}" stdDeviation="${sh}" flood-color="#000" flood-opacity=".45"/></filter>
+    </defs>`,
+    // a raised filled shape: tone 'lit' (main) or 'dim' (secondary)
+    part: (d, tone = 'lit') => `<path d="${d}" fill="url(#${tone})"/><path d="${d}" fill="url(#shine)"/>`,
+    // a raised line (for level lines, leaders...): gradient by height on the icon
+    line: (d, w, op = 1) => `<path d="${d}" fill="none" stroke="url(#litU)" stroke-opacity="${op}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`,
+    // white with an Ink edge: reads on both ribbons
+    white: (d, w = 1.1) => `<path d="${d}" fill="#fff" stroke="${INK}" stroke-width="${w}" stroke-linejoin="round"/>`,
+    lift: body => `<g filter="url(#lift)">${body}</g>`,
+  };
+}
+
+// ---- Shared shapes ------------------------------------------------------------------
+function ringSlot(cx, cy, ro, ri, a1, a2) {
+  const p = (r, a) => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)].map(v => v.toFixed(3)).join(' ');
+  const big = (a2 - a1) > 180 ? 1 : 0;
+  return `M${p(ro, a1)} A${ro} ${ro} 0 ${big} 1 ${p(ro, a2)} L${p(ri, a2)} A${ri} ${ri} 0 ${big} 0 ${p(ri, a1)} Z`;
+}
+const circle = (cx, cy, r) => `M${cx - r} ${cy} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0 Z`;
+const POINTER = 'M13.2 11.5 L13.2 22.3 L15.8 19.8 L17.6 23.7 L19.5 22.9 L17.7 19.1 L21.2 19.1 Z';
+
+// ---- The icons, in ribbon order -------------------------------------------------------
+// status: 'in place' once Ajmal said yes and the file was copied; 'review' while he decides.
+const ICONS = [
+  { name: 'QuickMenu', title: '1. Quick Menu', status: 'in place',
+    what: 'Opens the tool wheel around the mouse pointer. Picture: the wheel in light neumorphism, no tile; the top slot lit orange.',
+    // Ajmal's pick 2026-11-22: version E - grey slots, white highlight, orange only on the shadow edge.
+    // Final pick 2026-11-22: "E soft" - soft 3D, round corners, orange shadow edge, orange centre dot, no white fog.
+    svg: size => neuWheel(size, { orangeEdgeShadow: true, soft: true }) },
+
+  { name: 'QuickMenuSettings', title: '2. Quick Menu Settings', status: 'in place',
+    what: 'Chooses which tool sits in each slot of the wheel, how many slots and how big it opens. In the Quick Menu dropdown. Today: a gear.',
+    // 1st round A orange gear, B wheel + gear, C white gear; then D, F nicer white gears.
+    // Final pick 2026-11-22: 'D' - white soft gear, pressed-in ring, orange centre (pairs with the Quick Menu wheel).
+    svg: size => quickMenuSettings(size, 'D') },
+
+  { name: 'FilterPro', title: '3. Filter Pro', status: 'in place',
+    what: 'Makes one view filter per parameter value (category, parameter, values) and adds them to the view, each with its own colour. Picture: a funnel.',
+    // 1st round (A funnel + orange stem, B funnel + list, C funnel + drop): Ajmal asked instead for today's
+    // funnel shape in neumorphism or 3D clay. Old variants kept in filterPro() as 'A', 'B', 'C'.
+    // Pick 2026-11-22: 'E' - today's funnel shape in orange 3D clay. (D and F kept in filterPro().)
+    // Then: no white inside, shadow orange too -> 'G'.
+    // Final 2026-11-22: 'G' - all-orange clay, in the add-in.
+    svg: size => filterPro(size, 'G') },
+
+  { name: 'Colorize', title: '4. Colorize', status: 'in place',
+    what: 'Puts a colour straight on the matching elements (by category or parameter value), no view filter. Today: a drop. Picture: something that paints.',
+    // 1st round A brush, B roller, C brush + stroke; 2nd round H, J nicer rollers.
+    // Final pick 2026-11-22: 'B' - paint roller with the thin wire frame.
+    svg: size => colorize(size, 'B') },
+
+  { name: 'ResetGraphics', title: '5. Reset Graphics', status: 'in place',
+    what: 'Clears graphic overrides (of the selection, or of whole views and categories) and can bring the last reset back. Today: a round arrow around a square.',
+    // 1st round A arrow + square, B eraser, C element + small arrow: none liked; then D/E ring arrow only.
+    // Final pick 2026-11-22: 'D' - ring arrow only, all orange clay.
+    svg: size => resetGraphics(size, 'D') },
+
+  { name: 'ViewCrop', title: '6. View Crop', status: 'in place',
+    what: 'Fits the crop region of plan views around their elements (and, in the same dropdown, the annotation crop). Today: the crop tool.',
+    // 1st round A crop tool, B crop corners + element, C crop tool + element.
+    // Final pick 2026-11-22: 'A' - the crop tool in orange clay.
+    svg: size => viewCrop(size, 'A') },
+
+  { name: 'Snapshot3D', title: '8. 3D Section Box', status: 'in place',
+    what: 'Fits Revit’s {3D} view (section box) to a room, a section or a window dragged in the plan. Today: corner brackets round a cube.',
+    // 1st round A box in brackets, B camera, C camera + box. Ajmal: it MAKES a 3D view (not a picture) -
+    // keep B as an option, draw icons about making a 3D view; the tool may get a new name.
+    // Then B camera, D box + plus, E section box, F box on plan. Final pick 2026-11-22: 'B' camera, name stays 3D Snapshot.
+    svg: size => snapshot3D(size, 'B') },
+
+  { name: 'UnhideAll', title: '9. Unhide All', status: 'review',
+    what: 'Shows everything hidden in the active view: temporary hide/isolate and elements hidden in the view. Small button (16 px on the ribbon). Today: an eye.',
+    variants: [
+      { label: 'A', note: 'eye (the idea of today, in clay)', svg: size => unhideAll(size, 'A') },
+      { label: 'B', note: 'eye over a row of elements', svg: size => unhideAll(size, 'B') },
+      { label: 'C', note: 'eye opening with rays (reveal)', svg: size => unhideAll(size, 'C') },
+    ] },
+
+  // 7. Annotation Crop: no icon needed - Ajmal decided (2026-11-22) to remove its button and put the option in the
+  // Crop View window (session annotation-crop-merge). Drawings kept in annotationCrop() in case.
+];
+
+// ---- Soft 3D kit for every icon after the Quick Menu (same look as softWheel) ---------------
+// A part is drawn as its "skeleton" shape; the cut-out gives it a round outline of r, so design the
+// skeleton about r smaller than the finished part. tone 'grey' = white-grey puffy, 'lit' = orange.
+const BOXER = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+BOXER.setAttribute('style', 'position:absolute;width:0;height:0;overflow:hidden');
+document.documentElement.appendChild(BOXER);
+function bboxOf(d) {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); BOXER.appendChild(p);
+  const b = p.getBBox(); BOXER.removeChild(p); return [b.x, b.y, b.x + b.width, b.y + b.height];
+}
+// opts.allOrange: no white and no grey anywhere - the clay highlight is Accent Light, the shadow is an Accent glow only
+function softKit(size, opts = {}) {
+  const ao = !!opts.allOrange;
+  const small = size === 16, d = small ? 1.1 : .9, blur = small ? 1.0 : .85, r = small ? 1.3 : 1.1;
+  let defs = '', id = 0;
+  // gradients run across each paint rectangle, which is the part's own box
+  defs += `<linearGradient id="kShade" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${INK}" stop-opacity="0"/><stop offset="1" stop-color="${INK}" stop-opacity=".16"/></linearGradient>
+    <linearGradient id="kShine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="kLit" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${ACCENT_LIGHT}"/><stop offset="1" stop-color="${ACCENT}"/></linearGradient>
+    <filter id="kClay" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="${small ? 1.6 : 1.3}" result="b"/>
+      <feOffset in="b" dx="${small ? -1.4 : -1.2}" dy="${small ? -1.4 : -1.2}" result="up"/>
+      <feComposite in="SourceAlpha" in2="up" operator="arithmetic" k2="1" k3="-1" result="lowEdge"/>
+      <feFlood flood-color="${INK}" flood-opacity="${ao ? (small ? .18 : .22) : (small ? .3 : .34)}"/><feComposite in2="lowEdge" operator="in" result="dark"/>
+      <feOffset in="b" dx="${small ? 1.4 : 1.2}" dy="${small ? 1.4 : 1.2}" result="down"/>
+      <feComposite in="SourceAlpha" in2="down" operator="arithmetic" k2="1" k3="-1" result="highEdge"/>
+      <feFlood flood-color="${ao ? ACCENT_LIGHT : '#fff'}" flood-opacity="${ao ? 1 : .85}"/><feComposite in2="highEdge" operator="in" result="light"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="light"/></feMerge></filter>
+    <filter id="kSoft" x="-45%" y="-45%" width="190%" height="190%">
+      ${ao ? '' : `<feDropShadow dx="${d}" dy="${d}" stdDeviation="${blur}" flood-color="${INK}" flood-opacity=".3"/>`}
+      <feDropShadow dx="${d * .8}" dy="${d * .8}" stdDeviation="${ao ? blur * 1.1 : blur * .7}" flood-color="${ACCENT}" flood-opacity="${ao ? .85 : .8}"/></filter>`;
+  return {
+    small, r,
+    // clay: true = 3D clay look - inner highlight on the top-left edge, inner shadow on the bottom-right edge
+    part(path, tone = 'grey', round = r, clay = false) {
+      const m = 'k' + (id++), b = bboxOf(path), pad = round + .5;
+      defs += `<mask id="${m}" maskUnits="userSpaceOnUse" x="-4" y="-4" width="40" height="40">` +
+              `<path d="${path}" fill="${/z/i.test(path) ? '#fff' : 'none'}" stroke="#fff" stroke-width="${2 * round}" stroke-linejoin="round" stroke-linecap="round"/></mask>`;
+      // (an open path - a wire, a handle line - is only its outline; a closed path (Z) is filled)
+      const rect = paint => `<rect x="${b[0] - pad}" y="${b[1] - pad}" width="${b[2] - b[0] + 2 * pad}" height="${b[3] - b[1] + 2 * pad}" fill="${paint}" mask="url(#${m})"/>`;
+      // tones: 'lit' orange gradient, 'light' flat Accent Light, 'deep' Accent with an 18 % Ink shade, 'grey' white-grey
+      const shine = clay ? '' : rect('url(#kShine)');
+      const layers = tone === 'lit' ? rect('url(#kLit)') + shine
+                   : tone === 'light' ? rect(ACCENT_LIGHT) + shine
+                   : tone === 'recess' ? rect('#F7F5F2') + `<rect x="${b[0] - pad}" y="${b[1] - pad}" width="${b[2] - b[0] + 2 * pad}" height="${b[3] - b[1] + 2 * pad}" fill="${INK}" fill-opacity=".1" mask="url(#${m})"/>`
+                   : tone === 'deep' ? rect(ACCENT) + `<rect x="${b[0] - pad}" y="${b[1] - pad}" width="${b[2] - b[0] + 2 * pad}" height="${b[3] - b[1] + 2 * pad}" fill="${INK}" fill-opacity=".18" mask="url(#${m})"/>` + shine
+                   : rect('#F7F5F2') + rect('url(#kShade)') + shine;
+      return clay ? `<g filter="url(#kClay)">${layers}</g>` : layers;
+    },
+    // scale: drawing size inside the square, leaving room for the glow to fade out
+    render(body, scale = small ? .8 : .88, cy = 16) {
+      return `<defs>${defs}</defs><g transform="translate(16 16) scale(${scale}) translate(-16 -${cy})"><g filter="url(#kSoft)">${body}</g></g>`;
+    },
+  };
+}
+
+// ---- 4. Colorize (orange clay, like Filter Pro) ---------------------------------------------------
+function colorize(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') {
+    // brush lying from top-right to bottom-left: handle (light), metal band (deep), bristles with a pointed tip (lit)
+    const handle = 'M28 4 L19.2 12.8';
+    const band = 'M17.6 14.4 L15.8 16.2';
+    const bristles = 'M13.8 14.6 L17.4 18.2 C16 23 11 27.4 3.8 28.2 C4.6 21.2 9 16.2 13.8 14.6 Z';
+    return k.render(k.part(handle, 'light', s ? 2.7 : 2.5, true) + k.part(band, 'deep', s ? 3.2 : 3, true) + k.part(bristles, 'lit', k.r * .7, true));
+  }
+  if (v === 'B') {
+    // paint roller: roller on top, frame, handle down
+    const roller = s ? 'M5.5 6 L21.5 6 L21.5 12 L5.5 12 Z' : 'M5.6 6.2 L21.6 6.2 L21.6 11.8 L5.6 11.8 Z';
+    const frame = 'M23.8 9 L26.4 9 L26.4 15.8 L15.6 15.8 L15.6 18.6';
+    const handle = 'M15.6 20.8 L15.6 27.2';
+    return k.render(k.part(frame, 'deep', s ? 1.6 : 1.3, true) + k.part(handle, 'light', s ? 2.6 : 2.4, true) + k.part(roller, 'lit', k.r, true));
+  }
+  if (v === 'H' || v === 'J') {
+    // a real paint roller: round roller with an end cap, a thin bent wire frame, a metal collar, a shaped grip
+    const roller = s ? 'M5.2 6 L20.6 6 L20.6 12 L5.2 12 Z' : 'M5.4 6 L20.8 6 L20.8 11.6 L5.4 11.6 Z';
+    const cap = s ? 'M21.9 6.6 L22.4 6.6 L22.4 11.4 L21.9 11.4 Z' : 'M22 6.4 L22.6 6.4 L22.6 11.2 L22 11.2 Z';
+    const frame = s ? 'M23.6 9 L26.6 9 L26.6 15 L16 15 L16 17.6' : 'M23.8 8.8 L26.8 8.8 L26.8 14.6 L16 14.6 L16 17.4';
+    const collar = s ? 'M16 18.6 L16 19.8' : 'M16 18.4 L16 19.6';
+    const grip = s ? 'M14 21 L18 21 L18.4 26.6 C18.4 28.2 13.6 28.2 13.6 26.6 Z' : 'M14.2 21 L17.8 21 L18.4 26.8 C18.4 28.4 13.6 28.4 13.6 26.8 Z';
+    const body = k.part(frame, 'deep', s ? 1.4 : .95, true) + k.part(collar, 'deep', s ? 2.2 : 1.9, true) +
+                 k.part(grip, 'light', s ? 1.1 : .9, true) + k.part(roller, 'lit', s ? 1.4 : 1.3, true) + k.part(cap, 'deep', s ? 1.3 : 1.1, true);
+    return k.render(v === 'J' ? `<g transform="rotate(-16 16 16)">${body}</g>` : body);
+  }
+  // C: a smaller brush painting a wavy stroke under it = colour going on
+  const handle = 'M28.6 3.4 L22 10';
+  const band = 'M20.6 11.4 L19.2 12.8';
+  const bristles = 'M17.6 12 L20.4 14.8 C19.4 18.6 15.6 21.4 10.4 22 C11 17 14 13.2 17.6 12 Z';
+  const stroke = s ? 'M4.5 27.2 C8.5 23.6 12 29.6 16.5 26.4 C19.5 24.4 22.5 25.6 25.5 27'
+                   : 'M4.6 27.4 C8.6 24.2 12.2 29.6 16.6 26.6 C19.4 24.8 22.4 25.8 25.4 27.2';
+  return k.render(k.part(stroke, 'lit', s ? 1.9 : 1.6, true) + k.part(handle, 'light', s ? 2.4 : 2.1, true) +
+                  k.part(band, 'deep', s ? 2.8 : 2.5, true) + k.part(bristles, 'lit', k.r * .6, true));
+}
+
+// ---- 5. Reset Graphics (orange clay) ----------------------------------------------------------------
+// turn a list of points about (cx, cy) by deg, and close it as a path
+function poly(pts, deg = 0, cx = 16, cy = 16) {
+  const a = deg * Math.PI / 180, c = Math.cos(a), si = Math.sin(a);
+  return 'M' + pts.map(([x, y]) => [cx + (x - cx) * c - (y - cy) * si, cy + (x - cx) * si + (y - cy) * c].map(v => v.toFixed(2)).join(' ')).join(' L') + ' Z';
+}
+function resetGraphics(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'D' || v === 'E') {
+    // just the ring arrow: a thick ring open at the top-left, the head pointing back (anticlockwise) into the gap
+    const cx = 16, cy = 16.4, R = s ? 9.2 : 9.6, a1 = -118, a2 = 172;
+    const pt = a => [cx + R * Math.cos(a * Math.PI / 180), cy + R * Math.sin(a * Math.PI / 180)];
+    const [sx, sy] = pt(a1), [ex, ey] = pt(a2);
+    const ring = `M${sx.toFixed(2)} ${sy.toFixed(2)} A${R} ${R} 0 1 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+    const t = a1 * Math.PI / 180, dir = [Math.sin(t), -Math.cos(t)], nrm = [Math.cos(t), Math.sin(t)];
+    const L = s ? 5.4 : 5, W = s ? 4.8 : 4.4, bx = sx - dir[0] * .8, by = sy - dir[1] * .8;
+    const head = `M${(sx + dir[0] * L).toFixed(2)} ${(sy + dir[1] * L).toFixed(2)} L${(bx + nrm[0] * W).toFixed(2)} ${(by + nrm[1] * W).toFixed(2)} L${(bx - nrm[0] * W).toFixed(2)} ${(by - nrm[1] * W).toFixed(2)} Z`;
+    return k.render(k.part(ring, v === 'E' ? 'light' : 'lit', s ? 2.5 : 2.2, true) + k.part(head, 'lit', s ? .9 : .7, true));
+  }
+  if (v === 'A') {
+    // round arrow going back (anticlockwise), head at the top-left, around an element (square)
+    const arc = 'M8.2 9.6 A10.2 10.2 0 1 1 6.6 21.4';
+    const head = 'M3.4 10.6 L10.6 6.4 L10.2 14.2 Z';
+    const box = s ? 'M12 12.8 L20 12.8 L20 20.8 L12 20.8 Z' : 'M12.4 13.2 L19.6 13.2 L19.6 20.4 L12.4 20.4 Z';
+    return k.render(k.part(arc, 'light', s ? 1.8 : 1.5, true) + k.part(head, 'light', s ? .9 : .7, true) + k.part(box, 'lit', s ? 1.2 : 1, true));
+  }
+  if (v === 'B') {
+    // eraser lying at an angle: orange body, darker rubber end, wiping a stroke of colour (left behind, fading)
+    const body = poly([[12, 9], [26, 9], [26, 16], [12, 16]], -38, 18.5, 12.5);
+    const tip = poly([[7.6, 9], [12, 9], [12, 16], [7.6, 16]], -38, 18.5, 12.5);
+    const trail = s ? 'M3.6 26.6 C7 24.8 9.6 27.6 13 25.8' : 'M3.8 26.8 C7 25 9.6 27.6 12.8 26';
+    return k.render(`<g opacity=".55">${k.part(trail, 'light', s ? 1.7 : 1.4, true)}</g>` +
+                    k.part(body, 'lit', s ? 1.3 : 1.1, true) + k.part(tip, 'deep', s ? 1.3 : 1.1, true));
+  }
+  // C: an element (box) with a small round reset arrow at its lower-right
+  const box = s ? 'M5.4 5.4 L19.4 5.4 L19.4 19.4 L5.4 19.4 Z' : 'M5.6 5.6 L19.6 5.6 L19.6 19.6 L5.6 19.6 Z';
+  const arc = s ? 'M20.6 19.4 A5.6 5.6 0 1 1 18.4 25' : 'M20.8 19.6 A5.4 5.4 0 1 1 18.8 25.2';
+  const head = s ? 'M16.6 19.4 L22.4 16.8 L22 22.6 Z' : 'M17.2 19.8 L22.6 17.2 L22.2 22.6 Z';
+  return k.render(k.part(box, 'light', k.r, true) + k.part(arc, 'lit', s ? 1.5 : 1.3, true) + k.part(head, 'lit', s ? .8 : .6, true));
+}
+
+// ---- 6. View Crop (orange clay) --------------------------------------------------------------------
+function viewCrop(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 2.3 : 2;
+  const toolA = 'M9.4 3.6 L9.4 22.6 L28.4 22.6', toolB = 'M3.6 9.4 L22.6 9.4 L22.6 28.4';
+  if (v === 'A') return k.render(k.part(toolB, 'light', w, true) + k.part(toolA, 'lit', w, true));
+  if (v === 'B') {
+    const c = s ? [['M5 12 L5 5 L12 5'], ['M20 5 L27 5 L27 12'], ['M27 20 L27 27 L20 27'], ['M12 27 L5 27 L5 20']]
+                : [['M5.2 11.4 L5.2 5.2 L11.4 5.2'], ['M20.6 5.2 L26.8 5.2 L26.8 11.4'], ['M26.8 20.6 L26.8 26.8 L20.6 26.8'], ['M11.4 26.8 L5.2 26.8 L5.2 20.6']];
+    const el = s ? 'M11.4 11.4 L20.6 11.4 L20.6 20.6 L11.4 20.6 Z' : 'M11.6 11.8 L20.4 11.8 L20.4 20.2 L11.6 20.2 Z';
+    return k.render(c.map(([d]) => k.part(d, 'light', s ? 2 : 1.6, true)).join('') + k.part(el, 'lit', s ? 1.2 : 1, true));
+  }
+  const el = s ? 'M12.6 12.6 L19.4 12.6 L19.4 19.4 L12.6 19.4 Z' : 'M13 13 L19 13 L19 19 L13 19 Z';
+  return k.render(k.part(toolB, 'light', w, true) + k.part(toolA, 'deep', w, true) + k.part(el, 'lit', s ? 1.1 : .9, true));
+}
+
+// ---- 7. Annotation Crop (orange clay) -------------------------------------------------------------
+// a dashed square from lo to hi: an L at each corner and the middle of each side as one dash
+function dashedSquare(lo, hi, arm) {
+  const m = (lo + hi) / 2, h = arm * .7;
+  return [`M${lo} ${lo + arm} L${lo} ${lo} L${lo + arm} ${lo}`, `M${hi - arm} ${lo} L${hi} ${lo} L${hi} ${lo + arm}`,
+          `M${hi} ${hi - arm} L${hi} ${hi} L${hi - arm} ${hi}`, `M${lo + arm} ${hi} L${lo} ${hi} L${lo} ${hi - arm}`,
+          `M${m - h} ${lo} L${m + h} ${lo}`, `M${hi} ${m - h} L${hi} ${m + h}`, `M${m - h} ${hi} L${m + h} ${hi}`, `M${lo} ${m - h} L${lo} ${m + h}`];
+}
+function annotationCrop(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'D' || v === 'E') {
+    const w = s ? 2.3 : 2, dw = s ? 1.3 : 1;
+    if (v === 'D') {
+      // the View Crop tool as it is, and a small dotted square in its window (the annotation crop)
+      const tA = 'M9.4 3.6 L9.4 22.6 L28.4 22.6', tB = 'M3.6 9.4 L22.6 9.4 L22.6 28.4';
+      const dots = (s ? dashedSquare(13, 19, 2.2).slice(0, 4) : dashedSquare(13.2, 18.8, 1.8)).map(d => k.part(d, 'deep', dw, true)).join('');
+      return k.render(k.part(tB, 'light', w, true) + k.part(tA, 'lit', w, true) + dots);
+    }
+    // E: the crop tool a little smaller, in front of a dotted square behind it (the annotation crop)
+    const tA = 'M12 6.4 L12 21.8 L27.4 21.8', tB = 'M6.4 12 L21.8 12 L21.8 27.4';
+    const dots = (s ? dashedSquare(3.8, 24, 4).slice(0, 4) : dashedSquare(3.6, 24.4, 3.6)).map(d => k.part(d, 'light', dw, true)).join('');
+    return k.render(`<g opacity=".8">${dots}</g>` + k.part(tB, 'deep', w, true) + k.part(tA, 'lit', w, true));
+  }
+  if (v === 'A') {
+    const dash = (s ? [dashedSquare(4, 28, 4.6)[0], dashedSquare(4, 28, 4.6)[1], dashedSquare(4, 28, 4.6)[2], dashedSquare(4, 28, 4.6)[3]] : dashedSquare(3.8, 28.2, 4.2))
+      .map(d => k.part(d, 'light', s ? 1.5 : 1.15, true)).join('');
+    const tA = 'M12.6 8.6 L12.6 19.6 L23.6 19.6', tB = 'M8.6 12.6 L19.6 12.6 L19.6 23.6';
+    return k.render(dash + k.part(tB, 'deep', s ? 2 : 1.7, true) + k.part(tA, 'lit', s ? 2 : 1.7, true));
+  }
+  if (v === 'B') {
+    const tA = 'M9.4 3.6 L9.4 22.6 L28.4 22.6', tB = 'M3.6 9.4 L22.6 9.4 L22.6 28.4', w = s ? 2.3 : 2;
+    const tag = s ? 'M11.8 13 L17.4 13 L20 16 L17.4 19 L11.8 19 Z' : 'M12.2 13.2 L17.2 13.2 L19.8 16 L17.2 18.8 L12.2 18.8 Z';
+    return k.render(k.part(tB, 'light', w, true) + k.part(tA, 'deep', w, true) + k.part(tag, 'lit', s ? 1.1 : .9, true));
+  }
+  // C: solid inner frame (view crop) inside a dashed outer frame (annotation crop)
+  const dash = (s ? dashedSquare(4, 28, 4.6).slice(0, 4) : dashedSquare(3.8, 28.2, 4.2)).map(d => k.part(d, 'light', s ? 1.5 : 1.15, true)).join('');
+  const inner = s ? 'M10.4 10.4 L21.6 10.4 L21.6 21.6 L10.4 21.6 L10.4 10.4' : 'M10.6 10.6 L21.4 10.6 L21.4 21.4 L10.6 21.4 L10.6 10.6';
+  return k.render(dash + k.part(inner, 'lit', s ? 1.9 : 1.6, true));
+}
+
+// ---- 2. Quick Menu Settings ---------------------------------------------------------------------
+// a gear outline (n teeth with flat tops) as one closed path, centre (cx, cy)
+function gearPath(cx, cy, R, r, n) {
+  const step = 360 / n, tw = step * .2, bw = step * .3, P = (rad, a) => {
+    const t = a * Math.PI / 180; return `${(cx + rad * Math.cos(t)).toFixed(2)} ${(cy + rad * Math.sin(t)).toFixed(2)}`; };
+  const pts = [];
+  for (let i = 0; i < n; i++) { const a = -90 + i * step; pts.push(P(r, a - bw), P(R, a - tw), P(R, a + tw), P(r, a + bw)); }
+  return 'M' + pts.join(' L') + ' Z';
+}
+function quickMenuSettings(size, v) {
+  const s = size === 16, n = s ? 6 : 8;
+  if (v === 'A' || v === 'C') {
+    const k = softKit(size, { allOrange: v === 'A' });
+    const gear = gearPath(16, 16, s ? 12.6 : 12.8, s ? 9.4 : 10, n), hub = circle(16, 16, s ? 3.6 : 3.4);
+    if (v === 'A') return k.render(k.part(gear, 'lit', s ? 1.1 : .9, true) + k.part(hub, 'deep', s ? 1.2 : 1, true));
+    return k.render(k.part(gear, 'grey', s ? 1.1 : .9) + k.part(hub, 'lit', s ? 1.2 : 1));
+  }
+  if (v === 'D' || v === 'F') {
+    // white soft gear with rounder teeth, a soft ring pressed in around the centre, and an orange centre
+    const k = softKit(size);
+    const gear = gearPath(16, 16, s ? 12.2 : 12.4, s ? 9.2 : 9.8, n);
+    const ring = circle(16, 16, s ? 5.6 : 6.2), dot = circle(16, 16, s ? 3.2 : 3.6);
+    if (v === 'D') return k.render(k.part(gear, 'grey', s ? 1.6 : 1.5) + k.part(ring, 'recess', s ? .6 : .5) + k.part(dot, 'lit', s ? 1.2 : 1.1));
+    const oring = s ? 'M16 11.4 A4.6 4.6 0 1 1 15.99 11.4' : 'M16 10.6 A5.4 5.4 0 1 1 15.99 10.6';
+    return k.render(k.part(gear, 'grey', s ? 1.6 : 1.5) + k.part(ring, 'recess', s ? .6 : .5) + k.part(oring, 'lit', s ? 1.4 : 1.2) + k.part(circle(16, 16, s ? 2 : 2.4), 'grey', .6));
+  }
+  // B: the Quick Menu wheel (white, as its own icon), smaller, top-left; a small orange clay gear at the lower-right
+  const k = softKit(size, { allOrange: true });
+  const gear = gearPath(23.4, 23.4, s ? 7 : 7.6, s ? 5 : 5.6, 6), hub = circle(23.4, 23.4, s ? 2 : 2);
+  const wheel = neuWheel(size, { orangeEdgeShadow: true, soft: true });
+  return `<g transform="translate(.6 .6) scale(.7)">${wheel}</g>` + k.render(k.part(gear, 'lit', s ? .9 : .7, true) + k.part(hub, 'deep', s ? .9 : .7, true), s ? .78 : .86, 16);
+}
+
+// ---- 8. 3D Snapshot (orange clay) ---------------------------------------------------------------
+// an iso box of three faces (top light, left lit, right deep) with small gaps, centre (cx, cy), half-width h
+function isoBox(k, cx, cy, h, rr) {
+  const v = h * .56, faces = {
+    t: [[cx, cy - 2 * v], [cx + h, cy - v], [cx, cy], [cx - h, cy - v]],
+    l: [[cx - h, cy - v], [cx, cy], [cx, cy + 2 * v], [cx - h, cy + v]],
+    r: [[cx, cy], [cx + h, cy - v], [cx + h, cy + v], [cx, cy + 2 * v]] };
+  const inset = (pts, f) => { const mx = pts.reduce((a, p) => a + p[0], 0) / 4, my = pts.reduce((a, p) => a + p[1], 0) / 4;
+    return 'M' + pts.map(p => `${(mx + (p[0] - mx) * f).toFixed(2)} ${(my + (p[1] - my) * f).toFixed(2)}`).join(' L') + ' Z'; };
+  return k.part(inset(faces.t, .82), 'light', rr, true) + k.part(inset(faces.l, .82), 'lit', rr, true) + k.part(inset(faces.r, .82), 'deep', rr, true);
+}
+function snapshot3D(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'D') {
+    const plus = s ? ['M24 19.6 L24 28.4', 'M19.6 24 L28.4 24'] : ['M24 20.2 L24 27.8', 'M20.2 24 L27.8 24'];
+    return k.render(isoBox(k, 13.6, 14, s ? 9.6 : 9.4, s ? .9 : .7) + k.part(circle(24, 24, s ? 6 : 5.6), 'deep', 1, true) +
+                    plus.map(d => k.part(d, 'light', s ? 1.3 : 1.1, true)).join(''));
+  }
+  if (v === 'E') {
+    const outline = 'M16 4.2 L26.8 10.3 L26.8 22.5 L16 28.6 L5.2 22.5 L5.2 10.3 L16 4.2';
+    const inner = ['M5.2 10.3 L16 16.4 L26.8 10.3', 'M16 16.4 L16 28.6'];
+    return k.render(k.part(outline, 'light', s ? 1.5 : 1.2, true) + `<g opacity=".7">${inner.map(d => k.part(d, 'light', s ? 1 : .8, true)).join('')}</g>` +
+                    isoBox(k, 16, 17.6, s ? 5.4 : 5, s ? .6 : .5));
+  }
+  if (v === 'F') {
+    const plan = 'M16 18.6 L28.2 24.4 L16 30 L3.8 24.4 Z';
+    return k.render(k.part(plan, 'light', s ? 1 : .8, true) + isoBox(k, 16, 11.6, s ? 7.8 : 7.4, s ? .8 : .6));
+  }
+  if (v === 'A') {
+    const c = ['M4.6 11 L4.6 4.6 L11 4.6', 'M21 4.6 L27.4 4.6 L27.4 11', 'M27.4 21 L27.4 27.4 L21 27.4', 'M11 27.4 L4.6 27.4 L4.6 21'];
+    return k.render(c.map(d => k.part(d, 'light', s ? 1.8 : 1.4, true)).join('') + isoBox(k, 16, 16.6, s ? 7.4 : 7, s ? .9 : .7));
+  }
+  // camera body, top bump, lens
+  const body = s ? 'M4.4 10.4 L27.6 10.4 L27.6 25.6 L4.4 25.6 Z' : 'M4.4 10.6 L27.6 10.6 L27.6 25.4 L4.4 25.4 Z';
+  const bump = 'M11 7.2 L18.6 7.2 L20 10 L9.6 10 Z';
+  let lens = k.part(circle(16, 18, s ? 6.2 : 6.4), 'deep', 1, true);
+  lens += v === 'B' ? k.part(circle(16, 18, s ? 3.4 : 3.6), 'lit', 1, true) : isoBox(k, 16, 18.4, s ? 4.4 : 4.2, s ? .6 : .4);
+  return k.render(k.part(bump, 'deep', s ? 1 : .8, true) + k.part(body, 'light', s ? 1.6 : 1.4, true) + lens);
+}
+
+// ---- 9. Unhide All (orange clay) ------------------------------------------------------------------
+function eyeParts(k, cx, cy, w, h, s) {
+  // the eye as an outline (open path round the almond), a darker iris and a small light spot - reads as an eye even at 16 px
+  const almond = `M${cx - w} ${cy} C${cx - w * .6} ${cy - h} ${cx + w * .6} ${cy - h} ${cx + w} ${cy} C${cx + w * .6} ${cy + h} ${cx - w * .6} ${cy + h} ${cx - w} ${cy}`;
+  return k.part(almond, 'light', s ? 1.6 : 1.3, true) + k.part(circle(cx, cy, h * .5), 'deep', .6, true) +
+         k.part(circle(cx - h * .18, cy - h * .18, h * .14), 'light', .4, true);
+}
+function unhideAll(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') return k.render(eyeParts(k, 16, 16, s ? 12.6 : 12.4, s ? 9 : 8.6, s));
+  if (v === 'B') {
+    const boxes = [6.4, 16, 25.6].map(x => k.part(`M${x - 3} 22.6 L${x + 3} 22.6 L${x + 3} 28.2 L${x - 3} 28.2 Z`, 'deep', s ? 1 : .8, true)).join('');
+    return k.render(eyeParts(k, 16, 11.6, s ? 11.6 : 11.2, s ? 8 : 7.6, s) + boxes);
+  }
+  const rays = (s ? ['M16 3.4 L16 6.6', 'M7.4 6.2 L9.4 8.8', 'M24.6 6.2 L22.6 8.8'] : ['M16 3.4 L16 6.4', 'M7.6 6.4 L9.4 8.8', 'M24.4 6.4 L22.6 8.8'])
+    .map(d => k.part(d, 'deep', s ? 1.3 : 1.1, true)).join('');
+  return k.render(rays + eyeParts(k, 16, 18.4, s ? 12.4 : 12, s ? 8.2 : 7.8, s));
+}
+
+// ---- 3. Filter Pro ------------------------------------------------------------------------
+function filterPro(size, v) {
+  const k = softKit(size, { allOrange: v === 'G' }), s = k.small;
+  if (v === 'G') v = 'E';
+  if ('DEF'.includes(v)) {
+    // today's funnel shape: wide cone into a stem with a slanted foot
+    const cone = s ? 'M4.6 6 L27.4 6 L18.6 16.4 L13.4 16.4 Z' : 'M4.8 6.2 L27.2 6.2 L18.3 16.6 L13.7 16.6 Z';
+    const stem = s ? 'M13.4 16.4 L18.6 16.4 L18.6 24.6 L13.4 27.4 Z' : 'M13.7 16.6 L18.3 16.6 L18.3 24.8 L13.7 27.3 Z';
+    const whole = s ? 'M4.6 6 L27.4 6 L18.6 16.4 L18.6 24.6 L13.4 27.4 L13.4 16.4 Z' : 'M4.8 6.2 L27.2 6.2 L18.3 16.6 L18.3 24.8 L13.7 27.3 L13.7 16.6 Z';
+    if (v === 'D') return k.render(k.part(cone) + k.part(stem.replace(/16\.[46]/g, s ? '18.8' : '18.8'), 'lit'));
+    if (v === 'E') return k.render(k.part(whole, 'lit', k.r, true));
+    return k.render(k.part(cone, 'grey', k.r, true) + k.part(stem.replace(/16\.[46]/g, '18.8'), 'lit', k.r, true));
+  }
+  if (v === 'A') {
+    const cone = s ? 'M5 6.5 L27 6.5 L18.8 17 L13.2 17 Z' : 'M5.2 6.6 L26.8 6.6 L18.3 17.2 L13.7 17.2 Z';
+    const stem = s ? 'M13.2 19.6 L18.8 19.6 L18.8 25 L13.2 27.6 Z' : 'M13.7 19.4 L18.3 19.4 L18.3 25.2 L13.7 27.6 Z';
+    return k.render(k.part(cone) + k.part(stem, 'lit'));
+  }
+  if (v === 'B') {
+    const funnel = s ? 'M3.5 7 L19 7 L13.2 15.5 L13.2 24.5 L9.3 26.5 L9.3 15.5 Z' : 'M3.6 7 L19.4 7 L13.4 15.4 L13.4 24.6 L9.6 26.6 L9.6 15.4 Z';
+    const rows = s ? [[22.5, 9.5], [22.5, 17]] : [[22.4, 9], [22.4, 15.5], [22.4, 22]];
+    let body = k.part(funnel);
+    rows.forEach(([x, y], i) => { body += k.part(`M${x} ${y} L${x + (s ? 5.5 : 5.2)} ${y}`, i === 0 ? 'lit' : 'grey', s ? 2.2 : 1.9); });
+    return k.render(body);
+  }
+  // C: funnel, and an orange drop falling out of the stem = the filtered result
+  const funnel = s ? 'M5 5 L27 5 L18.6 14 L18.6 18.4 L13.4 18.4 L13.4 14 Z' : 'M5.2 5 L26.8 5 L18.2 14 L18.2 18.6 L13.8 18.6 L13.8 14 Z';
+  const drop = s ? 'M16 21.4 C18.6 24.4 19.4 25.4 19.4 26.8 A3.4 3.4 0 0 1 12.6 26.8 C12.6 25.4 13.4 24.4 16 21.4 Z'
+                 : 'M16 21.6 C18.2 24.3 19 25.3 19 26.6 A3 3 0 0 1 13 26.6 C13 25.3 13.8 24.3 16 21.6 Z';
+  return k.render(k.part(funnel) + k.part(drop, 'lit', s ? 1.0 : .8));
+}
+
+// Light neumorphism with no tile: Mist slots pressed out, light from the top-left
+// (white highlight up-left, shadow down-right). The lit slot is Accent.
+// o.orangeShadow: the shadow is Accent instead of Ink.  o.glow: a soft Accent glow around the lit slot.
+// o.edge: a thin Accent line round each grey slot.      o.tint: the grey slots get a faint Accent shade.
+// o.soft: soft 3D - round corners, light-to-shade shading on every part, softer shadows.
+function neuWheel(size, o) {
+  if (o.soft) return softWheel(size, o);
+  // Kept tight so the edges stay crisp: about 1 px offset and half a pixel of blur at real size.
+  const small = size === 16, d = small ? 1.1 : .9, blur = small ? .55 : .45;
+  const n = small ? 4 : 6, gap = small ? 14 : 9, ro = 13.6, ri = small ? 6.6 : 7.6, pop = small ? 1.6 : 1.8;
+  const cx = 16, cy = 16.9, step = 360 / n;
+  const shadow = o.orangeShadow ? `flood-color="${ACCENT}" flood-opacity=".6"` : `flood-color="${INK}" flood-opacity=".32"`;
+  // orangeEdgeShadow: a crisp Accent rim only on the lower-right (shadow) side, the grey and white stay as they are
+  const rim = o.orangeEdgeShadow
+    ? `<feDropShadow dx="${d * (o.strong ? 1.1 : .8)}" dy="${d * (o.strong ? 1.1 : .8)}" stdDeviation="${blur * .5}" flood-color="${ACCENT}" flood-opacity="${o.strong ? 1 : .85}"/>` : '';
+  const defs = `<defs><filter id="emboss" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="${d}" dy="${d}" stdDeviation="${blur}" ${shadow}/>${rim}
+      <feDropShadow dx="${-d}" dy="${-d}" stdDeviation="${blur}" flood-color="#fff" flood-opacity="1"/></filter>
+      <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="${small ? 1.6 : 1.4}"/></filter></defs>`;
+  // Mist with an 8 % Ink shade on top: the slot colour, from brand colours only
+  const neu = p => `<path d="${p}" fill="#F7F5F2"/>` +
+    (o.tint ? `<path d="${p}" fill="${ACCENT}" fill-opacity=".14"/>` : `<path d="${p}" fill="${INK}" fill-opacity=".08"/>`) +
+    (o.edge ? `<path d="${p}" fill="none" stroke="${ACCENT}" stroke-width="${small ? 1.1 : .8}"/>` : '');
+  let body = '', glow = '';
+  for (let i = 0; i < n; i++) {
+    const a1 = -90 - step / 2 + i * step + gap / 2, a2 = a1 + step - gap;
+    if (i === 0) {
+      const lit = ringSlot(cx, cy, ro + pop, ri + pop, a1, a2);
+      body += `<path d="${lit}" fill="${ACCENT}"/>`;
+      if (o.glow) glow = `<path d="${lit}" fill="${ACCENT}" fill-opacity=".75" filter="url(#glow)"/>`;
+    } else body += neu(ringSlot(cx, cy, ro, ri, a1, a2));
+  }
+  body += neu(circle(cx, cy, small ? 3.2 : 3.6));
+  return defs + glow + `<g filter="url(#emboss)">${body}</g>`;
+}
+
+// Soft 3D version of the light-neumorphism wheel. Each part is drawn a little smaller and then given a
+// round-cornered outline of the same paint, so every corner is rounded. Shading uses brand colours only:
+// Mist, a see-through Ink shade growing to the lower-right, a see-through white shine on the upper-left.
+function softWheel(size, o) {
+  const small = size === 16, d = small ? 1.1 : .9, blur = small ? 1.0 : .85, r = small ? 1.3 : 1.1;
+  const n = small ? 4 : 6, gap = small ? 14 : 9, ro = 13.6, ri = small ? 6.6 : 7.6, pop = small ? 1.6 : 1.8;
+  const cx = 16, cy = 16.9, step = 360 / n;
+  // Gradients are laid over each part's own box in icon units (userSpaceOnUse), so the fill and the
+  // rounded outline get exactly the same colour at the same spot - no visible seam between them.
+  let grads = '', gid = 0;
+  const box = (ro1, ri1, a1, a2) => {
+    const xs = [], ys = [];
+    for (let t = 0; t <= 20; t++) for (const rr of [ro1, ri1]) {
+      const a = (a1 + (a2 - a1) * t / 20) * Math.PI / 180; xs.push(cx + rr * Math.cos(a)); ys.push(cy + rr * Math.sin(a));
+    }
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  };
+  const grad = (b, stops) => {
+    const id = 'g' + (gid++);
+    grads += `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${b[0]}" y1="${b[1]}" x2="${b[2]}" y2="${b[3]}">${stops}</linearGradient>`;
+    return `url(#${id})`;
+  };
+  // o.extra: much softer - whiter parts, a lighter grey shadow, and a wide soft Accent glow on the shadow side
+  const SHADE = `<stop offset="0" stop-color="${INK}" stop-opacity="0"/><stop offset="1" stop-color="${INK}" stop-opacity="${o.extra ? .1 : .16}"/>`;
+  const SHINE = `<stop offset="0" stop-color="#fff" stop-opacity="${o.extra ? .95 : .9}"/><stop offset="${o.extra ? .6 : .55}" stop-color="#fff" stop-opacity="0"/>`;
+  const LIT = `<stop offset="0" stop-color="${ACCENT_LIGHT}"/><stop offset="1" stop-color="${ACCENT}"/>`;
+  const orange = !o.orangeEdgeShadow ? '' : o.extra
+    ? `<feDropShadow dx="0" dy="0" stdDeviation="${blur * 1.4}" flood-color="${ACCENT}" flood-opacity=".35"/>
+       <feDropShadow dx="${d * .7}" dy="${d * .7}" stdDeviation="${blur * (small ? 1.5 : 2.2)}" flood-color="${ACCENT}" flood-opacity=".95"/>`
+    : `<feDropShadow dx="${d * .8}" dy="${d * .8}" stdDeviation="${blur * .7}" flood-color="${ACCENT}" flood-opacity=".8"/>`;
+  const defsTail = () => `<defs>${grads}
+    <filter id="soft" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="${d}" dy="${d}" stdDeviation="${o.extra ? blur * 1.4 : blur}" flood-color="${INK}" flood-opacity="${o.extra ? .18 : .3}"/>
+      ${orange}</filter></defs>`;
+  // No white highlight OUTSIDE the parts: on the dark ribbon it shows as a white fog (Ajmal, 2026-11-22).
+  // The light side is carried by the white shine INSIDE each part instead.
+  // A rounded part = a cut-out (mask): the shrunk shape filled and given a round-joined outline, in solid white.
+  // Each paint layer is then a plain rectangle seen through that cut-out, so every layer covers the part
+  // exactly once - see-through layers never double up along the edge.
+  const part = (p, b, paints) => {
+    const id = 'm' + (gid++);
+    grads += `<mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32">` +
+             `<path d="${p}" fill="#fff" stroke="#fff" stroke-width="${2 * r}" stroke-linejoin="round"/></mask>`;
+    return paints.map(paint => `<rect x="${b[0] - 1}" y="${b[1] - 1}" width="${b[2] - b[0] + 2}" height="${b[3] - b[1] + 2}" fill="${paint}" mask="url(#${id})"/>`).join('');
+  };
+  const grey = (p, b) => part(p, b, ['#F7F5F2', grad(b, SHADE), grad(b, SHINE)]);
+  // the part, shrunk by r on every side (angles by r at the middle radius) so the rounded outline brings it back to size
+  const shrunk = (ro1, ri1, a1, a2) => {
+    const da = r / ((ro1 + ri1) / 2) * 180 / Math.PI;
+    return ringSlot(cx, cy, ro1 - r, ri1 + r, a1 + da, a2 - da);
+  };
+  let body = '';
+  for (let i = 0; i < n; i++) {
+    const a1 = -90 - step / 2 + i * step + gap / 2, a2 = a1 + step - gap;
+    if (i === 0) {
+      const p = shrunk(ro + pop, ri + pop, a1, a2), b = box(ro + pop, ri + pop, a1, a2);
+      body += part(p, b, [grad(b, LIT), grad(b, SHINE)]);
+    } else body += grey(shrunk(ro, ri, a1, a2), box(ro, ri, a1, a2));
+  }
+  const hr = small ? 3.2 : 3.6;
+  // centre dot in orange, like the lit slot (Ajmal, 2026-11-22)
+  const hb = [cx - hr, cy - hr, cx + hr, cy + hr];
+  body += part(circle(cx, cy, hr - r), hb, [grad(hb, LIT), grad(hb, SHINE)]);
+  // drawn a little smaller, centred, so the soft shadows and glow fade out inside the 32 x 32 square
+  // instead of being cut off at its edge (a cut shows as a hard line on the ribbon)
+  const sc = o.extra ? (small ? .8 : .79) : (small ? .8 : .88);
+  return defsTail() + `<g transform="translate(16 16) scale(${sc}) translate(-16 -16.9)"><g filter="url(#soft)">${body}</g></g>`;
+}
+
+// ---- Rendering ----------------------------------------------------------------------
+// Draws the icon's vector drawing (on its 'design' grid, 16 or 32) into a canvas of 'px' real pixels.
+function toCanvas(svgBody, px) {
+  return new Promise(resolve => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 32 32">${svgBody}</svg>`;
+    const img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = px; c.height = px; c.getContext('2d').drawImage(img, 0, 0, px, px); resolve(c); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+// Windows display scale of this screen (1.5 at 150 %). A canvas shown at 'css' size:
+// sharp = drawn with one canvas pixel per screen pixel; else the browser stretches it, as Revit does with a plain 32 px file.
+const DPR = window.devicePixelRatio || 1;
+function show(c, css) { c.style.width = css + 'px'; c.style.height = css + 'px'; c.style.imageRendering = 'auto'; return c; }
+function imgCell(file, px, label) {
+  const d = document.createElement('div'); d.className = 'cell';
+  const i = new Image(); i.src = TODAY_DIR + file; i.width = px; i.height = px; i.style.imageRendering = 'auto'; d.appendChild(i);
+  const s = document.createElement('span'); s.textContent = label; d.appendChild(s); return d;
+}
+function canvasCell(c, label) {
+  const d = document.createElement('div'); d.className = 'cell'; d.appendChild(c);
+  const s = document.createElement('span'); s.textContent = label; d.appendChild(s); return d;
+}
+function save(canvas, file) {
+  canvas.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = file; a.click(); });
+}
+
+(async () => {
+  const host = document.getElementById('icons'), exp = {};
+  for (const ic of ICONS) {
+    // An icon has one drawing (svg) or several to choose from (variants); each variant exports as Name-<letter>.
+    const variants = ic.variants || [{ label: 'New', note: '', svg: ic.svg }];
+    const drawn = [];
+    for (const v of variants) {
+      const c16 = await toCanvas(v.svg(16), 16), c32 = await toCanvas(v.svg(32), 32);
+      const tag = variants.length > 1 ? '-' + (v.label.length === 1 ? v.label : 'ABCDEFGH'[variants.indexOf(v)]) : '';
+      exp[ic.name + tag + '16.png'] = c16.toDataURL('image/png');
+      exp[ic.name + tag + '32.png'] = c32.toDataURL('image/png');
+      // double-size files, for screens set above 100 % (Windows display scale)
+      exp[ic.name + tag + '16@2x.png'] = (await toCanvas(v.svg(16), 32)).toDataURL('image/png');
+      exp[ic.name + tag + '32@2x.png'] = (await toCanvas(v.svg(32), 64)).toDataURL('image/png');
+      const sharp16 = await toCanvas(v.svg(16), Math.round(16 * DPR)), sharp32 = await toCanvas(v.svg(32), Math.round(32 * DPR));
+      const big = await toCanvas(v.svg(32), Math.round(128 * DPR));
+      drawn.push({ v, c16, c32, sharp16, sharp32, big, tag });
+    }
+    // the ribbon preview shows the newest drawing of each icon (the last variant)
+    const newest = drawn[drawn.length - 1];
+    RIB[ic.name] = { i16: newest.c16.toDataURL('image/png'), i32: newest.c32.toDataURL('image/png') };
+    // finished icons (in the add-in) show only in the ribbon preview, not as a detail block (Ajmal, 2026-11-22)
+    if (ic.status === 'in place') continue;
+    const block = document.createElement('section'); block.className = 'icon';
+    block.innerHTML = `<div class="title"><b>${ic.title}</b><span class="tag ${ic.status === 'in place' ? 'done' : ''}">${ic.status}</span>
+      <span class="what">${ic.what}</span></div>`;
+    const rows = [{ label: 'Today' }, ...drawn];
+    for (const r of rows) {
+      const row = document.createElement('div'); row.className = 'row';
+      const l = document.createElement('div'); l.className = 'lbl';
+      l.innerHTML = r.v ? `${r.v.label}<br><span style="font-weight:400">${r.v.note}</span>` : 'Today'; row.appendChild(l);
+      for (const side of ['light', 'dark']) {
+        const s = document.createElement('div'); s.className = 'side ' + side;
+        if (!r.v) {
+          s.append(imgCell(ic.name + '32.png', 32, '32 as Revit shows it'), imgCell(ic.name + '16.png', 16, '16'),
+                   imgCell(ic.name + '32.png', 128, 'big'));
+        } else {
+          const copy = c => { const n = document.createElement('canvas'); n.width = c.width; n.height = c.height; n.getContext('2d').drawImage(c, 0, 0); return n; };
+          s.append(canvasCell(show(copy(r.c32), 32), '32 as Revit shows it'), canvasCell(show(copy(r.sharp32), 32), '32 sharp'),
+                   canvasCell(show(copy(r.sharp16), 16), '16 sharp'), canvasCell(show(copy(r.big), 128), 'big'));
+          if (side === 'light') {
+            const b = document.createElement('button'); b.textContent = 'Save PNGs';
+            b.onclick = () => { save(r.c16, ic.name + '16.png'); save(r.c32, ic.name + '32.png'); };
+            s.appendChild(b);
+          }
+        }
+        row.appendChild(s);
+      }
+      block.appendChild(row);
+    }
+    host.appendChild(block);
+  }
+  buildRibbons();
+  document.getElementById('export').textContent = JSON.stringify(exp);
+  document.body.dataset.ready = '1';
+})();
+
+// ---- Revit ribbon preview: the Heron tab as Revit lays it out (from HeronToolsApp.cs and Ajmal's screenshot).
+// New icons where one is drawn here, today's icon everywhere else. Icons are plain 16 / 32 px files,
+// stretched by the Windows display scale exactly as Revit does it.
+const RIB = {};
+const RIBBON = [
+  { title: 'Quick', items: [{ big: 'QuickMenu', label: 'Quick\nMenu', drop: true }] },
+  { title: 'View', items: [
+    { big: 'FilterPro', label: 'Filter\nPro' }, { big: 'Colorize', label: 'Colorize' },
+    { big: 'ResetGraphics', label: 'Reset\nGraphics', drop: true }, { big: 'ViewCrop', label: 'View\nCrop', drop: true },
+    { big: 'Snapshot3D', label: '3D Section\nBox' },
+    { stack: [['UnhideAll', 'Unhide All'], ['ToggleLinks', 'Toggle Links'], ['HighlightSelection', 'Highlight']] }] },
+  { title: 'Datums', items: [{ stack: [['ResetDatums', 'Reset Datums to 3D', true], ['LevelExtents', 'Level Extents', true], ['FlipBubbles', 'Flip Bubbles']] }] },
+  { title: 'Modify', items: [
+    { stack: [['MatchElevation', 'Match Elevation', true], ['ReassignLevel', 'Reassign Level'], ['PinElements', 'Pin / Unpin']] },
+    { big: 'SmartSelection', label: 'Smart\nSelection' }] },
+  { title: 'Coordination', items: [
+    { big: 'QuickClash', label: 'Quick\nClash' }, { big: 'ModelWalk', label: 'Model\nWalk' },
+    { stack: [['ElementId', 'Element ID', true], ['Views3D', '3D Views by Workset'], ['LinkWorkset', 'Link Workset']] }] },
+  { title: 'About', items: [{ big: 'AboutHeron', label: 'About\nHeron' }] },
+];
+// Ajmal's idea (2026-11-22, 2nd version): Filter Pro, Colorize and View Crop as one stack of three small buttons,
+// like Unhide All / Toggle Links / Highlight; Reset Graphics stays a big button. Shown here only; the add-in
+// changes after his typed yes.
+const RIBBON_STACKED = RIBBON.map(p => p.title !== 'View' ? p : { title: 'View', items: [
+  { stack: [['FilterPro', 'Filter Pro'], ['Colorize', 'Colorize'], ['ViewCrop', 'View Crop', true]] },
+  ...p.items.filter(it => !['FilterPro', 'Colorize', 'ViewCrop'].includes(it.big))] });
+function ribIcon(name, px) {
+  const i = new Image(); i.width = px; i.height = px;
+  i.src = RIB[name] ? RIB[name][px === 16 ? 'i16' : 'i32'] : TODAY_DIR + name + px + '.png';
+  if (RIB[name]) i.title = 'new icon'; return i;
+}
+function buildRibbons() {
+  const host = document.getElementById('ribbons');
+  const names = st => ICONS.filter(i => (i.status === 'in place') === st).map(i => i.title.replace(/^\d+\. /, '')).join(', ') || 'none';
+  host.innerHTML = `<h2>Your Heron tab - in the add-in: ${names(true)}. Being drawn: ${names(false)}. Today's icons on the rest.</h2>`;
+  // the stacked View panel is in the add-in since Ajmal's yes (2026-11-22)
+  const shows = [['Heron tab (View panel: Filter Pro / Colorize / View Crop stacked)', RIBBON_STACKED, 'light'],
+                 ['Heron tab (View panel: Filter Pro / Colorize / View Crop stacked)', RIBBON_STACKED, 'dark']];
+  let last = '';
+  for (const [label, layout, theme] of shows) {
+    if (label !== last) { const h = document.createElement('h2'); h.textContent = label; host.appendChild(h); last = label; }
+    const rv = document.createElement('div'); rv.className = 'rv ' + theme;
+    rv.innerHTML = '<div class="rv-tabs"><span class="rv-tab on">Heron</span></div>';
+    const body = document.createElement('div'); body.className = 'rv-body';
+    for (const p of layout) {
+      const panel = document.createElement('div'); panel.className = 'rv-panel';
+      const items = document.createElement('div'); items.className = 'rv-items';
+      for (const it of p.items) {
+        if (it.big) {
+          const b = document.createElement('div'); b.className = 'rv-big'; b.appendChild(ribIcon(it.big, 32));
+          const t = document.createElement('span'); t.textContent = it.label; b.appendChild(t);
+          if (it.drop) { const d = document.createElement('span'); d.className = 'rv-drop'; d.textContent = '\u25BE'; t.appendChild(d); }
+          items.appendChild(b);
+        } else {
+          const st = document.createElement('div'); st.className = 'rv-stack';
+          for (const [name, label, drop] of it.stack) {
+            const row = document.createElement('div'); row.className = 'rv-row'; row.appendChild(ribIcon(name, 16));
+            const t = document.createElement('span'); t.textContent = label + (drop ? ' \u25BE' : ''); row.appendChild(t);
+            st.appendChild(row);
+          }
+          items.appendChild(st);
+        }
+      }
+      const title = document.createElement('div'); title.className = 'rv-title'; title.textContent = p.title;
+      panel.append(items, title); body.appendChild(panel);
+    }
+    rv.appendChild(body); host.appendChild(rv);
+  }
+}
+</script>
+</body>
+</html>

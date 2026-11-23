@@ -9,7 +9,7 @@ Tools for what a view shows and how it looks: view filters, colours, crops, hidd
 | Filter Pro, Colorize | Floor, ceiling, structural and area plans, sections, detail views, elevations and 3D views that take graphic overrides (not view templates) |
 | Reset Graphics (all three), Unhide All, Highlight | Any view that takes graphic overrides (not view templates) |
 | View Crop (both) | Floor, ceiling, structural and area plans |
-| 3D Snapshot | Floor, ceiling, structural and area plans, sections, elevations and detail views |
+| 3D Section Box | Floor, ceiling, structural and area plans, sections, elevations and detail views |
 | Toggle Links | Any view where the RVT Links category can be hidden |
 
 A button is greyed out in any other view.
@@ -161,18 +161,18 @@ crop region. The offset is measured **on paper** (25 mm as standard, never below
 
 ---
 
-## 3D Snapshot
+## 3D Section Box
 
 **What it does:** one click fits Revit's own 3D view ({3D}) to what you are working on. You stay in your view;
 the 3D view updates behind it (it opens behind if it is closed).
 
 **How to use it - pick one:**
 
-- **A room, space or zone:** select it (or its tag - rooms in links too) and click **3D Snapshot**. The section
+- **A room, space or zone:** select it (or its tag - rooms in links too) and click **3D Section Box**. The section
   box fits it, from its level to its upper limit.
 - **A section:** select a section mark, or run it while you are in a section, elevation or detail view. The box
   matches the section (same cut, same depth) and the camera looks the same way.
-- **A plan area:** with nothing selected in a plan, click **3D Snapshot** and drag a window. The box runs from the
+- **A plan area:** with nothing selected in a plan, click **3D Section Box** and drag a window. The box runs from the
   bottom to the top of the view range.
 
 **What it changes in the model:** the section box and camera of the 3D view Revit's own 3D button opens
