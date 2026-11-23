@@ -124,6 +124,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -NoInstall   # build on
 powershell -ExecutionPolicy Bypass -File build\build.ps1 -Years 2024  # one year
 powershell -ExecutionPolicy Bypass -File build\build.ps1 -Years 2024 -Rollback   # put the previous install back
 powershell -ExecutionPolicy Bypass -File build\build-installer.ps1    # make dist\HeronToolsInstaller-<version>.exe
+powershell -ExecutionPolicy Bypass -File build\build-store-package.ps1   # make the Autodesk App Store zip (docs/store/package.md)
 powershell -ExecutionPolicy Bypass -File build\uninstall.ps1          # remove (add -DryRun to see first)
 ```
 

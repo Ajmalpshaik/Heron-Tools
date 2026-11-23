@@ -61,8 +61,11 @@ namespace HeronTools.App
 
         public Result OnShutdown(UIControlledApplication application)
         {
+#if !HERON_STORE
             // Model Walk's third-person character: off the graphics service's active list, removed if Revit allows.
+            // (The Autodesk App Store build has no Model Walk - see HeronTools.csproj.)
             Services.ModelWalk.WalkCharacterServer.SwitchOff();
+#endif
             return Result.Succeeded;
         }
 
@@ -279,6 +282,7 @@ namespace HeronTools.App
                 "clash in the list to zoom to it. Every element's own colours are remembered: Reset view puts them back exactly " +
                 "(also done before Save and Sync with Central). Run and Reset are each one Undo step. Works in 3D views only."));
 
+#if !HERON_STORE
             // Model Walk: walk the live model in first person from a 3D view; a second click ends the walk.
             coordination.AddItem(Button(assemblyPath, "HeronTools_ModelWalk", "Model\nWalk", typeof(Commands.ModelWalk.CmdModelWalk),
                 typeof(Commands.ModelWalk.CmdModelWalkAvailability), "ModelWalk",
@@ -292,6 +296,7 @@ namespace HeronTools.App
                 "Save or Sync - no red is saved in the model. Q (standard key) switches to third person: a site worker drawn on screen where you stand, nothing added to the model. Pause (Esc) for snags, " +
                 "viewpoints, settings and keys. Camera " +
                 "moves make no Undo entries; each snag is one Undo step."));
+#endif
 
             var elementId = new PulldownButtonData("HeronTools_ElementIdGroup", "Element ID")
             {

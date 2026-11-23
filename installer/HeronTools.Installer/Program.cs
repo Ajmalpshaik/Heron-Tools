@@ -18,7 +18,8 @@
 //
 // Testing only (never needed by a modeller): --addins-root, --revit-root and --backup-root point the installer
 // at test folders (and stop it watching the real Revit; --revit-root also stops it reading Windows' list of
-// installed programs and the all-users Addins folder), and --picture <png> draws the window into a picture.
+// installed programs, the all-users Addins folder and the ApplicationPlugins folders), --plugins-root points the
+// search for the Autodesk App Store version at one test folder, and --picture <png> draws the window into a picture.
 //
 // Exit codes: 0 done, 1 something failed, 2 nothing to do (no Revit found / no build inside).
 
@@ -45,7 +46,7 @@ namespace HeronTools.Installer
             // "/install", "-install" and "--install" all mean the same: some shells (Git Bash) rewrite a
             // leading "/" into a folder path, and the switch then went unseen and the WINDOW opened instead.
             var withValue = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                { "years", "log", "addins-root", "revit-root", "backup-root", "picture", "report" };
+                { "years", "log", "addins-root", "revit-root", "backup-root", "plugins-root", "picture", "report" };
             var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "install", "uninstall", "status" };
             var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var flags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -92,7 +93,9 @@ namespace HeronTools.Installer
                 paths.WatchRunningRevit = false;
                 paths.ReadRegistry = false;
                 paths.AllUsersAddinsRoot = null;
+                paths.StoreBundleRoots = null;
             }
+            if (options.TryGetValue("plugins-root", out string plugins)) { paths.StoreBundleRoots = new[] { plugins }; }
             if (options.TryGetValue("backup-root", out string backup)) { paths.BackupRoot = backup; }
             var engine = new InstallEngine(payload, paths);
 
@@ -138,7 +141,8 @@ namespace HeronTools.Installer
                 foreach (YearState s in states)
                     Say($"Revit {s.Year}: Revit {(s.RevitInstalled ? "found" : "not found")}{(s.RevitOpen ? ", open" : "")}, " +
                         $"Heron Tools {(s.Installed != null ? InstallEngine.Short(s.Installed) : "not installed")}" +
-                        (s.AllUsersCopy != null ? ", ALSO in the all-users folder: " + s.AllUsersCopy : ""));
+                        (s.AllUsersCopy != null ? ", ALSO in the all-users folder: " + s.AllUsersCopy : "") +
+                        (s.StoreCopy != null ? ", Autodesk App Store version installed: " + s.StoreCopy : ""));
                 return 0;
             }
 
@@ -165,8 +169,12 @@ namespace HeronTools.Installer
             else
             {
                 wanted = install
-                    ? states.Where(s => s.RevitInstalled).Select(s => s.Year).ToList()
+                    ? states.Where(s => s.RevitInstalled && s.StoreCopy == null).Select(s => s.Year).ToList()
                     : states.Where(s => s.Installed != null).Select(s => s.Year).ToList();
+                // Install everywhere: a year with the Autodesk App Store version is left out, and said so.
+                if (install)
+                    foreach (YearState s in states.Where(s => s.RevitInstalled && s.StoreCopy != null))
+                        Say(InstallEngine.StoreCopyMessage(s.Year, s.StoreCopy));
             }
 
             if (wanted.Count == 0)
