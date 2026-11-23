@@ -12,14 +12,14 @@
 <rect x="232" y="50" width="206" height="297" rx="8" fill="#1B1B1F"/>
 <text x="244" y="72" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Filter Pro</text>
 <text x="244" y="91" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Colorize</text>
-<text x="244" y="110" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Reset Graphics ▾</text>
-<text x="258" y="129" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Reset Selected</text>
-<text x="258" y="148" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Reset Graphics...</text>
-<text x="258" y="167" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Restore Last Reset</text>
-<text x="244" y="186" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">View Crop ▾</text>
-<text x="258" y="205" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Crop View by Elements</text>
-<text x="258" y="224" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Annotation Crop by View Crop</text>
-<text x="244" y="243" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">3D Snapshot</text>
+<text x="244" y="110" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">View Crop ▾</text>
+<text x="258" y="129" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Crop View by Elements</text>
+<text x="258" y="148" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Annotation Crop by View Crop</text>
+<text x="244" y="167" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Reset Graphics ▾</text>
+<text x="258" y="186" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Reset Selected</text>
+<text x="258" y="205" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Reset Graphics...</text>
+<text x="258" y="224" font-size="12" fill="#F7F5F2" fill-opacity="0.72">Restore Last Reset</text>
+<text x="244" y="243" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">3D Section Box</text>
 <text x="244" y="262" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Unhide All</text>
 <text x="244" y="281" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Toggle Links</text>
 <text x="244" y="300" font-size="13" font-weight="600" fill="#F7F5F2" fill-opacity="0.92">Highlight</text>

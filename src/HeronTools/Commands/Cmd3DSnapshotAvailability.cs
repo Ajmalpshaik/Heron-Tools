@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Ribbon availability for 3D Snapshot: enabled in plans, ceiling plans, structural and area plans, sections,
+// Ribbon availability for 3D Section Box: enabled in plans, ceiling plans, structural and area plans, sections,
 // detail sections and elevations of a project - the views it can measure a box from.
 
 using Autodesk.Revit.DB;
@@ -14,7 +14,7 @@ using HeronTools.Services.Snapshot3D;
 
 namespace HeronTools.Commands
 {
-    /// <summary>Enables 3D Snapshot only where it can work; greyed in 3D views, sheets, schedules and families.</summary>
+    /// <summary>Enables 3D Section Box only where it can work; greyed in 3D views, sheets, schedules and families.</summary>
     public class Cmd3DSnapshotAvailability : IExternalCommandAvailability
     {
         public bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)

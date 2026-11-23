@@ -90,9 +90,11 @@ namespace HeronTools.App
 
             var panel = app.CreateRibbonPanel(TabName, PanelName);
 
+            // Filter Pro, Colorize and View Crop: one stack of three small buttons (like Unhide All / Toggle Links /
+            // Highlight), so the View panel stays narrow. Reset Graphics and 3D Section Box stay big buttons.
             var filterPro = new PushButtonData(
                 "HeronTools_FilterPro",
-                "Filter\nPro",
+                "Filter Pro",
                 assemblyPath,
                 typeof(CmdFilterPro).FullName)
             {
@@ -107,14 +109,32 @@ namespace HeronTools.App
                 LargeImage = BrandImages.Load("FilterPro32.png"),
             };
 
-            panel.AddItem(filterPro);
-
-            panel.AddItem(Button(assemblyPath, "HeronTools_Colorize", "Colorize", typeof(CmdColorize), typeof(CmdColorizeAvailability), "Colorize",
+            var colorize = Button(assemblyPath, "HeronTools_Colorize", "Colorize", typeof(CmdColorize), typeof(CmdColorizeAvailability), "Colorize",
                 "Colour elements by category or by parameter value in the active view (or views you pick) - no view filter is made.",
                 "The same picks as Filter Pro (categories, a parameter, values), but the colour is put straight on the matching " +
                 "elements instead of through a view filter. Shuffle colours gives every value its own colour; click it again for " +
                 "a new set. The colour replaces the elements' own overrides until you click Restore original, which puts " +
-                "them back. Each run is one Undo step."));
+                "them back. Each run is one Undo step.");
+
+            // View Crop: two related tools under one button.
+            var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View Crop")
+            {
+                ToolTip = "Fit crop regions and annotation crops of plan views.",
+                Image = BrandImages.Load("ViewCrop16.png"),
+                LargeImage = BrandImages.Load("ViewCrop32.png"),
+            };
+
+            IList<RibbonItem> viewStack = panel.AddStackedItems(filterPro, colorize, viewCrop);
+            var viewCropButton = (PulldownButton)viewStack[2];
+            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_CropByElements", "Crop View\nby Elements",
+                typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
+                "Fit the crop region of plan views around their elements.",
+                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the offset. " +
+                "Each run is one Undo step."));
+            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_AnnotationCrop", "Annotation Crop\nby View Crop",
+                typeof(CmdSetAnnotationCropByViewCrop), typeof(CmdPlanViewAvailability), "AnnotationCrop",
+                "Turn on the annotation crop in the picked views and set an equal offset from each view's crop region.",
+                "Pick the views and the offset. Revit's own limits on the annotation crop are respected. Each run is one Undo step."));
 
             // Reset: clear graphic overrides - the selection in one click, or a view / many views in the window -
             // and bring the last reset back. Each keeps a copy first, so nothing set by hand is lost.
@@ -140,27 +160,10 @@ namespace HeronTools.App
                 "Put back every override the last reset in this model cleared.",
                 "Works while Revit stays open, even after other work (where Undo would also undo that work). One Undo step."));
 
-            // View Crop: two related tools under one button.
-            var viewCrop = new PulldownButtonData("HeronTools_ViewCrop", "View\nCrop")
-            {
-                ToolTip = "Fit crop regions and annotation crops of plan views.",
-                Image = BrandImages.Load("ViewCrop16.png"),
-                LargeImage = BrandImages.Load("ViewCrop32.png"),
-            };
-            var viewCropButton = (PulldownButton)panel.AddItem(viewCrop);
-            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_CropByElements", "Crop View\nby Elements",
-                typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
-                "Fit the crop region of plan views around their elements.",
-                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the offset. " +
-                "Each run is one Undo step."));
-            viewCropButton.AddPushButton(Button(assemblyPath, "HeronTools_AnnotationCrop", "Annotation Crop\nby View Crop",
-                typeof(CmdSetAnnotationCropByViewCrop), typeof(CmdPlanViewAvailability), "AnnotationCrop",
-                "Turn on the annotation crop in the picked views and set an equal offset from each view's crop region.",
-                "Pick the views and the offset. Revit's own limits on the annotation crop are respected. Each run is one Undo step."));
-
-            // 3D Snapshot: one click fits Revit's default 3D view to a room, a section or a plan window.
-            panel.AddItem(Button(assemblyPath, "HeronTools_3DSnapshot", "3D\nSnapshot", typeof(Cmd3DSnapshot), typeof(Cmd3DSnapshotAvailability), "Snapshot3D",
-                "Fit Revit's 3D view ({3D}) to what you are working on - a room, a section, or a window you drag in the plan.",
+            // 3D Section Box: one click fits Revit's default 3D view to a room, a section or a plan window.
+            // (The id stays HeronTools_3DSnapshot so keyboard shortcuts and Quick Menu slots keep working after the rename.)
+            panel.AddItem(Button(assemblyPath, "HeronTools_3DSnapshot", "3D Section\nBox", typeof(Cmd3DSnapshot), typeof(Cmd3DSnapshotAvailability), "Snapshot3D",
+                "Fit the section box of Revit's 3D view ({3D}) to what you are working on - a room, a section, or a window you drag in the plan.",
                 "Room, space or zone selected (or its tag - rooms in links too): the box fits it, level to upper limit. Section mark selected, or run " +
                 "in a section or elevation: the box matches the section - same cut, same depth - and the camera looks the same way. " +
                 "Nothing selected in a plan: drag a window; the box runs from the bottom to the top of the view range.\n\n" +
