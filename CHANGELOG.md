@@ -4,6 +4,18 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Added - Autodesk App Store package (NEEDS A REAL REVIT TEST)
+- **Store build without Model Walk:** `-p:HeronStore=true` builds Heron Tools with no Model Walk at all (no button,
+  code, windows, character or icons), into its own `bin\Release\Store\<year>` folder. The normal (GitHub) build is
+  unchanged and keeps Model Walk.
+- **`build\build-store-package.ps1`** makes `dist\HeronTools-Store-<version>.zip` for Revit 2022-2027: an Autodesk
+  bundle (`HeronTools.bundle\PackageContents.xml`, each year's `.addin` with today's AddInId, the DLLs, help file,
+  Store icon and licences). It checks each DLL's .NET, that no Model Walk is left, and every path in the package,
+  and installs nothing. How to make and check it: [docs/store/package.md](docs/store/package.md).
+- **No double install:** the GitHub installer (window and `/install`) and `build\build.ps1` now leave out any Revit
+  year that already has the Autodesk App Store version, and say why - two copies would make Revit show a
+  "duplicate add-in" message at every start. The Store version is never touched.
+
 ### Added - Auto Dimension (Datums panel) (NEEDS A REAL REVIT TEST)
 - **Auto Dimension** drop-down: **Grids**, **Levels**, **Grids and Levels**, **Settings**. Moved from AJ-Tools'
   Automatic Dimension and rebuilt: each set of parallel grids or levels gets a chain and an overall, **just inside the

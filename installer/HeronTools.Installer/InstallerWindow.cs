@@ -194,13 +194,20 @@ namespace HeronTools.Installer
                 var tick = new CheckBox
                 {
                     Content = "Revit " + year.Year,
-                    IsChecked = keepTicks && before.ContainsKey(year.Year) ? before[year.Year] : year.RevitInstalled,
+                    IsChecked = year.StoreCopy == null && (keepTicks && before.ContainsKey(year.Year) ? before[year.Year] : year.RevitInstalled),
                     Margin = new Thickness(0, 4, 24, 4),
                     MinWidth = 120,
                     VerticalContentAlignment = VerticalAlignment.Center,
                 };
                 if (!year.RevitInstalled)
                     tick.ToolTip = $"Revit {year.Year} is not on this PC any more, but Heron Tools still is - Remove Heron Tools takes it out.";
+                if (year.StoreCopy != null)
+                {
+                    // The Autodesk App Store version is there: a second copy would give Revit's "duplicate add-in" message.
+                    tick.IsEnabled = false;
+                    tick.ToolTip = InstallEngine.StoreCopyMessage(year.Year, year.StoreCopy);
+                    ToolTipService.SetShowOnDisabled(tick, true);
+                }
                 _releaseTicks[year.Year] = tick;
                 _releaseList.Children.Add(tick);
             }
@@ -209,6 +216,11 @@ namespace HeronTools.Installer
                 _releaseNote.Text = "This installer was built without Heron Tools inside, so it has nothing to install.";
             else if (_years.Count == 0)
                 _releaseNote.Text = "No Revit was found on this PC. Heron Tools installs into Revit 2020 to 2027, so there is nothing for it to install into. Install Revit first.";
+            else if (_years.Any(y => y.StoreCopy != null))
+                _releaseNote.Text = "Revit " + Join(_years.Where(y => y.StoreCopy != null).Select(y => y.Year)) +
+                    " already has Heron Tools from the Autodesk App Store, so this installer leaves it out (two copies " +
+                    "would make Revit show a \"duplicate add-in\" message). To use this version there, remove the Store " +
+                    "version first (Windows Settings > Apps).";
             else
                 _releaseNote.Text = "";
             _releaseNote.Visibility = _releaseNote.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
@@ -343,7 +355,7 @@ namespace HeronTools.Installer
                     lines.Add(_engine.Remove(year).Message);
                 if (remove.Count > 0)
                     lines.Add("Restart Revit so Heron Tools stops loading.");
-                foreach (YearState year in _years.Where(y => install.Count > 0 && y.RevitInstalled && !chosen.Contains(y.Year)))
+                foreach (YearState year in _years.Where(y => install.Count > 0 && y.RevitInstalled && y.StoreCopy == null && !chosen.Contains(y.Year)))
                     lines.Add($"Revit {year.Year} is on this PC but was not ticked, so nothing was installed for it. Run this again and tick it if that was not meant.");
             }
             catch (Exception ex)

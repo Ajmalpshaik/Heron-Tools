@@ -279,7 +279,7 @@ src/HeronTools/          the add-in (one project, every Revit year)
   Resources/Icons/       16 and 32 px ribbon icons
 manifests/               one .addin manifest per Revit year
 installer/               HeronToolsInstaller.exe - the setup window (.NET Framework 4.8, one file)
-build/                   build.ps1, build-installer.ps1, uninstall.ps1, check-metadata.ps1, picture makers
+build/                   build.ps1, build-installer.ps1, build-store-package.ps1, uninstall.ps1, check-metadata.ps1, picture makers
 docs/                    install guide, tool catalogue (docs/tools), Model Walk guide, records, pictures
 Directory.Build.props    Revit year -> .NET runtime, output folders, compile symbols
 .github/workflows/       Gates (every change: metadata, every Revit year, installer); Release (a version tag)

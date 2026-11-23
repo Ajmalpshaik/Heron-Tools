@@ -36,13 +36,27 @@
 
   <!-- Ribbon icons, built into the DLL so they can never go missing beside it. -->
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Icons\*.png" LogicalName="HeronTools.Icons.%(Filename)%(Extension)" />
+    <!-- The Store build (-p:HeronStore=true) leaves out Model Walk's icons with the rest of Model Walk, below. -->
+    <EmbeddedResource Include="Resources\Icons\*.png" Exclude="Resources\Icons\ModelWalk*.png" Condition="'$(HeronStore)' == 'true'" LogicalName="HeronTools.Icons.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Resources\Icons\*.png" Condition="'$(HeronStore)' != 'true'" LogicalName="HeronTools.Icons.%(Filename)%(Extension)" />
     <!-- The brand font, built into the DLL so every PC shows it (no font install). SIL Open Font
          License 1.1 - its text ships beside it (Resources\Fonts\OFL.txt) and is named in NOTICE. -->
     <Resource Include="Resources\Fonts\*.ttf" />
     <!-- Model Walk's third-person character (a site worker, glTF 2.0, about 470 KB), built into the DLL so it can never
          go missing beside it. CC0 (public domain) - named in NOTICE. Read by ModelWalk\WalkCharacterModel.cs. -->
-    <EmbeddedResource Include="Resources\ModelWalk\WalkCharacter.gltf" LogicalName="HeronTools.ModelWalk.WalkCharacter.gltf" />
+    <EmbeddedResource Include="Resources\ModelWalk\WalkCharacter.gltf" Condition="'$(HeronStore)' != 'true'" LogicalName="HeronTools.ModelWalk.WalkCharacter.gltf" />
+  </ItemGroup>
+
+  <!--
+    THE AUTODESK APP STORE BUILD (-p:HeronStore=true, see Directory.Build.props): Model Walk is not finished, so the
+    Store version leaves it out completely - its code, its windows (the .xaml files are Page items, so they are
+    removed as well as the .cs files), its character and its icons. The normal (GitHub) build keeps all of it.
+    build/build-store-package.ps1 checks the finished Store DLL has no Model Walk left in it.
+  -->
+  <ItemGroup Condition="'$(HeronStore)' == 'true'">
+    <Compile Remove="ModelWalk\**" />
+    <Page Remove="ModelWalk\**" />
+    <None Remove="ModelWalk\**" />
   </ItemGroup>
 
 </Project>

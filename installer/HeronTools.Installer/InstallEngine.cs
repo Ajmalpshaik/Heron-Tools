@@ -17,7 +17,10 @@
 //     build.ps1 -Rollback reads), and puts it back by itself if the new copy fails;
 //   - checks every file it wrote, byte for byte, against the build it carries; a failed first install takes
 //     out only the files that run wrote, so Revit never loads half of one;
-//   - touches nothing but Heron Tools' own HeronTools.addin and HeronTools folder.
+//   - touches nothing but Heron Tools' own HeronTools.addin and HeronTools folder;
+//   - leaves out a Revit year that already has the Autodesk App Store version (HeronTools.bundle in an
+//     ApplicationPlugins folder): both copies carry the same AddInId, so Revit would load one and show a
+//     "duplicate add-in" message at every start. The Store version is never touched.
 // It decides nothing about the window; the window decides nothing about installing.
 
 using System;
@@ -135,6 +138,16 @@ namespace HeronTools.Installer
         /// <summary>The all-users Addins folder Revit's own setup makes for each year. Null = do not look (a test run).</summary>
         public string AllUsersAddinsRoot = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"Autodesk\Revit\Addins");
+        /// <summary>
+        /// The ApplicationPlugins folders Revit loads Autodesk App Store bundles from. Program Files is checked too in
+        /// case a Store installer puts it there (Revit 2027 moved its all-users Addins folder there). Null = do not look.
+        /// </summary>
+        public string[] StoreBundleRoots =
+        {
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Autodesk\ApplicationPlugins"),
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"Autodesk\ApplicationPlugins"),
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Autodesk\ApplicationPlugins"),
+        };
         /// <summary>False in a test run: Windows' list of installed programs must not decide a test.</summary>
         public bool ReadRegistry = true;
         /// <summary>False in a test run: a real Revit on the PC must not block a run into a test folder.</summary>
@@ -151,6 +164,8 @@ namespace HeronTools.Installer
         public string Installed;
         /// <summary>Another Heron Tools in the all-users folder - Revit would load two.</summary>
         public string AllUsersCopy;
+        /// <summary>The Autodesk App Store version's bundle folder when it covers this year, or null. Not installed into.</summary>
+        public string StoreCopy;
     }
 
     /// <summary>What happened to one year.</summary>
@@ -164,6 +179,8 @@ namespace HeronTools.Installer
     internal sealed class InstallEngine
     {
         private const string Product = "HeronTools";
+        /// <summary>The Store bundle's UpgradeCode, fixed in build/build-store-package.ps1 - how its bundle is known.</summary>
+        private const string StoreUpgradeCode = "57635C9D-886C-474D-8845-A71D1D68C10C";
         private readonly Payload _payload;
         private readonly MachinePaths _paths;
 
@@ -231,6 +248,7 @@ namespace HeronTools.Installer
                     RevitOpen = running.Contains(year),
                     Installed = InstalledVersion(year),
                     AllUsersCopy = AllUsersCopy(year),
+                    StoreCopy = StoreCopy(year),
                 };
                 states.Add(state);
             }
@@ -343,6 +361,44 @@ namespace HeronTools.Installer
             return places.FirstOrDefault(File.Exists);
         }
 
+        /// <summary>
+        /// The Autodesk App Store version of Heron Tools for this Revit year: its bundle folder, or null.
+        /// A bundle is ours when it is called HeronTools.bundle or its PackageContents.xml carries the Store
+        /// UpgradeCode; it covers the year when PackageContents.xml lists SeriesMin="R&lt;year&gt;" or it has a
+        /// Contents\&lt;year&gt; folder. A folder that cannot be read counts as not there.
+        /// </summary>
+        public string StoreCopy(int year)
+        {
+            if (_paths.StoreBundleRoots == null)
+                return null;
+            string y = year.ToString(CultureInfo.InvariantCulture);
+            foreach (string root in _paths.StoreBundleRoots)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(root) || !Directory.Exists(root))
+                        continue;
+                    foreach (string bundle in Directory.GetDirectories(root, "*.bundle"))
+                    {
+                        string package = Path.Combine(bundle, "PackageContents.xml");
+                        string text = File.Exists(package) ? File.ReadAllText(package) : "";
+                        bool ours = string.Equals(Path.GetFileName(bundle), Product + ".bundle", StringComparison.OrdinalIgnoreCase) ||
+                                    text.IndexOf(StoreUpgradeCode, StringComparison.OrdinalIgnoreCase) >= 0;
+                        if (!ours)
+                            continue;
+                        if (text.IndexOf("SeriesMin=\"R" + y + "\"", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            Directory.Exists(Path.Combine(bundle, "Contents", y)))
+                            return bundle;
+                    }
+                }
+                catch (Exception)
+                {
+                    // No access to that folder: nothing can be known about it, so it does not block an install.
+                }
+            }
+            return null;
+        }
+
         private static bool IsLink(string path)
         {
             return Directory.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
@@ -358,6 +414,10 @@ namespace HeronTools.Installer
                 return Fail(result, $"'Heron Tools' was not installed for Revit {year}. A Revit is open and which one it is could not be read - close every Revit.");
             if (running.Contains(year))
                 return Fail(result, $"'Heron Tools' was not installed for Revit {year}. Revit {year} is open - close it.");
+
+            string store = StoreCopy(year);
+            if (store != null)
+                return Fail(result, StoreCopyMessage(year, store));
 
             List<PayloadFile> files = _payload.Files.Where(f => f.Year == year).ToList();
             if (files.Count == 0)
@@ -420,6 +480,14 @@ namespace HeronTools.Installer
             if (allUsers != null)
                 result.Message += $" Another copy is in the all-users folder ({allUsers}) - Revit would load both; remove one.";
             return result;
+        }
+
+        /// <summary>Why a year with the Autodesk App Store version is left out, in plain words.</summary>
+        public static string StoreCopyMessage(int year, string bundle)
+        {
+            return $"'Heron Tools' was not installed for Revit {year}: the Autodesk App Store version of Heron Tools is " +
+                   $"already installed for it ({bundle}). Two copies would make Revit show a \"duplicate add-in\" message at " +
+                   "every start. Keep using the Store version, or remove it first (Windows Settings > Apps) and run this again.";
         }
 
         /// <summary>Keeps the install about to be replaced (one level: the last one). Null when there was none.</summary>

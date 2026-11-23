@@ -29,6 +29,9 @@
     Per-user install only. It needs no admin rights and works the same on every release, including
     2027 (Revit 2027 moved only the ALL-USERS folder, to Program Files). It never closes Revit.
 
+    A year that already has the Autodesk App Store version of Heron Tools (HeronTools.bundle in an
+    ApplicationPlugins folder) is built but not installed: two copies would give Revit's "duplicate add-in" message.
+
     Touches nothing but Heron Tools' own two items in each Addins folder, and its own backup folder
     %LocalAppData%\HeronTools\install-backup\<year>\.
 
@@ -182,6 +185,30 @@ function Get-AllUsersCopy([int]$year) {
     return @($places | Where-Object { Test-Path $_ })
 }
 
+# The Autodesk App Store version of Heron Tools for that year (its bundle folder), or $null. It carries the same
+# AddInId, so installing this one too would give Revit's "duplicate add-in" message at every start: that year is
+# left out. Same rule as installer\HeronTools.Installer\InstallEngine.cs (StoreCopy); the UpgradeCode is the one
+# fixed in build\build-store-package.ps1.
+function Get-StoreCopy([int]$year) {
+    $roots = @(
+        (Join-Path $env:APPDATA 'Autodesk\ApplicationPlugins'),
+        (Join-Path $env:ProgramData 'Autodesk\ApplicationPlugins'),
+        (Join-Path $env:ProgramFiles 'Autodesk\ApplicationPlugins'))
+    foreach ($root in $roots) {
+        if (-not (Test-Path -LiteralPath $root)) { continue }
+        foreach ($bundle in @(Get-ChildItem -LiteralPath $root -Directory -Filter '*.bundle' -ErrorAction SilentlyContinue)) {
+            $package = Join-Path $bundle.FullName 'PackageContents.xml'
+            $text = if (Test-Path -LiteralPath $package) { [IO.File]::ReadAllText($package) } else { '' }
+            $ours = ($bundle.Name -eq "$productName.bundle") -or ($text -match '57635C9D-886C-474D-8845-A71D1D68C10C')
+            if (-not $ours) { continue }
+            if ($text -match ('SeriesMin="R' + $year + '"') -or (Test-Path -LiteralPath (Join-Path $bundle.FullName "Contents\$year"))) {
+                return $bundle.FullName
+            }
+        }
+    }
+    return $null
+}
+
 function Test-IsLink([string]$path) {
     return (Test-Path $path) -and ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)
 }
@@ -308,6 +335,12 @@ foreach ($year in $yearList) {
     }
     if (@($runningRevit | Where-Object { $_.Year -eq $year }).Count -gt 0) {
         Add-Result $year 'PASS' 'NOT RUN' "Revit $year is open - close it and run again"
+        continue
+    }
+
+    $storeCopy = Get-StoreCopy $year
+    if ($storeCopy) {
+        Add-Result $year 'PASS' 'NOT RUN' "the Autodesk App Store version is installed for Revit $year ($storeCopy) - two copies would give Revit's duplicate add-in message; remove it first, or keep using it"
         continue
     }
 

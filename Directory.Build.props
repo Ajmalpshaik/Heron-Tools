@@ -53,9 +53,22 @@
     symbol), so the split is by Revit year, not by framework. Set here in .props, because
     OutputPath and the obj folder are read before the project file and before any .targets.
   -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(HeronStore)' != 'true'">
     <BaseIntermediateOutputPath>obj\R$(RevitVersion)\</BaseIntermediateOutputPath>
     <OutputPath>bin\$(Configuration)\$(RevitVersion)\</OutputPath>
+  </PropertyGroup>
+  <!--
+    THE AUTODESK APP STORE BUILD: -p:HeronStore=true (build/build-store-package.ps1 sets it).
+    Same add-in without Model Walk (not finished, so it is not offered in the Store). It gets its own bin and
+    obj folders, so it can never overwrite or mix with the normal (GitHub) build of the same Revit year,
+    and the HERON_STORE symbol, which HeronToolsApp.cs uses to leave the Model Walk button out.
+  -->
+  <PropertyGroup Condition="'$(HeronStore)' == 'true'">
+    <BaseIntermediateOutputPath>obj\Store\R$(RevitVersion)\</BaseIntermediateOutputPath>
+    <OutputPath>bin\$(Configuration)\Store\$(RevitVersion)\</OutputPath>
+    <DefineConstants>$(DefineConstants);HERON_STORE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <!-- Another year's generated files must never be compiled into this year's build. -->
