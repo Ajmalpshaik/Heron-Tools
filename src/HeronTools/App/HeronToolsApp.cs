@@ -90,9 +90,11 @@ namespace HeronTools.App
 
             var panel = app.CreateRibbonPanel(TabName, PanelName);
 
+            // Filter Pro, Colorize and View Crop: one stack of three small buttons (like Unhide All / Toggle Links /
+            // Highlight), so the View panel stays narrow. Reset Graphics and 3D Section Box stay big buttons.
             var filterPro = new PushButtonData(
                 "HeronTools_FilterPro",
-                "Filter\nPro",
+                "Filter Pro",
                 assemblyPath,
                 typeof(CmdFilterPro).FullName)
             {
@@ -107,14 +109,22 @@ namespace HeronTools.App
                 LargeImage = BrandImages.Load("FilterPro32.png"),
             };
 
-            panel.AddItem(filterPro);
-
-            panel.AddItem(Button(assemblyPath, "HeronTools_Colorize", "Colorize", typeof(CmdColorize), typeof(CmdColorizeAvailability), "Colorize",
+            var colorize = Button(assemblyPath, "HeronTools_Colorize", "Colorize", typeof(CmdColorize), typeof(CmdColorizeAvailability), "Colorize",
                 "Colour elements by category or by parameter value in the active view (or views you pick) - no view filter is made.",
                 "The same picks as Filter Pro (categories, a parameter, values), but the colour is put straight on the matching " +
                 "elements instead of through a view filter. Shuffle colours gives every value its own colour; click it again for " +
                 "a new set. The colour replaces the elements' own overrides until you click Restore original, which puts " +
-                "them back. Each run is one Undo step."));
+                "them back. Each run is one Undo step.");
+
+            // View Crop: one button. The annotation crop is a tick box in its window (no separate button).
+            var viewCrop = Button(assemblyPath, "HeronTools_ViewCrop", "View Crop",
+                typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
+                "Fit the crop region of plan views around their elements - and, if you tick it, the annotation crop too.",
+                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the margin. " +
+                "Tick \"Also turn on the annotation crop\" to set it the same distance outside the new crop on all four sides " +
+                "(an offset on paper; Revit's own limits on the annotation crop are respected). Each run is one Undo step.");
+
+            panel.AddStackedItems(filterPro, colorize, viewCrop);
 
             // Reset: clear graphic overrides - the selection in one click, or a view / many views in the window -
             // and bring the last reset back. Each keeps a copy first, so nothing set by hand is lost.
@@ -140,17 +150,10 @@ namespace HeronTools.App
                 "Put back every override the last reset in this model cleared.",
                 "Works while Revit stays open, even after other work (where Undo would also undo that work). One Undo step."));
 
-            // View Crop: one button. The annotation crop is a tick box in its window (no separate button).
-            panel.AddItem(Button(assemblyPath, "HeronTools_ViewCrop", "View\nCrop",
-                typeof(CmdViewCropByAllModelElements), typeof(CmdPlanViewAvailability), "ViewCrop",
-                "Fit the crop region of plan views around their elements - and, if you tick it, the annotation crop too.",
-                "Pick the views, then choose whether the crop fits the visible elements or all model elements, and the margin. " +
-                "Tick \"Also turn on the annotation crop\" to set it the same distance outside the new crop on all four sides " +
-                "(an offset on paper; Revit's own limits on the annotation crop are respected). Each run is one Undo step."));
-
-            // 3D Snapshot: one click fits Revit's default 3D view to a room, a section or a plan window.
-            panel.AddItem(Button(assemblyPath, "HeronTools_3DSnapshot", "3D\nSnapshot", typeof(Cmd3DSnapshot), typeof(Cmd3DSnapshotAvailability), "Snapshot3D",
-                "Fit Revit's 3D view ({3D}) to what you are working on - a room, a section, or a window you drag in the plan.",
+            // 3D Section Box: one click fits Revit's default 3D view to a room, a section or a plan window.
+            // (The id stays HeronTools_3DSnapshot so keyboard shortcuts and Quick Menu slots keep working after the rename.)
+            panel.AddItem(Button(assemblyPath, "HeronTools_3DSnapshot", "3D Section\nBox", typeof(Cmd3DSnapshot), typeof(Cmd3DSnapshotAvailability), "Snapshot3D",
+                "Fit the section box of Revit's 3D view ({3D}) to what you are working on - a room, a section, or a window you drag in the plan.",
                 "Room, space or zone selected (or its tag - rooms in links too): the box fits it, level to upper limit. Section mark selected, or run " +
                 "in a section or elevation: the box matches the section - same cut, same depth - and the camera looks the same way. " +
                 "Nothing selected in a plan: drag a window; the box runs from the bottom to the top of the view range.\n\n" +
@@ -209,6 +212,33 @@ namespace HeronTools.App
             levelButton.AddPushButton(Button(assemblyPath, "HeronTools_MaximizeLevelExtents", "Levels to Section Box", typeof(CmdMaximizeLevelsBySectionBox), null, "LevelExtents",
                 "Stretch every level's 3D extents to the active 3D view's section box.",
                 "Open a 3D view with a section box first. Level ends made 2D in a view stay 2D. One Undo step."));
+
+            // Auto Dimension: chain + overall rows across grids and levels, just inside their heads.
+            var autoDimension = new PulldownButtonData("HeronTools_AutoDimensionGroup", "Auto\nDimension")
+            {
+                ToolTip = "Dimension the grids and levels of this view in rows, just inside their heads.",
+                Image = BrandImages.Load("AutoDimension16.png"),
+                LargeImage = BrandImages.Load("AutoDimension32.png"),
+            };
+            var autoDimensionButton = (PulldownButton)datums.AddItem(autoDimension);
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionGrids", "Grids",
+                typeof(CmdAutoDimensionGrids), typeof(CmdAutoDimensionAvailability), "AutoDimension",
+                "Dimension the grids of this plan, section or elevation: a chain and an overall for each set of parallel grids.",
+                "Rows sit just inside the grid heads (and inside the crop). Grids at an angle get their own rows. Select grids " +
+                "first to dimension only those. A row already in the view is not made again. One Undo step."));
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionLevels", "Levels",
+                typeof(CmdAutoDimensionLevels), typeof(CmdAutoDimensionAvailability), "AutoDimension",
+                "Dimension the levels of this section or elevation: a chain and an overall.",
+                "Rows sit just inside the level heads (and inside the crop). Select levels first to dimension only those. " +
+                "One Undo step."));
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionGridsLevels", "Grids and Levels",
+                typeof(CmdAutoDimensionGridsLevels), typeof(CmdAutoDimensionAvailability), "AutoDimension",
+                "Plans: dimension the grids. Sections and elevations: the grids and the levels.",
+                "Uses Auto Dimension Settings. One Undo step for the whole run."));
+            autoDimensionButton.AddPushButton(Button(assemblyPath, "HeronTools_AutoDimensionSettings", "Settings",
+                typeof(CmdAutoDimensionSettings), null, "AutoDimension",
+                "Choose the rows, where they sit, the dimension types and which grids and levels are used.",
+                "Saved for you in every project. Changes nothing in the model."));
 
             // ---- Modify
             var modify = app.CreateRibbonPanel(TabName, ModifyPanelName);

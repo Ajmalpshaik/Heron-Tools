@@ -14,8 +14,8 @@ it step by step, what it changes in the model and how to undo it.
 | Panel | Tools | Page |
 |---|---|---|
 | Quick | Quick Menu, Quick Menu Settings | [quick.md](quick.md) |
-| View | Filter Pro, Colorize, Reset Graphics, View Crop, 3D Snapshot, Unhide All, Toggle Links, Highlight | [view.md](view.md) |
-| Datums | Reset Datums to 3D, Level Extents, Flip Bubbles | [datums.md](datums.md) |
+| View | Filter Pro, Colorize, View Crop (one stack of small buttons), Reset Graphics, 3D Section Box, Unhide All, Toggle Links, Highlight | [view.md](view.md) |
+| Datums | Reset Datums to 3D, Level Extents, Flip Bubbles, Auto Dimension | [datums.md](datums.md) |
 | Modify | Match Elevation, Reassign Level, Pin / Unpin, Smart Selection | [modify.md](modify.md) |
 | Coordination | Quick Clash, Model Walk, Element ID, 3D Views by Workset, Link Workset | [coordination.md](coordination.md) |
 | About | About Heron | [about.md](about.md) |
@@ -33,8 +33,9 @@ Model Walk has its own full guide: [Model Walk user guide](../model-walk-guide.m
 | Bring back everything hidden in a view | **Unhide All** |
 | Hide or show all Revit links in a view | **Toggle Links** |
 | Fit plan crops around the model, and set the annotation crop with them | **View Crop** |
-| See a room or a section in 3D in one click | **3D Snapshot** |
+| See a room or a section in 3D in one click | **3D Section Box** |
 | Tidy grid and level ends in a view | **Reset Datums to 3D**, **Level Extents**, **Flip Bubbles** |
+| Dimension the grids and levels of a view in one click | **Auto Dimension** |
 | Put MEP elements at the same height as another | **Match Elevation** |
 | Move elements to another reference level without moving them | **Reassign Level** |
 | Pin title blocks, views on sheets, grids, ducts... in one go | **Pin / Unpin** |

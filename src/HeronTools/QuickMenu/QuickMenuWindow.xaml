@@ -15,7 +15,10 @@
   drops back as it closes. Off when Windows' "Show animations" is off.
   The shell is deliberately plain: a see-through window is drawn by the CPU, so no blur, effect or
   whole-window opacity animation belongs on it - only transforms and the small slot glows animate, and the
-  soft halo behind the ring is a static gradient brush.
+  soft halo behind the ring is a static gradient brush. The Soft and Clay effects (2026-11-22) keep to that:
+  their shadows are drawn ONCE into still pictures (QuickMenuShading) and only faded in and out.
+  Light colour: Mist fills with Ink text, from the "WheelLight..." shades. Settings > Look shows this same
+  wheel live (TakeWheelForPreview) without opening this window.
 -->
 <Window x:Class="HeronTools.UI.QuickMenu.QuickMenuWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"

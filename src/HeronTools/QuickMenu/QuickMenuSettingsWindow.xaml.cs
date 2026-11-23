@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// Lets Ajmal decide what the quick wheel holds - which Heron Tools button sits in each slot, how many slots there are (4 to 12) and how big the wheel opens.
+// Lets Ajmal decide what the quick wheel holds - which Heron Tools button sits in each slot and how many slots there are (4 to 12) on the Slots tab - and how it looks (design, colour, effect, names, opening, size) on the Look tab, with the real wheel shown live.
 
 using System;
 using System.Collections.Generic;
@@ -133,11 +133,17 @@ namespace HeronTools.UI.QuickMenu
 
             ToolList.SelectionChanged += OnListSelectionChanged;
 
-            // The drawing follows the chosen look straight away (the opening only shows in Preview).
+            // The slot map follows the chosen design straight away; the Look tab's live wheel follows every choice.
             StyleCombo.SelectionChanged += OnLookChanged;
             NamesCombo.SelectionChanged += OnLookChanged;
+            ColourCombo.SelectionChanged += OnLookChanged;
+            EffectCombo.SelectionChanged += OnLookChanged;
+            OpeningCombo.SelectionChanged += OnLookChanged;
+            BackdropCombo.SelectionChanged += OnBackdropChanged;
+            Closed += (s, e) => DropLookPreview();
 
             _loading = false;
+            UpdateLookSummary();
             UpdateButtonStates();
 
             if (_layoutUnreadable)
@@ -224,6 +230,39 @@ namespace HeronTools.UI.QuickMenu
                 }
             }
 
+            foreach (QuickMenuColour colour in QuickMenuLook.Colours)
+            {
+                ColourCombo.Items.Add(new ComboBoxItem { Content = QuickMenuLook.ColourName(colour), Tag = colour });
+                if (colour == config.Colour)
+                {
+                    ColourCombo.SelectedIndex = ColourCombo.Items.Count - 1;
+                }
+            }
+
+            foreach (QuickMenuEffect effect in QuickMenuLook.Effects)
+            {
+                EffectCombo.Items.Add(new ComboBoxItem { Content = QuickMenuLook.EffectName(effect), Tag = effect });
+                if (effect == config.Effect)
+                {
+                    EffectCombo.SelectedIndex = EffectCombo.Items.Count - 1;
+                }
+            }
+
+            // Only for looking at the preview - not saved.
+            BackdropCombo.Items.Add(new ComboBoxItem { Content = "A white sheet", Tag = false });
+            BackdropCombo.Items.Add(new ComboBoxItem { Content = "A dark 3D view", Tag = true });
+            BackdropCombo.SelectedIndex = 0;
+
+            if (ColourCombo.SelectedIndex < 0)
+            {
+                ColourCombo.SelectedIndex = 0;
+            }
+
+            if (EffectCombo.SelectedIndex < 0)
+            {
+                EffectCombo.SelectedIndex = 0;
+            }
+
             if (StyleCombo.SelectedIndex < 0)
             {
                 StyleCombo.SelectedIndex = 0;
@@ -252,6 +291,114 @@ namespace HeronTools.UI.QuickMenu
             var item = OpeningCombo.SelectedItem as ComboBoxItem;
             return item != null && item.Tag is QuickMenuOpening ? (QuickMenuOpening)item.Tag : QuickMenuLook.DefaultOpening;
         }
+
+        private QuickMenuColour ChosenColour()
+        {
+            var item = ColourCombo.SelectedItem as ComboBoxItem;
+            return item != null && item.Tag is QuickMenuColour ? (QuickMenuColour)item.Tag : QuickMenuLook.DefaultColour;
+        }
+
+        private QuickMenuEffect ChosenEffect()
+        {
+            var item = EffectCombo.SelectedItem as ComboBoxItem;
+            return item != null && item.Tag is QuickMenuEffect ? (QuickMenuEffect)item.Tag : QuickMenuLook.DefaultEffect;
+        }
+
+        #region Look tab
+
+        /// <summary>The live wheel on the Look tab (never shown as its own window), or null.</summary>
+        private QuickMenuWindow _lookPreview;
+
+        /// <summary>The Slots tab's one-line reminder of the chosen look.</summary>
+        private void UpdateLookSummary()
+        {
+            LookSummaryText.Text = "Look: " + QuickMenuLook.StyleName(ChosenStyle()) + "  ·  " +
+                                   QuickMenuLook.ColourName(ChosenColour()) + "  ·  " +
+                                   QuickMenuLook.EffectName(ChosenEffect()) + "  -  change it on the Look tab";
+        }
+
+        /// <summary>Builds the real wheel with the current choices and slots and shows it, live, on the Look tab.</summary>
+        private void RefreshLookPreview()
+        {
+            if (_loading || LookTab == null || !LookTab.IsSelected)
+            {
+                return;
+            }
+
+            try
+            {
+                var slots = new List<QuickToolEntry>(_slotKeys.Count);
+                foreach (string key in _slotKeys)
+                {
+                    slots.Add(FindTool(key));
+                }
+
+                var wheel = new QuickMenuWindow(slots, null,
+                    ChoiceValue(WheelSizeCombo, QuickMenuConfig.DefaultDiameter),
+                    ChosenStyle(), ChosenShowNames(), ChosenOpening(), ChosenColour(), ChosenEffect());
+
+                DropLookPreview();
+                LookPreviewHost.Child = wheel.TakeWheelForPreview();
+                _lookPreview = wheel;
+                wheel.PlayPreviewOpening();
+            }
+            catch (Exception ex)
+            {
+                DropLookPreview();
+                ShowError("The look preview could not be drawn: " + ex.Message);
+            }
+        }
+
+        /// <summary>Takes the live wheel off the Look tab and lets its (never shown) window go.</summary>
+        private void DropLookPreview()
+        {
+            if (LookPreviewHost != null)
+            {
+                LookPreviewHost.Child = null;
+            }
+
+            if (_lookPreview != null)
+            {
+                try
+                {
+                    _lookPreview.Close();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Already gone - nothing to let go.
+                }
+
+                _lookPreview = null;
+            }
+        }
+
+        private void OnTabChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // SelectionChanged bubbles up from every list and combo inside the tabs: only the tabs themselves count.
+            // (It also fires while the window is still being built, before the tabs exist.)
+            if (_loading || LookTab == null || !ReferenceEquals(e.OriginalSource, MainTabs))
+            {
+                return;
+            }
+
+            if (LookTab.IsSelected)
+            {
+                RefreshLookPreview();   // picks up slots changed on the other tab, and plays the opening
+            }
+            else
+            {
+                DropLookPreview();
+            }
+        }
+
+        private void OnBackdropChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var item = BackdropCombo.SelectedItem as ComboBoxItem;
+            bool darkView = item != null && item.Tag is bool && (bool)item.Tag;
+            LookStage.Background = (Brush)FindResource(darkView ? "BackgroundDark" : "WheelPreviewSheet");
+        }
+
+        #endregion
 
         /// <summary>Which source the Show combo is asking for, or null for everything.</summary>
         private QuickToolSource? SelectedSourceFilter()
@@ -942,11 +1089,19 @@ namespace HeronTools.UI.QuickMenu
 
             RefreshWheel(_selectedSlot);
             UpdateButtonStates();
+            UpdateLookSummary();
+            RefreshLookPreview();
         }
 
         private void OnWheelSizeChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Nothing to redraw here - the value is read straight off the combo when saving.
+            // The value is read straight off the combo when saving; the Look tab's wheel is rebuilt at the new size.
+            if (_loading)
+            {
+                return;
+            }
+
+            RefreshLookPreview();
         }
 
         private void OnListSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1007,6 +1162,8 @@ namespace HeronTools.UI.QuickMenu
             config.Style = ChosenStyle();
             config.ShowNames = ChosenShowNames();
             config.Opening = ChosenOpening();
+            config.Colour = ChosenColour();
+            config.Effect = ChosenEffect();
             config.Normalize();
 
             for (int i = 0; i < config.Slots.Count && i < _slotKeys.Count; i++)
@@ -1043,7 +1200,7 @@ namespace HeronTools.UI.QuickMenu
 
                 var wheel = new QuickMenuWindow(slots, null,
                     ChoiceValue(WheelSizeCombo, QuickMenuConfig.DefaultDiameter),
-                    ChosenStyle(), ChosenShowNames(), ChosenOpening())
+                    ChosenStyle(), ChosenShowNames(), ChosenOpening(), ChosenColour(), ChosenEffect())
                 {
                     Owner = this
                 };

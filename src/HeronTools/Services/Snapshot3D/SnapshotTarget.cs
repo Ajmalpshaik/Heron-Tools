@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// What 3D Snapshot will show: a box measured in a level frame (one horizontal "right" direction, its
+// What 3D Section Box will show: a box measured in a level frame (one horizontal "right" direction, its
 // horizontal "back" direction, and world up), and - for a section - the way the camera should face.
 
 using System;

@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// The radial tool wheel itself - the video-game style ring that opens centred on the mouse pointer, lights up the slot the pointer is pointing at, and hands the chosen tool back to CmdQuickMenu to run. Draws any of the six designs (QuickMenuStyle), with or without tool names, and opens in any of the four ways (QuickMenuOpening).
+// The radial tool wheel itself - the video-game style ring that opens centred on the mouse pointer, lights up the slot the pointer is pointing at, and hands the chosen tool back to CmdQuickMenu to run. Draws any of the six designs (QuickMenuStyle), with or without tool names, in Dark or Light (QuickMenuColour) and Flat, Soft or Clay (QuickMenuEffect, shading baked by QuickMenuShading), and opens in any of the four ways (QuickMenuOpening).
 
 using System;
 using System.Collections.Generic;
@@ -38,26 +38,28 @@ namespace HeronTools.UI.QuickMenu
         private const double DesignRadius = QuickMenuDesign.DesignRadius;
 
         // Heron brand only, every brush from UI/HeronStyles.xaml: Surface and Ink for the ring, Mist at an
-        // opacity for text and lines, Accent for the slot being pointed at (the "Wheel..." shades are
-        // documented in that file's header).
-        private static readonly Brush WedgeFill = HeronPalette.Brush("WheelSlotFill");                       // Surface 95 %
-        private static readonly Brush WedgeFillEmpty = HeronPalette.Brush("WheelSlotEmptyFill");             // Ink 85 %
-        private static readonly Brush WedgeFillUnavailable = HeronPalette.Brush("WheelSlotUnavailableFill"); // Surface 90 %
-        private static readonly Brush WedgeStroke = HeronPalette.Brush("BorderSoft");                        // Mist 14 %
-        private static readonly Brush WedgeStrokeHover = HeronPalette.Brush("Accent");                       // Accent
-        private static readonly Brush WedgeStrokeHoverDisabled = HeronPalette.Brush("BorderStrong");         // Mist 28 %
-        private static readonly Brush RimIdle = HeronPalette.Brush("WheelRim");                              // Mist 10 %
-        private static readonly Brush RulerTick = HeronPalette.Brush("WheelTick");                           // Mist 25 %
-        private static readonly Brush RulerTickMajor = HeronPalette.Brush("AccentEdge");                     // Accent 70 %
-        private static readonly Brush HubFill = HeronPalette.Brush("WheelHubFill");                          // Ink 98 %
-        private static readonly Brush HubStroke = HeronPalette.Brush("BorderSoft");                          // Mist 14 %
-        private static readonly Brush HubTick = HeronPalette.Brush("WheelHubTick");                          // Mist 20 %
-        private static readonly Brush InkText = HeronPalette.Brush("TextOnAccent");                          // White on Accent (the name pill)
-        private static readonly Brush TextPrimary = HeronPalette.Brush("TextOnAccent");                      // White on the lit slot
-        private static readonly Brush TextIdle = HeronPalette.Brush("WheelTextIdle");                        // Mist 86 %
-        private static readonly Brush TextSecondary = HeronPalette.Brush("TextSecondary");                   // Mist 72 %
-        private static readonly Brush TextDisabled = HeronPalette.Brush("WheelTextDisabled");                // Mist 45 %
-        private static readonly Brush TextAccent = HeronPalette.Brush("Accent");                             // Accent
+        // opacity for text and lines, Accent for the slot being pointed at - or, in the Light colour, the same
+        // turned round (Mist fills, Ink lines and text). The "Wheel..." shades are documented in that file's header.
+        // Set once per wheel by SetUpColours.
+        private Brush WedgeFill;                 // Surface 95 %   / Mist 95 %
+        private Brush WedgeFillEmpty;            // Ink 85 %       / Mist 60 %
+        private Brush WedgeFillUnavailable;      // Surface 90 %   / Mist 90 %
+        private Brush WedgeStroke;               // Mist 14 %      / Ink 14 %
+        private Brush WedgeStrokeHover;          // Accent
+        private Brush WedgeStrokeHoverDisabled;  // Mist 28 %      / Ink 28 %
+        private Brush RimIdle;                   // Mist 10 %      / Ink 10 %
+        private Brush RulerTick;                 // Mist 25 %      / Ink 25 %
+        private Brush RulerTickMajor;            // Accent 70 %
+        private Brush HubFill;                   // Ink 98 %       / Mist 98 %
+        private Brush HubStroke;                 // Mist 14 %      / Ink 14 %
+        private Brush HubTick;                   // Mist 20 %      / Ink 20 %
+        private Brush InkText;                   // White on Accent (the name pill)
+        private Brush TextPrimary;               // the lit slot's name: White / Ink 92 % (Flat), Accent (Soft), White (Clay)
+        private Brush TextIdle;                  // Mist 86 %      / Ink 86 %
+        private Brush TextSecondary;             // Mist 72 %      / Ink 72 %
+        private Brush TextDisabled;              // Mist 45 %      / Ink 45 %
+        private Brush TextAccent;                // Accent
+        private Brush IconOnClay;                // White: the lit Clay slot's icon
 
         /// <summary>The heron mark (designer's kit, 1080 x 1071 units), drawn in the hub.</summary>
         private const string HeronMarkData =
@@ -70,8 +72,13 @@ namespace HeronTools.UI.QuickMenu
             public Canvas Layer;                // the whole slot: opacity and every transform below
             public Point Middle;                // the slot's centre, for its own scaling
             public double Angle;                // the slot's centre angle, degrees (0 = east, clockwise)
-            public Shape Body;                  // wedge or bubble
-            public Shape Glow;                  // the Accent layer shown while pointed at
+            public Shape Body;                  // wedge or bubble (Flat; null for Soft / Clay)
+            public Shape Glow;                  // the Accent layer shown while pointed at (Flat; null for Soft / Clay)
+            public UIElement IdleArt;           // Soft / Clay: the baked button at rest
+            public UIElement LitArt;            // Soft / Clay: the baked button pointed at (pressed in / orange clay)
+            public Geometry Shape;              // Soft / Clay: the button's outline, to bake LitArt from
+            public UIElement Icon;              // the slot's icon
+            public UIElement IconLit;           // Clay: the same icon in White, shown while lit
             public Shape RimLight;              // Accent rim light (Double Ring, Rim Lights)
             public FrameworkElement Pill;       // the orange name pill (Orbit Buttons with names)
             public TextBlock Label;
@@ -94,6 +101,17 @@ namespace HeronTools.UI.QuickMenu
         private readonly QuickMenuStyle _style;
         private readonly bool _showNames;
         private readonly QuickMenuOpening _opening;
+        private readonly QuickMenuColour _colour;
+        private readonly QuickMenuEffect _effect;
+
+        /// <summary>Soft / Clay only: bakes the shaded buttons. Null for Flat.</summary>
+        private QuickMenuShading _shading;
+
+        /// <summary>Room between the wheel and the window edge: 16 for Flat, more where soft shadows reach out.</summary>
+        private double _edgePadding = EdgePadding;
+
+        /// <summary>Soft: the round plate under the ring (as a radius), 0 when there is none.</summary>
+        private double _plateRadius;
 
         // The chosen design, worked out once in the constructor.
         private bool _bubbles;                  // Orbit Buttons: separate bubbles instead of a ring
@@ -163,9 +181,16 @@ namespace HeronTools.UI.QuickMenu
         /// <summary>True when he asked for the customise window instead of running a tool.</summary>
         internal bool OpenSettingsRequested { get; private set; }
 
-        /// <summary>Builds the default wheel (Heron Ring, names on, Unfold).</summary>
+        /// <summary>Builds the default wheel (Heron Ring, names on, Unfold, Dark, Flat).</summary>
         internal QuickMenuWindow(IList<QuickToolEntry> slots, IList<bool> available, int diameter)
             : this(slots, available, diameter, QuickMenuLook.DefaultStyle, true, QuickMenuLook.DefaultOpening)
+        {
+        }
+
+        /// <summary>Builds the wheel in the default colour and effect (Dark, Flat).</summary>
+        internal QuickMenuWindow(IList<QuickToolEntry> slots, IList<bool> available, int diameter,
+                                 QuickMenuStyle style, bool showNames, QuickMenuOpening opening)
+            : this(slots, available, diameter, style, showNames, opening, QuickMenuLook.DefaultColour, QuickMenuLook.DefaultEffect)
         {
         }
 
@@ -176,9 +201,13 @@ namespace HeronTools.UI.QuickMenu
         /// means every slot is treated as available.
         /// </summary>
         internal QuickMenuWindow(IList<QuickToolEntry> slots, IList<bool> available, int diameter,
-                                 QuickMenuStyle style, bool showNames, QuickMenuOpening opening)
+                                 QuickMenuStyle style, bool showNames, QuickMenuOpening opening,
+                                 QuickMenuColour colour, QuickMenuEffect effect)
         {
             InitializeComponent();
+            _colour = colour;
+            _effect = effect;
+            SetUpColours();
 
             // A wheel with no slots at all cannot be drawn or aimed at, so an empty list becomes a
             // single empty slot rather than an index that does not exist.
@@ -194,16 +223,32 @@ namespace HeronTools.UI.QuickMenu
                 _available[i] = available == null || i >= available.Count || available[i];
             }
 
-            double size = diameter + (EdgePadding * 2.0);
+            _outerRadius = diameter / 2.0;
+            _unit = _outerRadius / DesignRadius;
+            if (_effect != QuickMenuEffect.Flat)
+            {
+                // The soft shadows reach past the wheel: leave the window room for them, or they would stop at a
+                // hard square edge.
+                double probeReach = _outerRadius / QuickMenuShading.MockupRadius;
+                _edgePadding = _effect == QuickMenuEffect.Soft
+                    ? EdgePadding + (Math.Max(0.5, probeReach) * 50.0)
+                    : EdgePadding + (Math.Max(0.5, probeReach) * 34.0);
+            }
+
+            double size = diameter + (_edgePadding * 2.0);
             Width = size;
             Height = size;
             _centre = size / 2.0;
-            _outerRadius = diameter / 2.0;
-            _unit = _outerRadius / DesignRadius;
 
             _style = style;
             _showNames = showNames;
             _opening = opening;
+            if (_effect != QuickMenuEffect.Flat)
+            {
+                _shading = new QuickMenuShading(_colour, _outerRadius, new Point(_centre, _centre),
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            }
+
             SetUpDesign();
 
             Cursor = Cursors.Arrow;
@@ -229,11 +274,17 @@ namespace HeronTools.UI.QuickMenu
             _bubbleRadius = _bubbles ? d.BubbleRadius(r, _slotCount) : 0.0;
             _labelsOnSlots = d.LabelsOnSlots;
             _hub = d.Hub;
-            _lift = d.Lift;
+
+            // The effect decides what the pointed slot does: Soft presses it in (no step-out), Clay always pops it
+            // out a little, Flat keeps the design's own step-out. The design keeps its markers in every effect.
+            _lift = _effect == QuickMenuEffect.Soft ? 0.0
+                  : _effect == QuickMenuEffect.Clay ? Math.Max(d.Lift, 6.0)
+                  : d.Lift;
             _rimLights = d.RimLights;
             _notched = d.Notched;
             _ruler = d.Ruler;
-            _halo = d.Halo;
+            _halo = d.Halo && _effect == QuickMenuEffect.Flat;   // Soft and Clay carry their own shadows
+            _plateRadius = _effect == QuickMenuEffect.Soft && !d.Bubbles ? r * d.OuterFraction + _shading.Scaled(16.0) : 0.0;
             _digits = d.Digits;
             _arc = d.Arc;
             _needle = d.Needle;
@@ -248,7 +299,44 @@ namespace HeronTools.UI.QuickMenu
             else
             {
                 _hitInner = _ringInner;
-                _hitOuter = _ringOuter + (_rimLights ? 10.0 * _unit : 0.0);
+                _hitOuter = _ringOuter + (_rimLights ? 10.0 * _unit : 0.0) + (_plateRadius > 0.0 ? 6.0 : 0.0);
+            }
+        }
+
+        /// <summary>The brushes for the chosen colour (and the lit name's colour for the chosen effect).</summary>
+        private void SetUpColours()
+        {
+            bool light = _colour == QuickMenuColour.Light;
+            WedgeFill = HeronPalette.Brush(light ? "WheelLightSlotFill" : "WheelSlotFill");
+            WedgeFillEmpty = HeronPalette.Brush(light ? "WheelLightSlotEmptyFill" : "WheelSlotEmptyFill");
+            WedgeFillUnavailable = HeronPalette.Brush(light ? "WheelLightSlotUnavailableFill" : "WheelSlotUnavailableFill");
+            WedgeStroke = HeronPalette.Brush(light ? "WheelLightLine" : "BorderSoft");
+            WedgeStrokeHover = HeronPalette.Brush("Accent");
+            WedgeStrokeHoverDisabled = HeronPalette.Brush(light ? "WheelLightLineStrong" : "BorderStrong");
+            RimIdle = HeronPalette.Brush(light ? "WheelLightRim" : "WheelRim");
+            RulerTick = HeronPalette.Brush(light ? "WheelLightTick" : "WheelTick");
+            RulerTickMajor = HeronPalette.Brush("AccentEdge");
+            HubFill = HeronPalette.Brush(light ? "WheelLightHubFill" : "WheelHubFill");
+            HubStroke = HeronPalette.Brush(light ? "WheelLightLine" : "BorderSoft");
+            HubTick = HeronPalette.Brush(light ? "WheelLightHubTick" : "WheelHubTick");
+            InkText = HeronPalette.Brush("TextOnAccent");
+            TextIdle = HeronPalette.Brush(light ? "WheelLightTextIdle" : "WheelTextIdle");
+            TextSecondary = HeronPalette.Brush(light ? "WheelLightTextSecondary" : "TextSecondary");
+            TextDisabled = HeronPalette.Brush(light ? "WheelLightTextDisabled" : "WheelTextDisabled");
+            TextAccent = HeronPalette.Brush("Accent");
+            IconOnClay = HeronPalette.Brush("TextOnAccent");
+
+            switch (_effect)
+            {
+                case QuickMenuEffect.Soft:
+                    TextPrimary = TextAccent;                                    // orange name in the pressed slot
+                    break;
+                case QuickMenuEffect.Clay:
+                    TextPrimary = HeronPalette.Brush("TextOnAccent");            // white name on orange clay
+                    break;
+                default:
+                    TextPrimary = light ? HeronPalette.Brush("WheelLightTextLit") : HeronPalette.Brush("TextOnAccent");
+                    break;
             }
         }
 
@@ -328,6 +416,46 @@ namespace HeronTools.UI.QuickMenu
 
         #endregion
 
+        #region Settings > Look preview
+
+        /// <summary>
+        /// Settings > Look: hands the drawn wheel to the Settings window to show live, instead of opening this window.
+        /// Pointing at it lights the slots exactly as the real wheel does; it never runs or closes anything. The
+        /// window itself is never shown - close it when the preview is replaced.
+        /// </summary>
+        internal FrameworkElement TakeWheelForPreview()
+        {
+            FrameworkElement wheel = RootGrid;
+            Content = null;
+            wheel.Width = Width;
+            wheel.Height = Height;
+            wheel.MouseMove += (s, e) =>
+            {
+                if (_opened && !_choiceMade)
+                {
+                    SetHover(IndexAt(e.GetPosition(WheelCanvas)));
+                }
+            };
+            wheel.MouseLeave += (s, e) =>
+            {
+                if (_opened && !_choiceMade)
+                {
+                    SetHover(-1);
+                }
+            };
+            return wheel;
+        }
+
+        /// <summary>Settings > Look: plays the chosen opening on the preview (again).</summary>
+        internal void PlayPreviewOpening()
+        {
+            SetHover(-1);
+            _opened = false;
+            PlayOpening();
+        }
+
+        #endregion
+
         #region Opening and closing
 
         /// <summary>
@@ -343,6 +471,7 @@ namespace HeronTools.UI.QuickMenu
             {
                 _opened = true;
                 ArmAutoClose();
+                BakeLitArt();
                 return;
             }
 
@@ -353,6 +482,7 @@ namespace HeronTools.UI.QuickMenu
                 landed.Stop();
                 _opened = true;
                 ArmAutoClose();
+                BakeLitArt();   // after the opening, so baking never stutters it
                 if (!_choiceMade && IsLoaded)
                 {
                     SetHover(IndexAt(Mouse.GetPosition(WheelCanvas)));
@@ -599,7 +729,7 @@ namespace HeronTools.UI.QuickMenu
         /// </summary>
         private void AddBackLayer()
         {
-            if (!_halo && !_ruler)
+            if (!_halo && !_ruler && _plateRadius <= 0.0)
             {
                 return;
             }
@@ -608,9 +738,24 @@ namespace HeronTools.UI.QuickMenu
             _backLayer = new Canvas { IsHitTestVisible = false, RenderTransform = _backGrow };
             WheelCanvas.Children.Add(_backLayer);
 
+            if (_plateRadius > 0.0)
+            {
+                // Soft: the round plate the buttons stand on, with a shallow groove they stand in.
+                var plate = new EllipseGeometry(new Point(_centre, _centre), _plateRadius, _plateRadius);
+                plate.Freeze();
+                _backLayer.Children.Add(_shading.Plate(plate));
+                double grooveRadius = _ringOuter + _shading.Scaled(5.0);
+                var groove = new EllipseGeometry(new Point(_centre, _centre), grooveRadius, grooveRadius);
+                groove.Freeze();
+                _backLayer.Children.Add(_shading.Pressed(groove, false));
+            }
+
             if (_halo)
             {
                 double radius = _ringOuter + EdgePadding - 2.0;
+                bool light = _colour == QuickMenuColour.Light;
+                string haloKey = light ? "WheelLightHaloColor" : "WheelHaloColor";
+                string haloFadeKey = light ? "WheelLightHaloFadeColor" : "WheelHaloFadeColor";
                 var halo = new Ellipse
                 {
                     Width = radius * 2.0,
@@ -619,9 +764,9 @@ namespace HeronTools.UI.QuickMenu
                     {
                         GradientStops =
                         {
-                            new GradientStop(HeronPalette.Colour("WheelHaloColor"), 0.0),          // Ink 85 %
-                            new GradientStop(HeronPalette.Colour("WheelHaloColor"), (_ringOuter / radius) - 0.005),
-                            new GradientStop(HeronPalette.Colour("WheelHaloFadeColor"), 1.0)      // Ink 0 %
+                            new GradientStop(HeronPalette.Colour(haloKey), 0.0),                  // Ink / Mist 85 %
+                            new GradientStop(HeronPalette.Colour(haloKey), (_ringOuter / radius) - 0.005),
+                            new GradientStop(HeronPalette.Colour(haloFadeKey), 1.0)               // Ink / Mist 0 %
                         }
                     }
                 };
@@ -633,13 +778,14 @@ namespace HeronTools.UI.QuickMenu
 
             if (_ruler)
             {
-                // 72 ticks, one every 5 degrees; every 45 degrees a longer Accent one.
+                // 72 ticks, one every 5 degrees; every 45 degrees a longer Accent one (outside the Soft plate).
+                double rulerStart = _plateRadius > 0.0 ? _plateRadius - _ringOuter : 0.0;
                 for (int k = 0; k < 72; k++)
                 {
                     bool major = k % 9 == 0;
                     double angle = k * 5.0;
-                    Point a = Polar(_ringOuter + (6.0 * _unit), angle);
-                    Point b = Polar(_ringOuter + ((major ? 16.0 : 11.0) * _unit), angle);
+                    Point a = Polar(_ringOuter + rulerStart + (6.0 * _unit), angle);
+                    Point b = Polar(_ringOuter + rulerStart + ((major ? 16.0 : 11.0) * _unit), angle);
                     _backLayer.Children.Add(new Line
                     {
                         X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
@@ -678,27 +824,112 @@ namespace HeronTools.UI.QuickMenu
             return p;
         }
 
+        /// <summary>Blank space between two slots, per side: wider for Soft and Clay so each button stands alone.</summary>
+        private double GapDegrees()
+        {
+            switch (_effect)
+            {
+                case QuickMenuEffect.Soft: return 2.4;
+                case QuickMenuEffect.Clay: return 3.4;
+                default: return WedgeGapDegrees;
+            }
+        }
+
+        /// <summary>
+        /// Soft / Clay: the baked button at rest. Its pointed-at picture is baked just after the wheel opens
+        /// (BakeLitArt), or on the spot if the pointer gets there first. An empty slot's button is drawn fainter.
+        /// </summary>
+        private void AddShadedButton(SlotParts p, Geometry button, bool filled)
+        {
+            p.Shape = button;
+            p.IdleArt = _effect == QuickMenuEffect.Soft ? _shading.Raised(button) : _shading.Clay(button);
+            p.IdleArt.Opacity = IdleArtOpacity(filled);
+            p.Layer.Children.Add(p.IdleArt);
+        }
+
+        /// <summary>
+        /// An empty slot's button sinks a little into the Soft plate. Where nothing is behind it (Clay, Orbit
+        /// Buttons) a see-through button would only look like a grey ghost, so it stays whole - "Empty" says it.
+        /// </summary>
+        private double IdleArtOpacity(bool filled)
+        {
+            return !filled && _plateRadius > 0.0 ? 0.55 : 1.0;
+        }
+
+        /// <summary>Makes sure this slot has its pointed-at picture (pressed in, or orange clay).</summary>
+        private void EnsureLitArt(SlotParts p)
+        {
+            if (_shading == null || p.LitArt != null || p.Shape == null)
+            {
+                return;
+            }
+
+            UIElement lit = _effect == QuickMenuEffect.Soft ? _shading.Pressed(p.Shape, true) : _shading.ClayLit(p.Shape);
+            lit.Opacity = 0.0;
+            p.Layer.Children.Insert(p.Layer.Children.IndexOf(p.IdleArt) + 1, lit);
+            p.LitArt = lit;
+        }
+
+        /// <summary>Bakes every slot's pointed-at picture once the wheel is on screen, at low priority.</summary>
+        private void BakeLitArt()
+        {
+            if (_shading == null)
+            {
+                return;
+            }
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                if (_choiceMade)
+                {
+                    return;
+                }
+
+                foreach (SlotParts p in _parts)
+                {
+                    EnsureLitArt(p);
+                }
+            }));
+        }
+
         private void AddWedge(int index)
         {
             QuickToolEntry entry = _slots[index];
             bool filled = entry != null;
             bool usable = IsUsable(index);
 
+            double gap = GapDegrees();
             double centreAngle = -90.0 + (index * _stepDegrees);
-            double startAngle = centreAngle - (_stepDegrees / 2.0) + WedgeGapDegrees;
-            double endAngle = centreAngle + (_stepDegrees / 2.0) - WedgeGapDegrees;
-            double contentRadius = (_ringInner + _ringOuter) / 2.0;
+            double startAngle = centreAngle - (_stepDegrees / 2.0) + gap;
+            double endAngle = centreAngle + (_stepDegrees / 2.0) - gap;
+            double contentRadius = ((_ringInner + _ringOuter) / 2.0) + (_shading != null ? _shading.Scaled(3.0) : 0.0);
             SlotParts p = NewSlot(centreAngle, Polar(contentRadius, centreAngle));
+            double notch = _notched ? 7.0 * _unit : 0.0;
+            var centre = new Point(_centre, _centre);
 
-            Geometry shape = RoundedSlotGeometry.Build(
-                new Point(_centre, _centre), _ringInner, _ringOuter, startAngle, endAngle,
-                _outerRadius * RoundedSlotGeometry.CornerFraction, _notched ? 7.0 * _unit : 0.0);
+            if (_shading == null)
+            {
+                Geometry shape = RoundedSlotGeometry.Build(
+                    centre, _ringInner, _ringOuter, startAngle, endAngle,
+                    _outerRadius * RoundedSlotGeometry.CornerFraction, notch);
 
-            p.Body = new Path { Data = shape, Fill = IdleFill(index), Stroke = WedgeStroke, StrokeThickness = 1.0 };
-            p.Layer.Children.Add(p.Body);
+                p.Body = new Path { Data = shape, Fill = IdleFill(index), Stroke = WedgeStroke, StrokeThickness = 1.0 };
+                p.Layer.Children.Add(p.Body);
 
-            p.Glow = new Path { Data = shape, Fill = _hoverFill, Stroke = WedgeStrokeHover, StrokeThickness = 2.0, Opacity = 0.0 };
-            p.Layer.Children.Add(p.Glow);
+                p.Glow = new Path { Data = shape, Fill = _hoverFill, Stroke = WedgeStrokeHover, StrokeThickness = 2.0, Opacity = 0.0 };
+                p.Layer.Children.Add(p.Glow);
+            }
+            else
+            {
+                // Soft: a button a little in from the ring's inner edge, standing on the plate. Clay: a firm button
+                // with clear gaps all round, so each one reads as its own piece.
+                Geometry button = _effect == QuickMenuEffect.Soft
+                    ? RoundedSlotGeometry.Build(centre, _ringInner + _shading.Scaled(4.0), _ringOuter,
+                        startAngle, endAngle, _shading.Scaled(10.0), notch)
+                    : RoundedSlotGeometry.Build(centre, _ringInner + _shading.Scaled(8.0), _ringOuter - _shading.Scaled(2.0),
+                        startAngle, endAngle, _shading.Scaled(9.0), notch);
+                AddShadedButton(p, button, filled);
+            }
 
             if (_rimLights)
             {
@@ -713,7 +944,7 @@ namespace HeronTools.UI.QuickMenu
             // Fit the icon + label inside the slot. The tight spot is the INNER corners of the block, not its
             // middle: a slot narrows towards the hub, so measure the allowance there, and never let the block
             // be wider than the ring is thick.
-            double halfWedgeRadians = ((_stepDegrees / 2.0) - WedgeGapDegrees) * Math.PI / 180.0;
+            double halfWedgeRadians = ((_stepDegrees / 2.0) - gap) * Math.PI / 180.0;
             // Measured where the name sits (just inside the slot's middle), not at the block's very bottom.
             double innerCornerRadius = Math.Max(_ringInner + 6.0, contentRadius - 10.0);
             double angularAllowance = 2.0 * innerCornerRadius * Math.Tan(Math.Min(halfWedgeRadians, 1.2));
@@ -755,22 +986,32 @@ namespace HeronTools.UI.QuickMenu
             Point middle = Polar(_ringOuter, centreAngle);
             SlotParts p = NewSlot(centreAngle, middle);
 
-            var shape = new EllipseGeometry(middle, _bubbleRadius, _bubbleRadius);
-            shape.Freeze();
-            p.Body = new Path { Data = shape, Fill = IdleFill(index), Stroke = WedgeStroke, StrokeThickness = 1.0 };
-            p.Layer.Children.Add(p.Body);
-
-            var glowFill = new RadialGradientBrush
+            if (_shading == null)
             {
-                GradientStops =
+                var shape = new EllipseGeometry(middle, _bubbleRadius, _bubbleRadius);
+                shape.Freeze();
+                p.Body = new Path { Data = shape, Fill = IdleFill(index), Stroke = WedgeStroke, StrokeThickness = 1.0 };
+                p.Layer.Children.Add(p.Body);
+
+                var glowFill = new RadialGradientBrush
                 {
-                    new GradientStop(HeronPalette.Colour("WheelBubbleGlowCentreColor"), 0.0),   // Accent 45 %
-                    new GradientStop(HeronPalette.Colour("WheelBubbleGlowEdgeColor"), 1.0)    // Accent 18 %
-                }
-            };
-            glowFill.Freeze();
-            p.Glow = new Path { Data = shape, Fill = glowFill, Stroke = WedgeStrokeHover, StrokeThickness = 2.0, Opacity = 0.0 };
-            p.Layer.Children.Add(p.Glow);
+                    GradientStops =
+                    {
+                        new GradientStop(HeronPalette.Colour("WheelBubbleGlowCentreColor"), 0.0),   // Accent 45 %
+                        new GradientStop(HeronPalette.Colour("WheelBubbleGlowEdgeColor"), 1.0)    // Accent 18 %
+                    }
+                };
+                glowFill.Freeze();
+                p.Glow = new Path { Data = shape, Fill = glowFill, Stroke = WedgeStrokeHover, StrokeThickness = 2.0, Opacity = 0.0 };
+                p.Layer.Children.Add(p.Glow);
+            }
+            else
+            {
+                double radius = _effect == QuickMenuEffect.Clay ? _bubbleRadius - _shading.Scaled(2.0) : _bubbleRadius;
+                var button = new EllipseGeometry(middle, radius, radius);
+                button.Freeze();
+                AddShadedButton(p, button, filled);
+            }
 
             AddSlotContent(p, index, entry, filled, usable, _bubbleRadius * 1.6, middle, false, 34.0);
 
@@ -828,18 +1069,38 @@ namespace HeronTools.UI.QuickMenu
 
             if (filled && entry.Icon != null)
             {
-                stack.Children.Add(new Image
+                var icon = new Image
                 {
                     Source = entry.Icon,
                     Width = iconSize,
                     Height = iconSize,
-                    Margin = new Thickness(0, 0, 0, withLabel ? 6 : 0),
-                    HorizontalAlignment = HorizontalAlignment.Center,
                     SnapsToDevicePixels = true,
 
                     // Dimmed the way the ribbon dims a greyed button's icon.
                     Opacity = usable ? 1.0 : 0.35
-                });
+                };
+                p.Icon = icon;
+
+                var iconCell = new Grid
+                {
+                    Width = iconSize,
+                    Height = iconSize,
+                    Margin = new Thickness(0, 0, 0, withLabel ? 6 : 0),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+                iconCell.Children.Add(icon);
+
+                // Clay: on orange clay the icon turns White - the icon's own shape cut from a White fill (an
+                // opacity mask, not an effect), so it works with whatever icons the ribbon ships.
+                if (_effect == QuickMenuEffect.Clay && usable)
+                {
+                    var mask = new ImageBrush(entry.Icon) { Stretch = Stretch.Uniform };
+                    mask.Freeze();
+                    p.IconLit = new Rectangle { Fill = IconOnClay, OpacityMask = mask, Opacity = 0.0 };
+                    iconCell.Children.Add(p.IconLit);
+                }
+
+                stack.Children.Add(iconCell);
             }
 
             // An empty slot always says so, even when names are off, so it never looks like a missing icon.
@@ -881,18 +1142,36 @@ namespace HeronTools.UI.QuickMenu
             _hubLayer = new Canvas { IsHitTestVisible = false, RenderTransform = _hubGrow };
             WheelCanvas.Children.Add(_hubLayer);
 
-            var hub = new Ellipse { Width = hr * 2.0, Height = hr * 2.0, Fill = HubFill, Stroke = HubStroke, StrokeThickness = 1.0 };
-            Canvas.SetLeft(hub, _centre - hr);
-            Canvas.SetTop(hub, _centre - hr);
-            _hubLayer.Children.Add(hub);
+            double tickEdge = hr;
+            if (_effect == QuickMenuEffect.Soft)
+            {
+                // A raised round knob with a dish pressed into it; the ticks sit inside the dish.
+                double knob = hr - _shading.Scaled(4.0);
+                double dish = Math.Max(10.0, hr - _shading.Scaled(20.0));
+                _hubLayer.Children.Add(_shading.Raised(Circle(knob)));
+                _hubLayer.Children.Add(_shading.Pressed(Circle(dish), false));
+                tickEdge = dish;
+            }
+            else if (_effect == QuickMenuEffect.Clay)
+            {
+                _hubLayer.Children.Add(_shading.ClayHub(Circle(hr - _shading.Scaled(2.0))));
+                tickEdge = hr - _shading.Scaled(2.0);
+            }
+            else
+            {
+                var hub = new Ellipse { Width = hr * 2.0, Height = hr * 2.0, Fill = HubFill, Stroke = HubStroke, StrokeThickness = 1.0 };
+                Canvas.SetLeft(hub, _centre - hr);
+                Canvas.SetTop(hub, _centre - hr);
+                _hubLayer.Children.Add(hub);
+            }
 
             if (_hub == QuickMenuHub.Ticks)
             {
                 for (int k = 0; k < 48; k++)
                 {
                     double angle = k * 7.5;
-                    Point a = Polar(hr - 4.0, angle);
-                    Point b = Polar(hr - (k % 6 == 0 ? 10.0 : 7.0), angle);
+                    Point a = Polar(tickEdge - 4.0, angle);
+                    Point b = Polar(tickEdge - (k % 6 == 0 ? 10.0 : 7.0), angle);
                     _hubLayer.Children.Add(new Line { X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y, Stroke = HubTick, StrokeThickness = 1.0 });
                 }
             }
@@ -957,6 +1236,14 @@ namespace HeronTools.UI.QuickMenu
             _hubLayer.Children.Add(stack);
         }
 
+        /// <summary>A frozen circle round the wheel centre.</summary>
+        private Geometry Circle(double radius)
+        {
+            var circle = new EllipseGeometry(new Point(_centre, _centre), radius, radius);
+            circle.Freeze();
+            return circle;
+        }
+
         private void AddHubMark(Geometry mark, double size, double middleY)
         {
             var box = new Viewbox
@@ -1013,7 +1300,8 @@ namespace HeronTools.UI.QuickMenu
                 double half = Math.Max(4.0, (_stepDegrees / 2.0) - (WedgeGapDegrees * 3.0));
 
                 // Just clear of a lifted slot (which steps out 7 + 1 for its edge), inside the window's margin.
-                double arcRadius = _ringOuter + 11.0;
+                // (Soft: just outside the plate the buttons stand on.)
+                double arcRadius = _plateRadius > 0.0 ? _plateRadius + 5.0 : _ringOuter + 11.0;
                 var arc = new PathFigure { StartPoint = Polar(arcRadius, -90.0 - half), IsClosed = false, IsFilled = false };
                 arc.Segments.Add(new ArcSegment(Polar(arcRadius, -90.0 + half), new Size(arcRadius, arcRadius), 0,
                     (half * 2.0) > 180.0, SweepDirection.Clockwise, true));
@@ -1047,7 +1335,7 @@ namespace HeronTools.UI.QuickMenu
 
             if (_chevron)
             {
-                double r = _ringOuter + (8.0 * _unit);
+                double r = (_plateRadius > 0.0 ? _plateRadius + (4.0 * _unit) : _ringOuter) + (8.0 * _unit);
                 var chevron = new PathFigure { StartPoint = Polar(r + (9.0 * _unit), -94.0), IsClosed = false, IsFilled = false };
                 chevron.Segments.Add(new LineSegment(Polar(r, -90.0), true));
                 chevron.Segments.Add(new LineSegment(Polar(r + (9.0 * _unit), -86.0), true));
@@ -1264,10 +1552,18 @@ namespace HeronTools.UI.QuickMenu
             {
                 SlotParts previous = _parts[_hoverIndex];
                 Panel.SetZIndex(previous.Layer, 0);
-                previous.Body.Fill = IdleFill(_hoverIndex);
-                previous.Body.Stroke = WedgeStroke;
-                previous.Body.StrokeThickness = 1.0;
+                if (previous.Body != null)
+                {
+                    previous.Body.Fill = IdleFill(_hoverIndex);
+                    previous.Body.Stroke = WedgeStroke;
+                    previous.Body.StrokeThickness = 1.0;
+                }
+
                 FadeTo(previous.Glow, 0.0, 140);
+                FadeTo(previous.LitArt, 0.0, 140);
+                FadeTo(previous.IdleArt, IdleArtOpacity(_slots[_hoverIndex] != null), 140);
+                FadeTo(previous.IconLit, 0.0, 140);
+                FadeTo(previous.Icon, IsUsable(_hoverIndex) ? 1.0 : 0.35, 140);
                 FadeTo(previous.RimLight, 0.0, 140);
                 FadeTo(previous.Pill, 0.0, 120);
                 LiftSlot(_hoverIndex, false);
@@ -1288,10 +1584,21 @@ namespace HeronTools.UI.QuickMenu
 
                 // In front of its neighbours, so its lift, glow and name pill are never half-hidden.
                 Panel.SetZIndex(current.Layer, 1);
-                current.Body.Stroke = usable ? WedgeStroke : WedgeStrokeHoverDisabled;
-                current.Body.StrokeThickness = usable ? 1.0 : 1.4;
+                if (current.Body != null)
+                {
+                    current.Body.Stroke = usable ? WedgeStroke : WedgeStrokeHoverDisabled;
+                    current.Body.StrokeThickness = usable ? 1.0 : 1.4;
+                }
+
                 if (usable)
                 {
+                    // Soft / Clay: the pressed-in (or orange clay) picture takes over from the button at rest;
+                    // the clay icon turns White.
+                    EnsureLitArt(current);
+                    FadeTo(current.LitArt, 1.0, 90);
+                    FadeTo(current.IdleArt, 0.0, 90);
+                    FadeTo(current.IconLit, 1.0, 90);
+                    FadeTo(current.Icon, current.IconLit != null ? 0.0 : 1.0, 90);
                     FadeTo(current.Glow, 1.0, 90);
                     FadeTo(current.RimLight, 1.0, 90);
                     FadeTo(current.Pill, 1.0, 90);

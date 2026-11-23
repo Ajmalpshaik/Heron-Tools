@@ -51,13 +51,14 @@ Every tool, step by step, with what it changes and how to undo it: **[tool catal
 | | **Colorize** | The same picks, but the colour goes straight onto the elements (no filter). **Restore original** puts their own overrides back. |
 | | **Reset Graphics** | Clear the overrides of the selection, or of whole views and categories - it counts first. **Restore Last Reset** puts them back. |
 | | **View Crop** | Fit plan crops around their elements with a margin; tick a box to also set the annotation crop at an offset on paper. |
-| | **3D Snapshot** | Fit Revit's own {3D} view to a selected room, a section, or a window you drag in a plan - you stay in your view. |
+| | **3D Section Box** | Fit Revit's own {3D} view to a selected room, a section, or a window you drag in a plan - you stay in your view. |
 | | **Unhide All** | Show everything hidden one by one in the view and turn Temporary Hide/Isolate off. |
 | | **Toggle Links** | Turn the RVT Links category off or on in the view. |
 | | **Highlight** | Selection in red, the rest grey. **Click again to put the view back.** |
 | [Datums](docs/tools/datums.md) | **Reset Datums to 3D** | Put grid and/or level ends in the view back to their 3D extents. |
 | | **Level Extents** | Match level extents to another level, or stretch them to the section box. |
 | | **Flip Bubbles** | Swap which end of a grid or level shows its bubble. |
+| | **Auto Dimension** | Chain and overall dimension rows across the grids and levels of a view, just inside their heads. |
 | [Modify](docs/tools/modify.md) | **Match Elevation** | Match the centre, top or bottom elevation of a source MEP element. |
 | | **Reassign Level** | Move MEP elements to another reference level without moving them in space. |
 | | **Pin / Unpin** | Pin or unpin groups: title blocks, views on sheets, ducts, pipes, grids, levels... |

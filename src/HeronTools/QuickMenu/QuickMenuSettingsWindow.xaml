@@ -6,10 +6,10 @@
   Heron-Layer:  revit
   See docs/metadata-standard.md
 
-  Quick Menu Settings: choose which Heron Tools button or Revit command sits in each slot of the quick
-  wheel, how many slots there are, how big the wheel opens, and its look (style, tool names, opening),
-  with a Preview of the real wheel. Left card: every tool, with a search box.
-  Right card: the wheel itself, drawn in code exactly like the real one, and the drop target for tools.
+  Quick Menu Settings, two tabs. Slots: choose which Heron Tools button or Revit command sits in each slot of
+  the quick wheel and how many slots there are - left card every tool, with a search box; right card the wheel
+  drawn in code in the chosen design, and the drop target for tools. Look (2026-11-22, a separate tab inside
+  the settings as Ajmal asked): design, colour, effect, names, opening and size, with the real wheel live.
   Footer: honest status on the left, ONE Accent action (Save) on the right.
   The body scrolls on a small screen, so the footer and everything above it stay reachable.
   Heron brand design (UI/HeronStyles.xaml) - same patterns as Filter Pro and Colorize.
@@ -78,13 +78,17 @@
         <!-- ============ BODY ============ -->
         <!-- Scrolls on a small or scaled screen (ScreenFit makes the window shorter than its 780 minimum
              there), so nothing in the middle is cut off. The body fills the visible height as before, and
-             never gets shorter than the 600 it needs - below that the scrollbar takes over. Its height
+             never gets shorter than the 560 it needs (under the Slots / Look tabs) - below that the scrollbar takes over. Its height
              follows the visible area, so the tool list still scrolls on its own and is not stretched to
              every tool. -->
-        <ScrollViewer x:Name="BodyScroll" Grid.Row="1"
+        <TabControl x:Name="MainTabs" Grid.Row="1" Style="{StaticResource RailTabs}" Margin="14,4,14,0"
+                    SelectionChanged="OnTabChanged">
+        <TabItem x:Name="SlotsTab" Header="Slots" Style="{StaticResource RailTab}"
+                 ToolTip="Which tool sits in each slot of the wheel">
+        <ScrollViewer x:Name="BodyScroll"
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       Focusable="False">
-        <Border Padding="24,20,24,16" MinHeight="600"
+        <Border Padding="24,20,24,16" MinHeight="560"
                 Height="{Binding ViewportHeight, ElementName=BodyScroll}">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -200,54 +204,17 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Slots" Style="{StaticResource FieldLabel}"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <ComboBox x:Name="SlotCountCombo" Grid.Column="1"
                                   ToolTip="How many slots the wheel has. Tools in slots you take away are dropped."
                                   SelectionChanged="OnSlotCountChanged"/>
-                        <TextBlock Grid.Column="3" Text="Size" Style="{StaticResource FieldLabel}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="WheelSizeCombo" Grid.Column="4"
-                                  ToolTip="How big the wheel opens on screen."
-                                  SelectionChanged="OnWheelSizeChanged"/>
                     </Grid>
 
-                    <!-- The wheel's look: design, tool names, opening - and a Preview of the real wheel. -->
-                    <Grid Grid.Row="2" Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="8"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Style" Style="{StaticResource FieldLabel}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="StyleCombo" Grid.Row="0" Grid.Column="1"
-                                  ToolTip="Which of the six wheel designs opens."/>
-                        <TextBlock Grid.Row="0" Grid.Column="3" Text="Names" Style="{StaticResource FieldLabel}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="NamesCombo" Grid.Row="0" Grid.Column="4"
-                                  ToolTip="Tool names written on the wheel, or icons only with the name shown in the centre."/>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Opens" Style="{StaticResource FieldLabel}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="OpeningCombo" Grid.Row="2" Grid.Column="1"
-                                  ToolTip="How the wheel opens. Every way starts with a small centre button that grows."/>
-                        <Button x:Name="PreviewButton" Grid.Row="2" Grid.Column="3" Grid.ColumnSpan="2"
-                                Content="Preview the wheel"
-                                Style="{StaticResource SecondaryButton}"
-                                ToolTip="Open the real wheel with these choices and your slots. Nothing runs from it - click anywhere or press Esc to come back."
-                                Click="OnPreviewClick"/>
-                    </Grid>
+                    <!-- The chosen look in one line; it is changed on the Look tab. -->
+                    <TextBlock x:Name="LookSummaryText" Grid.Row="2" Margin="0,0,0,8"
+                               Style="{StaticResource HelpText}" TextTrimming="CharacterEllipsis"/>
 
                     <!-- Drawn in code so it matches the real wheel exactly, same as QuickMenuWindow does. -->
                     <Canvas x:Name="WheelCanvas" Grid.Row="3"
@@ -282,8 +249,103 @@
         </Grid>
         </Border>
         </ScrollViewer>
+        </TabItem>
+
+        <!-- ============ LOOK TAB ============ -->
+        <!-- How the wheel looks: design, colour, effect, names, opening and size, with the REAL wheel live on
+             the right (built by QuickMenuWindow and shown here) - point at it to see a tool light up. -->
+        <TabItem x:Name="LookTab" Header="Look" Style="{StaticResource RailTab}"
+                 ToolTip="How the wheel looks: design, colour, effect, names, opening and size">
+        <ScrollViewer x:Name="LookScroll"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Focusable="False">
+        <Border Padding="10,16,10,16" MinHeight="560"
+                Height="{Binding ViewportHeight, ElementName=LookScroll}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- The choices -->
+            <Border Grid.Column="0" Style="{StaticResource StepCard}">
+                <StackPanel>
+                    <TextBlock Text="Choose the look" Style="{StaticResource StepTitle}" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Design" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="StyleCombo" Margin="0,0,0,12"
+                              ToolTip="The shape of the wheel: which of the six designs opens."/>
+
+                    <TextBlock Text="Colour" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="ColourCombo" Margin="0,0,0,12"
+                              ToolTip="Dark or Light. Every design comes in both."/>
+
+                    <TextBlock Text="Effect" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="EffectCombo" Margin="0,0,0,12"
+                              ToolTip="Flat is the wheel as it always was. Soft: raised buttons, the one you point at presses in. Clay: rounded buttons, the one you point at pops out in orange."/>
+
+                    <TextBlock Text="Names" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="NamesCombo" Margin="0,0,0,12"
+                              ToolTip="Tool names written on the wheel, or icons only with the name shown in the centre."/>
+
+                    <TextBlock Text="Opens" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="OpeningCombo" Margin="0,0,0,12"
+                              ToolTip="How the wheel opens. Every way starts with a small centre button that grows."/>
+
+                    <TextBlock Text="Size" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="WheelSizeCombo" Margin="0,0,0,16"
+                              ToolTip="How big the wheel opens on screen."
+                              SelectionChanged="OnWheelSizeChanged"/>
+
+                    <Button x:Name="PreviewButton"
+                            Content="Open the real wheel"
+                            Style="{StaticResource SecondaryButton}"
+                            ToolTip="Open the real wheel with these choices and your slots, where your mouse is. Nothing runs from it - click anywhere or press Esc to come back."
+                            Click="OnPreviewClick"/>
+
+                    <TextBlock Style="{StaticResource HelpText}" TextWrapping="Wrap" Margin="0,12,0,0"
+                               Text="Every design works with every colour and effect. Flat is the look the wheel has always had."/>
+                </StackPanel>
+            </Border>
+
+            <!-- The real wheel, live -->
+            <Border Grid.Column="2" Style="{StaticResource StepCard}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Text="How it looks" Style="{StaticResource StepTitle}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox x:Name="BackdropCombo" DockPanel.Dock="Right" MinWidth="170"
+                                  ToolTip="See the wheel over a white sheet or a dark 3D view."/>
+                        <TextBlock DockPanel.Dock="Right" Text="Behind it" Style="{StaticResource FieldLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    </DockPanel>
+
+                    <Border x:Name="LookStage" Grid.Row="1" CornerRadius="10" ClipToBounds="True"
+                            Background="{StaticResource WheelPreviewSheet}"
+                            BorderBrush="{StaticResource BorderSoft}" BorderThickness="1">
+                        <Viewbox x:Name="LookPreviewHost" Stretch="Uniform" Margin="8"/>
+                    </Border>
+
+                    <TextBlock Grid.Row="2" Margin="0,10,0,0" Style="{StaticResource HelpText}"
+                               TextAlignment="Center" TextWrapping="Wrap"
+                               Text="This is the real wheel with your slots. Point at it to see a tool light up; change Opens to watch it open again."/>
+                </Grid>
+            </Border>
+        </Grid>
+        </Border>
+        </ScrollViewer>
+        </TabItem>
+        </TabControl>
 
         <!-- ============ FOOTER ============ -->
+
         <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
                 BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid>

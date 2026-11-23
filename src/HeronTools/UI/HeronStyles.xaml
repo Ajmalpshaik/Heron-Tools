@@ -34,6 +34,15 @@ Heron window, so it needs a few more see-through steps of the same brand colours
     Success 28 %          the slot a tool is being dropped on (Settings preview)
 Only the Quick Menu wheels use them; a window uses the shades above.
 
+Quick Menu Colour and Effect (2026-11-22, the "WheelLight..." and Soft / Clay keys below): still no new colour.
+    Light colour   Mist 100 / 98 / 95 / 90 / 60 %  button face / hub / slot / not available / empty slot
+                   Ink 92 / 86 / 72 / 45 %  lit name / name / mark / cannot run;  Ink 28 / 25 / 20 / 14 / 10 %  lines,
+                   ticks and rim;  Mist 85 % to 0 %  the Flat halo
+    Soft / Clay    shadows: Shadow (Dark) or Ink (Light) see-through; shines: Mist (Dark) or White (Light)
+                   see-through; the lit Clay slot: Accent Light to Accent with a White icon and name, and an Accent
+                   glow; the pressed Soft slot: an Accent 0 % to 22 % (Dark) / 14 % (Light) wash. How see-through
+                   each shadow and shine is lives in QuickMenu/QuickMenuShading.cs - a strength, not a colour.
+
 Font: Manrope, built into HeronTools.dll (Resources/Fonts, SIL Open Font License 1.1), with Segoe UI as
 the fallback.
 
@@ -108,6 +117,35 @@ by today's windows; they are kept for the next tools moved in, and use brand col
     <Color x:Key="WheelBubbleGlowEdgeColor">#2EFD641A</Color>             <!-- Accent 18 % -->
     <Color x:Key="WheelHaloColor">#D90F0F10</Color>                       <!-- Ink 85 % -->
     <Color x:Key="WheelHaloFadeColor">#000F0F10</Color>                   <!-- Ink 0 % -->
+
+    <!-- Quick Menu wheel, Light colour (see the header): the dark shades above, turned round - Mist fills, Ink lines/text. -->
+    <SolidColorBrush x:Key="WheelLightBase" Color="#FFF7F5F2"/>                <!-- Mist: Soft / Clay button face -->
+    <SolidColorBrush x:Key="WheelLightSlotFill" Color="#F2F7F5F2"/>            <!-- Mist 95 % -->
+    <SolidColorBrush x:Key="WheelLightSlotUnavailableFill" Color="#E6F7F5F2"/> <!-- Mist 90 % -->
+    <SolidColorBrush x:Key="WheelLightSlotEmptyFill" Color="#99F7F5F2"/>       <!-- Mist 60 % -->
+    <SolidColorBrush x:Key="WheelLightHubFill" Color="#FAF7F5F2"/>             <!-- Mist 98 % -->
+    <SolidColorBrush x:Key="WheelLightLine" Color="#240F0F10"/>                <!-- Ink 14 % -->
+    <SolidColorBrush x:Key="WheelLightLineStrong" Color="#470F0F10"/>          <!-- Ink 28 % -->
+    <SolidColorBrush x:Key="WheelLightTextLit" Color="#EB0F0F10"/>             <!-- Ink 92 % (name on the lit Flat slot) -->
+    <SolidColorBrush x:Key="WheelLightTextIdle" Color="#DB0F0F10"/>            <!-- Ink 86 % -->
+    <SolidColorBrush x:Key="WheelLightTextSecondary" Color="#B80F0F10"/>       <!-- Ink 72 % -->
+    <SolidColorBrush x:Key="WheelLightTextDisabled" Color="#730F0F10"/>        <!-- Ink 45 % -->
+    <SolidColorBrush x:Key="WheelLightTick" Color="#400F0F10"/>                <!-- Ink 25 % -->
+    <SolidColorBrush x:Key="WheelLightHubTick" Color="#330F0F10"/>             <!-- Ink 20 % -->
+    <SolidColorBrush x:Key="WheelLightRim" Color="#1A0F0F10"/>                 <!-- Ink 10 % -->
+    <Color x:Key="WheelLightHaloColor">#D9F7F5F2</Color>                       <!-- Mist 85 % -->
+    <Color x:Key="WheelLightHaloFadeColor">#00F7F5F2</Color>                   <!-- Mist 0 % -->
+    <SolidColorBrush x:Key="WheelPreviewSheet" Color="#FFFFFFFF"/>             <!-- White: Settings > Look, "a white sheet" behind the wheel -->
+
+    <!-- Quick Menu wheel, Soft and Clay effects (see the header). Solid colours: how see-through each shadow or
+         shine is, is the effect's own strength (QuickMenuShading.cs), never a new colour. -->
+    <Color x:Key="ShadowColor">#FF000000</Color>                               <!-- Shadow -->
+    <Color x:Key="MistColor">#FFF7F5F2</Color>                                 <!-- Mist -->
+    <Color x:Key="WhiteColor">#FFFFFFFF</Color>                                <!-- White -->
+    <Color x:Key="SurfaceColor">#FF1B1B1F</Color>                              <!-- Surface: Dark Soft / Clay button face -->
+    <Color x:Key="WheelSoftWashDarkColor">#38FD641A</Color>                    <!-- Accent 22 %: pressed slot's wash, Dark -->
+    <Color x:Key="WheelSoftWashLightColor">#24FD641A</Color>                   <!-- Accent 14 %: pressed slot's wash, Light -->
+    <Color x:Key="WheelAccentClearColor">#00FD641A</Color>                     <!-- Accent 0 % (gradient end only) -->
 
     <!-- Aliases used by the templates below -->
     <SolidColorBrush x:Key="PrimaryBrush" Color="#FFFD641A"/>

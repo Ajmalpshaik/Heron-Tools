@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// The model work behind 3D Snapshot: measure the box (rooms/spaces, a section, or a plan rectangle) and put
+// The model work behind 3D Section Box: measure the box (rooms/spaces, a section, or a plan rectangle) and put
 // it on Revit's own default 3D view ("{3D - user}" or "{3D}") in one transaction. Shows nothing itself; the
 // command (Cmd3DSnapshot) talks to the modeller.
 
@@ -34,7 +34,7 @@ namespace HeronTools.Services.Snapshot3D
 
     internal static class Snapshot3DService
     {
-        internal const string TransactionName = "3D Snapshot";
+        internal const string TransactionName = "3D Section Box";
 
         /// <summary>Extra space round the box, like Revit's own Selection Box (BX). Ajmal's choice: 300 mm.</summary>
         internal static readonly double Padding = SnapshotTarget.MillimetresToFeet(300.0);
@@ -71,7 +71,7 @@ namespace HeronTools.Services.Snapshot3D
             internal bool Linked { get; }
         }
 
-        /// <summary>What the modeller's selection holds that 3D Snapshot can use.</summary>
+        /// <summary>What the modeller's selection holds that 3D Section Box can use.</summary>
         internal sealed class SelectionRead
         {
             internal List<SpatialPart> Spatials { get; } = new List<SpatialPart>();
@@ -91,7 +91,7 @@ namespace HeronTools.Services.Snapshot3D
 
             /// <summary>
             /// Section marks whose name is shared by two or more section-type views, with nothing to tell which one
-            /// the mark stands for. 3D Snapshot does not guess; the modeller renames one view or opens it.
+            /// the mark stands for. 3D Section Box does not guess; the modeller renames one view or opens it.
             /// </summary>
             internal int MarksSharedName { get; set; }
         }
@@ -249,7 +249,7 @@ namespace HeronTools.Services.Snapshot3D
             return 0.0;
         }
 
-        /// <summary>True for the views 3D Snapshot treats as a section: sections, detail sections and elevations.</summary>
+        /// <summary>True for the views 3D Section Box treats as a section: sections, detail sections and elevations.</summary>
         internal static bool IsSectionLike(View view)
         {
             if (!(view is ViewSection) || view.IsTemplate)
@@ -596,7 +596,7 @@ namespace HeronTools.Services.Snapshot3D
 
         /// <summary>
         /// Finds Revit's default 3D view (making it the first time, if Revit allows) and sets its section box -
-        /// and, for a section, its camera - in ONE transaction named "3D Snapshot". Any failure rolls the whole
+        /// and, for a section, its camera - in ONE transaction named "3D Section Box". Any failure rolls the whole
         /// run back.
         /// </summary>
         internal static SnapshotApplyResult Apply(Document doc, SnapshotTarget target)
@@ -637,7 +637,7 @@ namespace HeronTools.Services.Snapshot3D
                             result.Problem = "Revit's own 3D view \"" + viewName + "\" is not in this model yet, and Revit " +
                                              "does not let an add-in make it. Nothing was changed.\n\n" +
                                              "Click Revit's 3D button once (View tab > 3D View, or the small house on the " +
-                                             "Quick Access Toolbar), go back to your view, then run 3D Snapshot again.";
+                                             "Quick Access Toolbar), go back to your view, then run 3D Section Box again.";
                             return result;
                         }
 

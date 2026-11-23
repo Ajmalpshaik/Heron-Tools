@@ -18,7 +18,7 @@ body:
         - Colorize
         - Reset Graphics (Reset Selected / Reset Graphics / Restore Last Reset)
         - View Crop (Crop View by Elements, with or without the annotation crop)
-        - 3D Snapshot
+        - 3D Section Box
         - Unhide All
         - Toggle Links
         - Highlight Selection

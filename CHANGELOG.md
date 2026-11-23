@@ -4,6 +4,34 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Added - Auto Dimension (Datums panel) (NEEDS A REAL REVIT TEST)
+- **Auto Dimension** drop-down: **Grids**, **Levels**, **Grids and Levels**, **Settings**. Moved from AJ-Tools'
+  Automatic Dimension and rebuilt: each set of parallel grids or levels gets a chain and an overall, **just inside the
+  grid and level heads** (and always inside the crop), at the bubble end, the other end or both. One Undo step per run;
+  a run that places everything ends quietly. Notes on what was fixed: [docs/auto-dimension-move-notes.md](docs/auto-dimension-move-notes.md).
+- Grids at an angle to the screen get their own rows; callouts of sections are allowed; select grids or levels first
+  to dimension only those; "leave out" names are whole names (`1` no longer leaves out 10 and 21), with `*` and `?`.
+
+### Added - Quick Menu look (NEEDS A REAL REVIT TEST)
+- **Colour and Effect for the wheel:** every one of the six designs now comes in **Dark** or **Light**, and **Flat**,
+  **Soft** (neumorphism: soft raised buttons on a plate, the pointed one presses in) or **Clay** (soft 3D clay: rounded
+  buttons, the pointed one pops out in orange with a white icon). Flat and Dark are the standard, so a wheel saved
+  before looks exactly as it did. The soft shadows are drawn once when the wheel opens, never live.
+- **Quick Menu Settings has two tabs:** **Slots** (which tool sits where, as before) and **Look** (design, colour,
+  effect, names, opening and size), with the real wheel shown live on the Look tab - point at it to see a tool light up.
+- The layout file gains two lines, `Colour=` and `Effect=`; an older file without them still reads fine.
+
+### Changed
+
+- **New ribbon icons (in progress):** Quick Menu and Quick Menu Settings in a soft white 3D look; Filter Pro,
+  Colorize (now a paint roller), Reset Graphics (a ring arrow) and View Crop in orange 3D clay. The rest of the
+  icons follow. Needs a real Revit look on the light and dark ribbon.
+- **View panel layout:** Filter Pro, Colorize and View Crop are now one stack of three small buttons (like Unhide
+  All / Toggle Links / Highlight); Reset Graphics and 3D Section Box stay big buttons. Needs a real Revit look.
+- **3D Snapshot is now called 3D Section Box** (button text, tooltips, messages, Undo name, docs): it fits the
+  section box of Revit's own 3D view, it does not take a picture. The button id and command class stay the same,
+  so keyboard shortcuts and Quick Menu slots keep working.
+
 ### Changed - View panel (NEEDS A REAL REVIT TEST)
 - **View Crop is one button now.** The separate "Annotation Crop by View Crop" button is gone; its job is the
   **Also turn on the annotation crop** tick box in the View Crop window, which sets the annotation crop the same

@@ -35,10 +35,23 @@ Screenshot needed: the Quick Menu wheel open over a Revit floor plan.
 ## Quick Menu Settings
 
 **What it does:** chooses which tool sits in each slot of the wheel, how many slots there are (4 to 12, 8 as
-standard) and how big the wheel opens.
+standard), and how the wheel looks.
 
-**How to use it:** Heron tab > Quick > arrow under **Quick Menu** > **Quick Menu Settings**. Put a tool in each
-slot, set the number of slots and the size, then save. It works even with no model open.
+**How to use it:** Heron tab > Quick > arrow under **Quick Menu** > **Quick Menu Settings**. It works even with no
+model open. The window has two tabs, and one **Save** keeps both:
+
+- **Slots:** put a tool in each slot (drag it onto the wheel, or pick it and press **Set**) and choose how many slots.
+- **Look:** how the wheel looks, with the real wheel shown live beside the choices - point at it to see a tool light
+  up. **Behind it** shows the wheel over a white sheet or a dark 3D view (only for looking; it is not saved).
+  - **Design:** the shape - Heron Ring, Slim Ring, Double Ring, Orbit Buttons, Rim Lights or HUD Notched.
+  - **Colour:** Dark or Light.
+  - **Effect:** **Flat** (the look the wheel has always had), **Soft** (soft raised buttons on a plate; the one you
+    point at presses in) or **Clay** (rounded buttons like soft clay; the one you point at pops out in orange).
+    Every design works with every colour and effect.
+  - **Names:** tool names on the wheel, or icons only with the name in the centre.
+  - **Opens:** how the wheel opens - Unfold, Bloom, Spin in or Iris Pop.
+  - **Size:** how big the wheel opens on screen.
+  - **Open the real wheel** opens it where your mouse is, to try it. Nothing runs from it.
 
 **What it changes in the model:** nothing. The layout is saved for your Windows user on this PC in
 `%AppData%\HeronTools\quickmenu-slots.txt`, so it stays after Revit restarts and Heron Tools updates.
