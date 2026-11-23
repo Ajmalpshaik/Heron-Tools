@@ -12,10 +12,10 @@ powershell -ExecutionPolicy Bypass -File build\build-store-package.ps1
 
 It builds the **Store version** for Revit 2022 to 2027 and writes `dist\HeronTools-Store-<version>.zip`.
 Nothing is installed on the PC. Options: `-Years 2026,2027` (only some years), `-SkipBuild` (pack what is
-already built), `-SupportEmail <address>` (the public support email written into the package).
+already built), `-SupportEmail <address>` (only if a public support email is ever wanted; see below).
 
 At the end it prints a table (one row per Revit year), the list of files in the zip, and either
-**Zip made and checked** or **NOT READY TO SUBMIT** with what is missing (help file, Store icon, support email).
+**Zip made and checked** or **NOT READY TO SUBMIT** with what is missing (help file, Store icon, Revit 2027).
 
 ## What the Store version leaves out
 
@@ -55,7 +55,10 @@ post (blog.autodesk.io, "Understanding the role of SeriesMin and SeriesMax", 202
 
 Not from Autodesk's file: the package-level `<RuntimeRequirements>` spans R2022 to R2027 (Autodesk's has one year
 there; the blog's several-year example has none). **If a Revit year does not load the bundle, remove that line
-first.** The `Email` in `CompanyDetails` is filled from `-SupportEmail`.
+first.**
+
+**Support is GitHub issues only** (Ajmal's choice, 2026-11-23): `CompanyDetails` gives
+`Url=".../Heron-Tools/issues"` and no `Email`. An `Email` attribute is written only if `-SupportEmail` is given.
 
 **Fixed codes.** `UpgradeCode` `{57635C9D-886C-474D-8845-A71D1D68C10C}` is fixed for the life of the product
 (never change it; the GitHub installer and `build.ps1` also use it to find the Store version). `ProductCode`

@@ -38,8 +38,8 @@
     Pack what is already built in src\HeronTools\bin\Release\Store\<year> instead of building again.
 
 .PARAMETER SupportEmail
-    The public support email written into PackageContents.xml (CompanyDetails). Left empty, the zip is made
-    but the summary says it is not ready to submit.
+    A public support email for PackageContents.xml (CompanyDetails). Left empty (Ajmal's choice, 2026-11-23),
+    support is GitHub issues only: CompanyDetails gives the issues page and no Email attribute is written.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File build\build-store-package.ps1
@@ -272,8 +272,6 @@ Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination (Join-Path $
 Copy-Item -LiteralPath (Join-Path $repoRoot 'NOTICE') -Destination (Join-Path $resources 'NOTICE.txt')
 Copy-Item -LiteralPath (Join-Path $repoRoot 'src\HeronTools\Resources\Fonts\OFL.txt') -Destination (Join-Path $resources 'Manrope-OFL.txt')
 
-if (-not $SupportEmail) { $notReady.Add('no -SupportEmail: CompanyDetails Email in PackageContents.xml is empty') }
-
 # ---------------------------------------------------------------------------------------------------
 # PackageContents.xml - root and CompanyDetails as in Autodesk's own Revit bundle; one <Components> per year
 # ---------------------------------------------------------------------------------------------------
@@ -293,7 +291,11 @@ $root = ('<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="Revit" Produc
     'HelpFile="./Contents/Resources/{4}" ProductCode="{5}" UpgradeCode="{6}" SupportedLocales="Enu">') -f
     (Esc $version), (Esc $description), $iconName, (Esc $repoUrl), $helpName, $productCode, $upgradeCode
 [void]$xml.AppendLine($root)
-[void]$xml.AppendLine(('  <CompanyDetails Name="Ajmal PS" Url="{0}" Email="{1}" />' -f (Esc "$repoUrl/issues"), (Esc $SupportEmail)))
+# Support is GitHub issues (the Url); an Email attribute is written only when -SupportEmail is given.
+$emailAttr = ''
+if ($SupportEmail) { $emailAttr = ' Email="{0}"' -f (Esc $SupportEmail) }
+$company = '  <CompanyDetails Name="Ajmal PS" Url="{0}"{1} />' -f (Esc "$repoUrl/issues"), $emailAttr
+[void]$xml.AppendLine($company)
 [void]$xml.AppendLine(('  <RuntimeRequirements OS="Win64" Platform="Revit" SeriesMin="R{0}" SeriesMax="R{1}" />' -f $minYear, $maxYear))
 foreach ($year in $yearList) {
     [void]$xml.AppendLine(('  <Components Description="Revit {0}">' -f $year))
