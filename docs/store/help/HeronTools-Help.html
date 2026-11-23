@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heron Tools - Help</title>
+<style>
+  :root{--ink:#0F0F10;--surface:#1B1B1F;--mist:#F7F5F2;--text:#EBF7F5F2;--muted:#B8F7F5F2;--line:#24F7F5F2;--accent:#FD641A;--accent-light:#FF9A5C}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--text);font:15px/1.6 "Segoe UI",system-ui,Arial,sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 64px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:8px}
+  h1{font-size:34px;margin:0 0 4px;font-weight:800;letter-spacing:-.5px}
+  header p{margin:0;color:var(--muted)}
+  h2{font-size:22px;margin:40px 0 8px;padding-top:8px;border-top:1px solid var(--line);color:var(--mist)}
+  h2 .bar,h3 .bar{color:var(--accent)}
+  h3{font-size:17px;margin:26px 0 4px;color:var(--mist)}
+  p,li{color:var(--text)}
+  ul,ol{padding-left:22px}
+  a{color:var(--accent);font-weight:600;text-decoration:none}
+  a:hover{color:var(--accent-light);text-decoration:underline}
+  code{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:12px 0}
+  .tool{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:12px 18px;margin:12px 0}
+  .tool h3{margin:0 0 4px}
+  .tool p{margin:6px 0}
+  .k{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  nav ul{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px}
+  footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Heron Tools</h1>
+  <p>Help for the free Revit add-in &middot; Revit 2022 to 2027 &middot; by Ajmal PS</p>
+</header>
+
+<nav>
+  <ul>
+    <li><a href="#what">What it is</a></li>
+    <li><a href="#install">Install and remove</a></li>
+    <li><a href="#tab">The Heron tab</a></li>
+    <li><a href="#tools">The tools</a></li>
+    <li><a href="#licence">Licence</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#support">Support</a></li>
+  </ul>
+</nav>
+
+<h2 id="what">What Heron Tools is</h2>
+<p>Heron Tools is a set of everyday tools for Autodesk Revit users: view filters, colours, crops, datums, levels,
+pinning, clash checks, links and worksets, and a tool wheel at the mouse pointer. It is free and open source.</p>
+<div class="card">
+  <p class="k">Rules every tool follows</p>
+  <ul>
+    <li><b>One button press is one Undo step.</b> If something fails, the whole run is undone and the tool says so in plain words. Press <b>Ctrl+Z</b> to undo a run.</li>
+    <li>Your own graphic overrides are never lost without a way back (each tool below says how).</li>
+    <li>A <b>greyed-out button</b> means the tool does not work in the view that is open. Its tooltip says which views it needs.</li>
+    <li>Distances in the windows are in <b>millimetres</b>.</li>
+  </ul>
+</div>
+<p><b>Please read the <a href="https://github.com/Ajmalpshaik/Heron-Tools/blob/main/DISCLAIMER.md">disclaimer</a>.</b>
+These tools change live Revit models. Try a tool on a copy of a model first, and save before a large run.</p>
+
+<h2 id="install">Install and remove</h2>
+<ol>
+  <li><b>Install:</b> download Heron Tools from the Autodesk App Store and run the installer Autodesk provides. Close Revit first. The installer adds Heron Tools to the Revit versions you have (2022 to 2027).</li>
+  <li><b>Start Revit.</b> If Revit asks whether to load the add-in, choose to always load it.</li>
+  <li><b>Remove:</b> close Revit, then uninstall <b>Heron Tools</b> from Windows <b>Settings &gt; Apps &gt; Installed apps</b>.</li>
+  <li><b>Clear saved settings (optional):</b> uninstalling leaves a few small settings files. Delete the folders <code>%AppData%\HeronTools</code> and <code>%LocalAppData%\HeronTools</code>. See the <a href="#privacy">privacy</a> section.</li>
+</ol>
+
+<h2 id="tab">Where the Heron tab is</h2>
+<p>After you start Revit, a tab called <b>Heron</b> sits in the ribbon beside Revit's own tabs. Its panels, from left to right:
+<b>Quick</b>, <b>View</b>, <b>Datums</b>, <b>Modify</b>, <b>Coordination</b>, <b>About</b>.</p>
+
+<h2 id="tools">The tools</h2>
+
+<h3><span class="bar">|</span> Quick panel</h3>
+<div class="tool">
+  <h3>Quick Menu</h3>
+  <p>Opens a tool wheel around the mouse pointer with your favourite Heron Tools buttons and Revit commands. Click it, then click a tool or press its number. <b>Esc</b> closes it. Tip: give the button a keyboard shortcut (File &gt; Options &gt; User Interface &gt; Keyboard Shortcuts, search "Quick Menu").</p>
+  <p>The small arrow under the button opens <b>Quick Menu Settings</b>: which tool is in each slot (4 to 12 slots), and how the wheel looks (design, colour, effect, names, opening style, size). It changes nothing in the model.</p>
+</div>
+
+<h3><span class="bar">|</span> View panel</h3>
+<div class="tool">
+  <h3>Filter Pro</h3>
+  <p>Makes one view filter for every value of a parameter (for example one per system or size), names them and adds them to the view, or to views you pick. Pick categories, a parameter and values; check the name preview; press <b>Apply to view</b>. Each run is one Undo step.</p>
+</div>
+<div class="tool">
+  <h3>Colorize</h3>
+  <p>The same picks as Filter Pro, but the colour goes straight onto the elements as graphic overrides and no filter is made. <b>Restore original</b> puts back each element's own overrides while Revit stays open.</p>
+</div>
+<div class="tool">
+  <h3>Reset Graphics</h3>
+  <p>A drop-down: <b>Reset Selected</b> clears the overrides of selected elements; <b>Reset Graphics...</b> clears element and/or category overrides in this view or views you pick; <b>Restore Last Reset</b> puts back what the last reset cleared.</p>
+</div>
+<div class="tool">
+  <h3>View Crop</h3>
+  <p>Fits the crop region of plan views around their elements with a margin (300 mm as standard). It now has an <b>Also turn on the annotation crop</b> tick box: tick it and the same run also turns on the annotation crop and sets it a distance outside the crop, measured on paper (25 mm as standard). Works in floor, ceiling, structural and area plans. Views with a shaped (non-rectangular) crop are skipped and listed.</p>
+</div>
+<div class="tool">
+  <h3>3D Section Box</h3>
+  <p>One click fits Revit's own {3D} view to your work: select a room, space or zone; or a section; or drag a window in a plan. You stay in your view while the 3D view updates behind it. (This tool was called 3D Snapshot in early test versions.)</p>
+</div>
+<div class="tool">
+  <h3>Unhide All</h3>
+  <p>Shows everything hidden in the active view: turns Temporary Hide/Isolate off and unhides elements hidden one by one. Categories hidden in Visibility/Graphics stay as they are.</p>
+</div>
+<div class="tool">
+  <h3>Toggle Links</h3>
+  <p>Turns the RVT Links category off or on in the active view. Click again to bring the links back.</p>
+</div>
+<div class="tool">
+  <h3>Highlight</h3>
+  <p>Shows the selected elements in red and everything else in grey in the active view. Click again in the same view to put it back.</p>
+</div>
+
+<h3><span class="bar">|</span> Datums panel</h3>
+<div class="tool">
+  <h3>Reset Datums to 3D</h3>
+  <p>Puts grid and/or level ends in the active view back to their 3D extents: <b>Grids</b>, <b>Levels</b> or <b>Grids and Levels</b>.</p>
+</div>
+<div class="tool">
+  <h3>Level Extents</h3>
+  <p><b>Match Level Extents</b> gives other levels the same 3D extents as a source level. <b>Levels to Section Box</b> stretches every level to the section box of the active 3D view.</p>
+</div>
+<div class="tool">
+  <h3>Flip Bubbles</h3>
+  <p>Swaps which end of a grid or level shows its bubble. Pick datums one at a time or window-select batches; <b>Esc</b> to finish.</p>
+</div>
+<div class="tool">
+  <h3>Auto Dimension</h3>
+  <p>On the Datums panel. Places a <b>chain</b> and an <b>overall</b> dimension row across the grids and/or levels of the active view, just inside their heads. Choose <b>Grids</b>, <b>Levels</b> or <b>Grids and Levels</b>; <b>Settings</b> sets the gaps, the ends, the dimension types and names to leave out. Select some grids or levels first to dimension only those. Works in plans, sections, elevations and their callouts; curved grids are left out and counted.</p>
+</div>
+
+<h3><span class="bar">|</span> Modify panel</h3>
+<div class="tool">
+  <h3>Match Elevation</h3>
+  <p>Gives other MEP elements the same centre, top or bottom elevation as a source element: <b>Match Centre</b>, <b>Match Top</b>, <b>Match Bottom</b>. Pick the source, then the targets; <b>Esc</b> to finish.</p>
+</div>
+<div class="tool">
+  <h3>Reassign Level</h3>
+  <p>Moves ducts, pipes, cable trays, conduits and free-standing families to another reference level without moving them in space. Choose the whole project or your selection, pick the <b>To</b> level, press <b>Reassign</b>. Anything that would move is put back and reported.</p>
+</div>
+<div class="tool">
+  <h3>Pin / Unpin</h3>
+  <p>Pins or unpins whole groups in one go: title blocks, views, legends, schedules, duct and pipe systems, equipment, grids, levels and more. In a workshared model, elements a colleague owns are left alone.</p>
+</div>
+<div class="tool">
+  <h3>Smart Selection</h3>
+  <p>Pick one element, then window-select: only elements of the same category stay selected. It only selects; it changes nothing.</p>
+</div>
+
+<h3><span class="bar">|</span> Coordination panel</h3>
+<div class="tool">
+  <h3>Quick Clash</h3>
+  <p>A clash test in the active 3D view, in a window that stays open while you work. Choose Selection A and B, then <b>Hard</b> and/or <b>Clearance</b>, and press <b>Run</b>. Clashes turn red and green and the rest goes grey. Click a clash to zoom, then <b>Isolate</b>, <b>Show all</b> or <b>Select</b>. Press <b>Reset view</b> when done (it also happens by itself before Save and Synchronize with Central).</p>
+</div>
+<div class="tool">
+  <h3>Element ID</h3>
+  <p>A drop-down. <b>ID of a Picked Element</b> shows an element's ID and which model it comes from, also in links. <b>Find by Element ID</b> finds and zooms to an element by its ID, in this model or a link. Both only read the model.</p>
+</div>
+<div class="tool">
+  <h3>3D Views by Workset</h3>
+  <p>In a workshared model, makes one 3D view per user workset, named after the workset and showing only that workset.</p>
+</div>
+<div class="tool">
+  <h3>Link Workset</h3>
+  <p>In a workshared model, puts Revit links and CAD imports on a workset (an existing one, or a new name you type).</p>
+</div>
+
+<h3><span class="bar">|</span> About panel</h3>
+<div class="tool">
+  <h3>About Heron</h3>
+  <p>Shows the Heron Tools version, the Revit and .NET versions it runs in, the privacy policy and licence links. Use <b>Copy version details</b> when you report a problem.</p>
+</div>
+
+<h2 id="licence">Licence</h2>
+<p>Heron Tools is free and open source under the <a href="https://github.com/Ajmalpshaik/Heron-Tools/blob/main/LICENSE">Apache License 2.0</a>.
+It comes <b>without warranty</b> of any kind; you are responsible for your models. See the
+<a href="https://github.com/Ajmalpshaik/Heron-Tools/blob/main/DISCLAIMER.md">disclaimer</a>.
+The Heron name and mark are not covered by the licence. Autodesk and Revit are trademarks of Autodesk, Inc.
+Heron Tools is an independent add-in and is not made or endorsed by Autodesk.</p>
+
+<h2 id="privacy">Privacy</h2>
+<p>Heron Tools collects no personal data and sends nothing over the internet. It saves a few small settings files on your own PC.
+Read the full <a href="https://github.com/Ajmalpshaik/Heron-Tools/blob/main/PRIVACY.md">privacy policy</a>
+(<code>https://github.com/Ajmalpshaik/Heron-Tools/blob/main/PRIVACY.md</code>).</p>
+
+<h2 id="support">Support</h2>
+<p>A problem or an idea: <a href="https://github.com/Ajmalpshaik/Heron-Tools/issues/new/choose">open an issue on GitHub</a>
+(<code>https://github.com/Ajmalpshaik/Heron-Tools/issues</code>). Say which tool, which Revit version, which view, what you did and what
+happened. Use <b>Copy version details</b> in About Heron. Please never attach a client model.</p>
+
+<footer>Heron Tools &middot; Apache License 2.0 &middot; Ajmal PS &middot; This page works offline.</footer>
+</div>
+</body>
+</html>
