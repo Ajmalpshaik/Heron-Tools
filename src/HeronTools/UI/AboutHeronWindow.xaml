@@ -98,8 +98,35 @@
                 </StackPanel>
             </Border>
 
+            <!-- Privacy and licence -->
+            <Border Style="{StaticResource StepCard}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Privacy and licence" Style="{StaticResource SectionLabel}"/>
+
+                    <DockPanel Margin="0,0,0,10">
+                        <Button x:Name="privacy_link_button" DockPanel.Dock="Right" Content="Privacy policy" Style="{StaticResource LinkButton}"
+                                VerticalAlignment="Center" ToolTip="github.com/Ajmalpshaik/Heron-Tools/blob/main/PRIVACY.md"/>
+                        <StackPanel>
+                            <TextBlock Text="Privacy" Style="{StaticResource StepTitle}"/>
+                            <TextBlock Text="Collects no personal data and sends nothing over the internet."
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <DockPanel>
+                        <Button x:Name="licence_link_button" DockPanel.Dock="Right" Content="Apache 2.0" Style="{StaticResource LinkButton}"
+                                VerticalAlignment="Center" ToolTip="github.com/Ajmalpshaik/Heron-Tools/blob/main/LICENSE"/>
+                        <StackPanel>
+                            <TextBlock Text="Licence" Style="{StaticResource StepTitle}"/>
+                            <TextBlock Text="Free and open source under the Apache License 2.0, with no warranty."
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
             <TextBlock Margin="2,14,0,0" Style="{StaticResource HelpText}"
-                       Text="Free and open source under the Apache License 2.0. The Heron name and mark are not covered by the licence. Autodesk and Revit are trademarks of Autodesk, Inc."/>
+                       Text="The Heron name and mark are not covered by the licence. Autodesk and Revit are trademarks of Autodesk, Inc."/>
         </StackPanel>
         </ScrollViewer>
 

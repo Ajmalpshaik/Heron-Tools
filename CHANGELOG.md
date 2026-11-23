@@ -4,6 +4,14 @@ All notable changes to Heron Tools. Dates are yyyy-mm-dd.
 
 ## [Unreleased]
 
+### Added - Autodesk App Store paperwork (NEEDS A REAL REVIT TEST for the About window)
+- **[PRIVACY.md](PRIVACY.md):** Heron Tools collects no personal data and sends nothing over the internet; lists every
+  settings and log file it writes under `%AppData%\HeronTools` and how to delete them.
+- **About Heron** now has a **Privacy policy** link and an **Apache 2.0** licence link (both open GitHub in the browser
+  only when clicked).
+- **Store files in `docs/store/`:** `listing.md` (Store form text and screenshot ideas), `help/HeronTools-Help.html`
+  (offline help page for the Store zip, without Model Walk), the 120 x 120 Store icon, and `README.md` (Store rules).
+
 ### Added - Autodesk App Store package (NEEDS A REAL REVIT TEST)
 - **Store build without Model Walk:** `-p:HeronStore=true` builds Heron Tools with no Model Walk at all (no button,
   code, windows, character or icons), into its own `bin\Release\Store\<year>` folder. The normal (GitHub) build is
