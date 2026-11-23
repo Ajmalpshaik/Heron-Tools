@@ -1,0 +1,264 @@
+<!--
+  Heron-Agent:  none
+  Heron-Step:   1
+  Heron-Status: DRAFT
+  Heron-Since:  1.3.0
+  Heron-Layer:  revit
+  See docs/metadata-standard.md
+
+  Auto Dimension - settings shared by the Grids, Levels and Grids and Levels buttons: which rows, where they
+  sit (just inside the grid and level heads), which dimension types, which grids and levels.
+  Design: Heron brand kit via HeronStyles.xaml. Modal; takes plain name lists, never touches the model.
+-->
+<Window x:Class="HeronTools.UI.AutoDimension.AutoDimensionSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Auto Dimension Settings - Heron Tools"
+        Width="720"
+        MinWidth="640"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Background="{DynamicResource BackgroundDark}"
+        FontFamily="{DynamicResource BrandFont}"
+        FontSize="13"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../HeronStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============ HEADER ============ -->
+        <Border Grid.Row="0" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,0,1" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="11"
+                        Background="{StaticResource BackgroundDark}"
+                        BorderBrush="{StaticResource BorderSoft}" BorderThickness="1" VerticalAlignment="Center">
+                    <Viewbox Margin="9">
+                        <Path Data="{StaticResource HeronMarkGeometry}" Fill="{StaticResource TextPrimary}" Stretch="Uniform"/>
+                    </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Auto Dimension Settings" Style="{StaticResource HeaderTitle}"/>
+                    <TextBlock Text="Used by Grids, Levels and Grids and Levels. Saved for you, in every project."
+                               Style="{StaticResource HeaderSubtitle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ BODY ============ -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,20,24,16">
+
+                <!-- Rows + placement, with a live sketch of the result -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="272"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <Border Style="{StaticResource StepCard}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Rows" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                                <CheckBox x:Name="ChainCheck" Style="{StaticResource ModernCheckBox}"
+                                          Content="Chain - every grid or level in turn"
+                                          Checked="OnInputChanged" Unchecked="OnInputChanged"/>
+                                <CheckBox x:Name="OverallCheck" Style="{StaticResource ModernCheckBox}"
+                                          Content="Overall - first to last"
+                                          Checked="OnInputChanged" Unchecked="OnInputChanged"/>
+                                <CheckBox x:Name="SkipOverallForTwoCheck" Style="{StaticResource ModernCheckBox}"
+                                          Content="Leave the overall out when there are only two"
+                                          Margin="24,5,0,5"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource StepCard}">
+                            <StackPanel>
+                                <TextBlock Text="Where the rows sit" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Just inside the grid and level heads, and always inside the crop."
+                                           Style="{StaticResource HelpText}" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <RadioButton x:Name="BubbleEndRadio" Content="Bubble end" GroupName="Side"
+                                                 Style="{StaticResource ModernRadioButton}" Margin="0,0,18,0"
+                                                 Checked="OnInputChanged"/>
+                                    <RadioButton x:Name="OtherEndRadio" Content="Other end" GroupName="Side"
+                                                 Style="{StaticResource ModernRadioButton}" Margin="0,0,18,0"
+                                                 Checked="OnInputChanged"/>
+                                    <RadioButton x:Name="BothEndsRadio" Content="Both ends" GroupName="Side"
+                                                 Style="{StaticResource ModernRadioButton}"
+                                                 Checked="OnInputChanged"/>
+                                </StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Heads to first row (mm)" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="FirstGapBox" Style="{StaticResource ModernTextBox}"
+                                                 TextChanged="OnTextChanged"
+                                                 ToolTip="Millimetres on the printed sheet, from the grid heads to the first row"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Between rows (mm)" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="RowGapBox" Style="{StaticResource ModernTextBox}"
+                                                 TextChanged="OnTextChanged"
+                                                 ToolTip="Millimetres on the printed sheet, from the chain to the overall"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="Sheet millimetres - the same look at 1:50 and 1:200."
+                                           Style="{StaticResource HelpText}" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Sketch: grids A-D with bubbles at the top; the rows follow the choices on the left. -->
+                    <Border Grid.Column="2" Style="{StaticResource PreviewCard}">
+                        <StackPanel>
+                            <TextBlock Text="Preview" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+                            <Viewbox Stretch="Uniform" Height="170">
+                                <Canvas Width="240" Height="170">
+                                    <Line X1="40" Y1="24" X2="40" Y2="166" Stroke="{StaticResource BorderStrong}" StrokeThickness="1.2" StrokeDashArray="6 3"/>
+                                    <Line X1="90" Y1="24" X2="90" Y2="166" Stroke="{StaticResource BorderStrong}" StrokeThickness="1.2" StrokeDashArray="6 3"/>
+                                    <Line X1="150" Y1="24" X2="150" Y2="166" Stroke="{StaticResource BorderStrong}" StrokeThickness="1.2" StrokeDashArray="6 3"/>
+                                    <Line X1="200" Y1="24" X2="200" Y2="166" Stroke="{StaticResource BorderStrong}" StrokeThickness="1.2" StrokeDashArray="6 3"/>
+
+                                    <Ellipse Canvas.Left="31" Canvas.Top="6" Width="18" Height="18" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2"/>
+                                    <Ellipse Canvas.Left="81" Canvas.Top="6" Width="18" Height="18" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2"/>
+                                    <Ellipse Canvas.Left="141" Canvas.Top="6" Width="18" Height="18" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2"/>
+                                    <Ellipse Canvas.Left="191" Canvas.Top="6" Width="18" Height="18" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2"/>
+                                    <TextBlock Canvas.Left="31" Canvas.Top="7" Width="18" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" Text="A"/>
+                                    <TextBlock Canvas.Left="81" Canvas.Top="7" Width="18" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" Text="B"/>
+                                    <TextBlock Canvas.Left="141" Canvas.Top="7" Width="18" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" Text="C"/>
+                                    <TextBlock Canvas.Left="191" Canvas.Top="7" Width="18" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextSecondary}" Text="D"/>
+
+                                    <Path x:Name="TopOverall" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
+                                          Data="M40,52 L200,52 M36,56 L44,48 M196,56 L204,48"/>
+                                    <Path x:Name="TopChain" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
+                                          Data="M40,38 L200,38 M36,42 L44,34 M86,42 L94,34 M146,42 L154,34 M196,42 L204,34"/>
+                                    <Path x:Name="BottomChain" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
+                                          Data="M40,152 L200,152 M36,156 L44,148 M86,156 L94,148 M146,156 L154,148 M196,156 L204,148"/>
+                                    <Path x:Name="BottomOverall" Stroke="{StaticResource Accent}" StrokeThickness="1.4"
+                                          Data="M40,138 L200,138 M36,142 L44,134 M196,142 L204,134"/>
+                                </Canvas>
+                            </Viewbox>
+                            <TextBlock Text="Nearest the heads: the chain, then the overall."
+                                       Style="{StaticResource HelpText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Dimension types + each run, side by side -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource StepCard}">
+                        <StackPanel>
+                            <TextBlock Text="Dimension types" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+                            <TextBlock Text="Chain" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="ChainTypeCombo" Margin="0,0,0,8"/>
+                            <TextBlock Text="Overall" Style="{StaticResource FieldLabel}"/>
+                            <ComboBox x:Name="OverallTypeCombo"/>
+                            <TextBlock Style="{StaticResource HelpText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="This project's linear types. A project without the type uses its default."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Style="{StaticResource StepCard}">
+                        <StackPanel>
+                            <TextBlock Text="Each run" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+                            <CheckBox x:Name="SkipExistingCheck" Style="{StaticResource ModernCheckBox}"
+                                      Content="Skip a row already in the view"
+                                      ToolTip="A dimension on exactly the same grids or levels is not made a second time"/>
+                            <CheckBox x:Name="ShowLeftOutCheck" Style="{StaticResource ModernCheckBox}"
+                                      Content="Tell me what was left out"/>
+                            <TextBlock Style="{StaticResource HelpText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="A run that places everything ends quietly. The whole run is one Undo step."/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- What to dimension -->
+                <Border Style="{StaticResource StepCard}">
+                    <StackPanel>
+                        <TextBlock Text="What to dimension" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Grids from" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox x:Name="GridsFromCombo" SelectionChanged="OnSelectionChanged"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Levels from" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox x:Name="LevelsFromCombo" SelectionChanged="OnSelectionChanged"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock x:Name="LinkNote" Style="{StaticResource HelpText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                   Visibility="Collapsed"
+                                   Text="Linked grids and levels: only links shown in the view, limited to its crop. A dimension to a link goes if the link is unloaded."/>
+                        <CheckBox x:Name="StoryOnlyCheck" Style="{StaticResource ModernCheckBox}" Margin="0,10,0,4"
+                                  Content="Only levels ticked Building Story"/>
+                        <TextBlock Text="Leave out these names" Style="{StaticResource FieldLabel}" Margin="0,8,0,0"/>
+                        <TextBox x:Name="LeaveOutBox" Style="{StaticResource ModernTextBox}"
+                                 ToolTip="Whole names separated by ;   * stands for any text, ? for one character"/>
+                        <TextBlock Style="{StaticResource HelpText}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="Whole names, separated by ;  - for example  T.O.S;  A*;  *-X.  &quot;1&quot; leaves out grid 1 only, not 10 or 21."/>
+                        <TextBlock Style="{StaticResource HelpText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                   Text="Select grids or levels before clicking, and only those are dimensioned."/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============ FOOTER ============ -->
+        <Border Grid.Row="2" Background="{StaticResource BackgroundMedium}"
+                BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="Reset to defaults" Style="{StaticResource GhostButton}"
+                        MinWidth="120" Click="OnReset"/>
+                <TextBlock x:Name="ErrorText" Grid.Column="1" VerticalAlignment="Center" Margin="16,0,16,0"
+                           Foreground="{StaticResource AccentWarning}" FontSize="12" TextWrapping="Wrap"
+                           Visibility="Collapsed"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButton}"
+                            MinWidth="110" Margin="0,0,16,0" IsDefault="True" Click="OnSave"/>
+                    <Button Content="Cancel" Style="{StaticResource GhostButton}" MinWidth="88"
+                            IsCancel="True" Click="OnCancel"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
