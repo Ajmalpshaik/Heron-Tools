@@ -5,7 +5,7 @@
 // Heron-Layer:  revit
 // See docs/metadata-standard.md
 
-// 3D Snapshot: fit Revit's default 3D view's section box to what they are working on, in one click -
+// 3D Section Box: fit Revit's default 3D view's section box to what they are working on, in one click -
 // selected rooms/spaces (or their tags), a selected section mark, the section they are in, or a window
 // dragged in a plan. The modeller stays in their view; the 3D view updates (and opens behind if closed).
 
@@ -25,7 +25,7 @@ namespace HeronTools.Commands
     [Regeneration(RegenerationOption.Manual)]
     public class Cmd3DSnapshot : IExternalCommand
     {
-        private const string ToolTitle = "3D Snapshot";
+        private const string ToolTitle = "3D Section Box";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -70,7 +70,7 @@ namespace HeronTools.Commands
                     string note = "The section box of \"" + applied.View.Name + "\" now fits " + target.SourceName + ".";
                     if (applied.CameraKept)
                         note += "\n\nThe view is locked, so its camera was not turned to face the section. " +
-                                "Unlock it (View Cube > Unlock View) if you want 3D Snapshot to turn it next time.";
+                                "Unlock it (View Cube > Unlock View) if you want 3D Section Box to turn it next time.";
                     if (showProblem != null)
                         note += "\n\n" + showProblem;
                     DialogHelper.ShowWarning(ToolTitle, note);
@@ -87,7 +87,7 @@ namespace HeronTools.Commands
             catch (Exception ex)
             {
                 DialogHelper.ShowError(ToolTitle,
-                    "3D Snapshot could not update the 3D view. Nothing was changed.\n\n" +
+                    "3D Section Box could not update the 3D view. Nothing was changed.\n\n" +
                     "Try again; if it keeps happening, send the detail below.\n\nWhat went wrong: " + ex.Message);
                 return Result.Failed;
             }
@@ -112,7 +112,7 @@ namespace HeronTools.Commands
 
                 if (read.SectionViews.Count > 1)
                 {
-                    problem = "You selected " + read.SectionViews.Count + " section marks. 3D Snapshot matches one section at a time.\n\n" +
+                    problem = "You selected " + read.SectionViews.Count + " section marks. 3D Section Box matches one section at a time.\n\n" +
                               "Select just one section mark and run it again.";
                     return null;
                 }
@@ -135,13 +135,13 @@ namespace HeronTools.Commands
             if (Snapshot3DService.IsPlan(activeView))
             {
                 PickedBox picked = uidoc.Selection.PickBox(PickBoxStyle.Enclosing,
-                    "3D Snapshot: drag a window round the area to show in 3D (Esc to cancel)");
+                    "3D Section Box: drag a window round the area to show in 3D (Esc to cancel)");
                 if (picked == null)
                     return null;
                 return Snapshot3DService.FromPlanRectangle((ViewPlan)activeView, picked.Min, picked.Max, out problem);
             }
 
-            problem = "3D Snapshot works in a plan, ceiling plan, section or elevation.\n\n" +
+            problem = "3D Section Box works in a plan, ceiling plan, section or elevation.\n\n" +
                       "Open one of those, then select a room, space, zone, their tag or a section mark - or select nothing " +
                       "and drag a window in the plan.";
             return null;
@@ -165,7 +165,7 @@ namespace HeronTools.Commands
                             "select the arrow of the elevation you want).");
             if (read.MarksSharedName > 0)
                 reasons.Add("- " + Plural(read.MarksSharedName, "mark has", "marks have") +
-                            " a name that two or more sections or elevations share, so 3D Snapshot cannot tell which view " +
+                            " a name that two or more sections or elevations share, so 3D Section Box cannot tell which view " +
                             "it is. Nothing was changed. Give the views different names, or open the section and run it there.");
 
             return "Nothing you selected can be shown:\n\n" + string.Join("\n", reasons) +

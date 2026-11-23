@@ -37,3 +37,6 @@ Desktop.ini
 # Installer: the packed build and the finished .exe are made by build/build-installer.ps1, never committed
 installer/payload/
 dist/
+
+# Icon studio output (made again by tools/icon-studio/export-icons.ps1)
+tools/icon-studio/export/
