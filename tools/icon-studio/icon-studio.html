@@ -49,6 +49,17 @@
   .cell canvas, .cell img { display: block; image-rendering: pixelated; }
   button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(15,15,16,.25); background: #fff; cursor: pointer; }
   #export { display: none; }
+  /* ---- review sheet: one row per icon, options side by side ---- */
+  #sheet { padding: 4px 24px 18px; }
+  #sheet h2 { margin: 6px 0 8px; font-size: 13px; font-weight: 600; color: rgba(15,15,16,.72); }
+  .sh-row { display: grid; grid-template-columns: 150px repeat(5, max-content); gap: 8px; align-items: end; padding: 6px 0; border-top: 1px solid rgba(15,15,16,.12); }
+  .sh-name { align-self: center; font-size: 12px; } .sh-name b { display: block; font-size: 13px; } .sh-name span { color: rgba(15,15,16,.6); font-size: 10.5px; }
+  .sh-lbl { font-size: 11px; margin-bottom: 2px; max-width: 200px; } .sh-lbl b { font-size: 13px; }
+  .sh-pair { display: flex; border-radius: 4px; overflow: hidden; }
+  .sh-l, .sh-d { display: flex; align-items: center; gap: 8px; padding: 6px 8px; height: 64px; }
+  .sh-l { background: #F0F0F0; } .sh-d { background: #3B4252; }
+  .sh-pair canvas, .sh-pair img { display: block; }
+  body.sheet-only header, body.sheet-only #ribbons, body.sheet-only #icons { display: none; }
   @media (max-width: 760px) { .row { grid-template-columns: 1fr; } .side { flex-wrap: wrap; } }
 </style>
 </head>
@@ -60,11 +71,13 @@
      scale (as Revit does today); "sharp" = drawn for your screen; "big" = the drawing itself, large. Style rule: STYLE.md.</p>
 </header>
 <section id="ribbons"></section>
+<section id="sheet"></section>
 <main id="icons"></main>
 <pre id="export"></pre>
 
 <script>
 const ACCENT = '#FD641A', ACCENT_LIGHT = '#FF9A5C', INK = '#0F0F10';
+if (location.hash === '#sheet') document.body.classList.add('sheet-only');
 const TODAY_DIR = '../../src/HeronTools/Resources/Icons/';
 
 // ---- The Soft 3D kit: every icon is drawn with these, so the set stays one family -------
@@ -152,7 +165,43 @@ const ICONS = [
       { label: 'A', note: 'eye (the idea of today, in clay)', svg: size => unhideAll(size, 'A') },
       { label: 'B', note: 'eye over a row of elements', svg: size => unhideAll(size, 'B') },
       { label: 'C', note: 'eye opening with rays (reveal)', svg: size => unhideAll(size, 'C') },
+      // Ajmal picked C (2026-11-23), not yet typed yes; D = C with bolder rays for 16 px
+      { label: 'D', note: 'C with bolder rays', svg: size => unhideAll(size, 'D') },
     ] },
+
+  // 2026-11-23 batch: 2-3 options for every icon left, shown together on one review sheet (Ajmal answers "Toggle Links B, ...")
+  { name: 'ToggleLinks', title: '10. Toggle Links', status: 'review', what: 'Turns the RVT Links category off or on in the view. Small button.',
+    variants: vs(toggleLinks, [['A', 'chain link'], ['B', 'one link on, one off'], ['C', 'link over a switch']]) },
+  { name: 'HighlightSelection', title: '11. Highlight', status: 'review', what: 'Selection in red, the rest grey; click again to put the view back. Small button.',
+    variants: vs(highlight, [['A', 'picked one bright, rest faded'], ['B', 'pointer lights an element'], ['C', 'highlighter pen']]) },
+  { name: 'ResetDatums', title: '12. Reset Datums to 3D', status: 'review', what: 'Puts grid and level ends back to their 3D extents. Small button.',
+    variants: vs(resetDatums, [['A', 'grid + reset arrow'], ['B', 'grid + 3D box']]) },
+  { name: 'LevelExtents', title: '13. Level Extents', status: 'review', what: 'Matches level extents to another level, or to the section box. Small button.',
+    variants: vs(levelExtents, [['A', 'two levels lined up'], ['B', 'level + stretch arrow'], ['C', 'short level stretched']]) },
+  { name: 'FlipBubbles', title: '14. Flip Bubbles', status: 'review', what: 'Swaps which end of a grid or level shows its bubble. Small button.',
+    variants: vs(flipBubbles, [['A', 'bubble jumps across'], ['B', 'grid, bubble goes down'], ['C', 'swap arrows']]) },
+  { name: 'AutoDimension', title: '15. Auto Dimension', status: 'review', what: 'Chain and overall dimensions across the grids and levels of a view. Big button.',
+    variants: vs(autoDimension, [['A', 'grids + dimension'], ['B', 'chain + overall rows'], ['C', 'grids + dimension + spark']]) },
+  { name: 'MatchElevation', title: '16. Match Elevation', status: 'review', what: 'Matches the centre, top or bottom elevation of a source MEP element. Small button.',
+    variants: vs(matchElevation, [['A', 'pipe moves up to match'], ['B', 'duct moves up to match'], ['C', 'pipe up to a line']]) },
+  { name: 'ReassignLevel', title: '17. Reassign Level', status: 'review', what: 'Moves MEP elements to another reference level without moving them. Small button.',
+    variants: vs(reassignLevel, [['A', 'element + arrow up a level'], ['B', 'element tied to new level']]) },
+  { name: 'PinElements', title: '18. Pin / Unpin', status: 'review', what: 'Pins or unpins groups: title blocks, views on sheets, ducts, pipes, grids... Small button.',
+    variants: vs(pinUnpin, [['A', 'push pin'], ['B', 'pin in an element']]) },
+  { name: 'SmartSelection', title: '19. Smart Selection', status: 'review', what: 'Pick one element, window-select, keep only that category. Big button.',
+    variants: vs(smartSelection, [['A', 'window + pointer'], ['B', 'window keeps one kind']]) },
+  { name: 'QuickClash', title: '20. Quick Clash', status: 'review', what: 'Clash test in the active 3D view. Big button.',
+    variants: vs(quickClash, [['A', 'two pipes crossing'], ['B', 'two boxes overlapping'], ['C', 'pipe through a duct']]) },
+  { name: 'ModelWalk', title: '21. Model Walk', status: 'review', what: 'Walk the model in first or third person. Big button.',
+    variants: vs(modelWalk, [['A', 'walking person'], ['B', 'footprints'], ['C', 'person on a path']]) },
+  { name: 'ElementId', title: '22. Element ID', status: 'review', what: 'See the ID of a picked element, or find one by ID. Small button (dropdown).',
+    variants: vs(elementId, [['A', 'tag'], ['B', '# sign'], ['C', 'element with a tag']]) },
+  { name: 'FindById', title: '23. Find by ID', status: 'review', what: 'Find an element by its ID and zoom to it. In the Element ID dropdown.',
+    variants: vs(findById, [['A', 'magnifier with #'], ['B', '# + magnifier'], ['C', 'tag + magnifier']]) },
+  { name: 'Views3D', title: '24. 3D Views by Workset', status: 'review', what: 'One 3D view per user workset. Small button.',
+    variants: vs(views3D, [['A', 'three 3D boxes'], ['B', '3D box on layers']]) },
+  { name: 'LinkWorkset', title: '25. Link Workset', status: 'review', what: 'Puts Revit links and CAD imports on a workset. Small button.',
+    variants: vs(linkWorkset, [['A', 'layers + small link'], ['B', 'big link over layers'], ['C', 'layers only']]) },
 
   // 7. Annotation Crop: no icon needed - Ajmal decided (2026-11-22) to remove its button and put the option in the
   // Crop View window (session annotation-crop-merge). Drawings kept in annotationCrop() in case.
@@ -435,9 +484,291 @@ function unhideAll(size, v) {
     const boxes = [6.4, 16, 25.6].map(x => k.part(`M${x - 3} 22.6 L${x + 3} 22.6 L${x + 3} 28.2 L${x - 3} 28.2 Z`, 'deep', s ? 1 : .8, true)).join('');
     return k.render(eyeParts(k, 16, 11.6, s ? 11.6 : 11.2, s ? 8 : 7.6, s) + boxes);
   }
+  if (v === 'D') {
+    // C with bolder rays, so they still read at 16 px (the size this small button shows)
+    const raysD = (s ? ['M16 2.8 L16 6.4', 'M6.6 5.6 L9.2 8.8', 'M25.4 5.6 L22.8 8.8'] : ['M16 3 L16 6.6', 'M7 5.8 L9.4 8.8', 'M25 5.8 L22.6 8.8'])
+      .map(d => k.part(d, 'lit', s ? 2.1 : 1.5, true)).join('');
+    return k.render(raysD + eyeParts(k, 16, 19, s ? 12.4 : 12, s ? 8 : 7.6, s));
+  }
   const rays = (s ? ['M16 3.4 L16 6.6', 'M7.4 6.2 L9.4 8.8', 'M24.6 6.2 L22.6 8.8'] : ['M16 3.4 L16 6.4', 'M7.6 6.4 L9.4 8.8', 'M24.4 6.4 L22.6 8.8'])
     .map(d => k.part(d, 'deep', s ? 1.3 : 1.1, true)).join('');
   return k.render(rays + eyeParts(k, 16, 18.4, s ? 12.4 : 12, s ? 8.2 : 7.8, s));
+}
+
+// options list for an icon: [['A', 'note'], ...] -> variants drawn by fn(size, letter)
+function vs(fn, list) { return list.map(([label, note]) => ({ label, note, svg: size => fn(size, label) })); }
+
+// ---- 2026-11-23 batch: shared shapes ---------------------------------------------------------------
+const PT = (x, y) => `${(+x).toFixed(2)} ${(+y).toFixed(2)}`;
+// a ring as an open path (drawn as a round line), a filled ellipse, a filled rectangle, a filled polygon
+const ring = (cx, cy, r) => `M${PT(cx - r, cy)} A${r} ${r} 0 1 1 ${PT(cx + r, cy)} A${r} ${r} 0 1 1 ${PT(cx - r, cy)}`;
+const ellipse = (cx, cy, rx, ry) => `M${PT(cx - rx, cy)} A${rx} ${ry} 0 1 0 ${PT(cx + rx, cy)} A${rx} ${ry} 0 1 0 ${PT(cx - rx, cy)} Z`;
+const rect = (x1, y1, x2, y2) => `M${PT(x1, y1)} L${PT(x2, y1)} L${PT(x2, y2)} L${PT(x1, y2)} Z`;
+const shape = pts => 'M' + pts.map(p => PT(p[0], p[1])).join(' L') + ' Z';
+function star(cx, cy, ro, ri, n) {
+  const pts = [];
+  for (let i = 0; i < 2 * n; i++) { const a = (-90 + i * 180 / n) * Math.PI / 180, r = i % 2 ? ri : ro; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+  return shape(pts);
+}
+// a triangle arrow head, tip at (x, y), pointing along deg (0 = right, 90 = down)
+function head(x, y, deg, len, hw) {
+  const a = deg * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), bx = x - ux * len, by = y - uy * len;
+  return shape([[x, y], [bx - uy * hw, by + ux * hw], [bx + uy * hw, by - ux * hw]]);
+}
+// one chain link (a long ring) round (cx, cy), half straight length L, radius R, turned by deg
+function linkLoop(cx, cy, L, R, deg) {
+  const a = deg * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), nx = -uy, ny = ux;
+  const pt = (s, t) => PT(cx + ux * s + nx * t, cy + uy * s + ny * t);
+  return `M${pt(-L, -R)} L${pt(L, -R)} A${R} ${R} 0 0 1 ${pt(L, R)} L${pt(-L, R)} A${R} ${R} 0 0 1 ${pt(-L, -R)}`;
+}
+// the Reset Graphics ring arrow, any size
+function ringArrow(k, cx, cy, R, w, L, W, tone = 'lit') {
+  const a1 = -118, a2 = 172, pt = a => [cx + R * Math.cos(a * Math.PI / 180), cy + R * Math.sin(a * Math.PI / 180)];
+  const [sx, sy] = pt(a1), [ex, ey] = pt(a2);
+  const t = a1 * Math.PI / 180, dir = [Math.sin(t), -Math.cos(t)], nrm = [Math.cos(t), Math.sin(t)];
+  const bx = sx - dir[0] * .8, by = sy - dir[1] * .8;
+  return k.part(`M${PT(sx, sy)} A${R} ${R} 0 1 1 ${PT(ex, ey)}`, tone, w, true) +
+         k.part(shape([[sx + dir[0] * L, sy + dir[1] * L], [bx + nrm[0] * W, by + nrm[1] * W], [bx - nrm[0] * W, by - nrm[1] * W]]), tone, .6, true);
+}
+// an arrow head placed at the end of a line, continuing it (from (fx, fy) towards (ex, ey))
+function endHead(fx, fy, ex, ey, len, hw) {
+  const deg = Math.atan2(ey - fy, ex - fx) * 180 / Math.PI, a = deg * Math.PI / 180;
+  return head(ex + Math.cos(a) * len * .8, ey + Math.sin(a) * len * .8, deg, len, hw);
+}
+const faded = (body, op = .4) => `<g opacity="${op}">${body}</g>`;
+
+// ---- 10. Toggle Links (orange clay) -------------------------------------------------------------------
+function toggleLinks(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 2.1 : 1.5;
+  const a = linkLoop(12.1, 19.9, s ? 3 : 3.4, 4.2, -45), b = linkLoop(19.9, 12.1, s ? 3 : 3.4, 4.2, -45);
+  if (v === 'A') return k.render(k.part(b, 'light', w, true) + k.part(a, 'lit', w, true));
+  if (v === 'B') return k.render(faded(k.part(b, 'light', w, true)) + k.part(a, 'lit', w, true));
+  // C: a small chain link over an on/off switch
+  const lw = s ? 1.7 : 1.2;
+  return k.render(k.part(linkLoop(12.2, 9.4, 2.4, 3.4, 0), 'light', lw, true) + k.part(linkLoop(19.8, 9.4, 2.4, 3.4, 0), 'lit', lw, true) +
+                  k.part(rect(10, 21.4, 22, 24.6), 'deep', 4, true) + k.part(circle(21.6, 23, 2.4), 'light', .8, true));
+}
+
+// ---- 11. Highlight (orange clay) ----------------------------------------------------------------------
+function highlight(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') {
+    // the picked element bright, the rest faded
+    const sides = [rect(2.6, 13, 6.2, 19), rect(25.8, 13, 29.4, 19)].map(d => k.part(d, 'light', 1.2, true)).join('');
+    return k.render(faded(sides, .45) + k.part(rect(10.6, 10.6, 21.4, 21.4), 'lit', 1.6, true));
+  }
+  if (v === 'B') {
+    // the pointer clicks an element, which lights up
+    const pointer = shape([[15, 14.5], [15, 27.5], [18.2, 24.6], [20.4, 29], [22.8, 28], [20.6, 23.6], [25, 23.6]]);
+    return k.render(k.part(rect(5.4, 5.4, 16.6, 16.6), 'lit', 1.4, true) + k.part(pointer, 'deep', s ? 1 : .8, true));
+  }
+  // C: a highlighter pen laying a broad stroke
+  const pen = rect(13.4, 3.6, 18.6, 14), collar = rect(13.4, 15.4, 18.6, 16.4), tip = shape([[13.6, 17.8], [18.4, 17.8], [17.2, 21.6], [14.8, 22.6]]);
+  return k.render(faded(k.part('M4 25 L20 25', 'light', s ? 2.8 : 2.4, true), .6) +
+                  `<g transform="rotate(-38 16 15)">${k.part(pen, 'lit', 1.2, true) + k.part(collar, 'deep', 1.2, true) + k.part(tip, 'deep', .8, true)}</g>`);
+}
+
+// ---- 12. Reset Datums to 3D (orange clay) -------------------------------------------------------------
+// a grid line with its bubble on top
+function gridMark(k, x, top, r, bottom, w, tone) {
+  return k.part(ring(x, top + r, r), tone, w, true) + k.part(`M${x} ${top + 2 * r} L${x} ${bottom}`, tone, w, true);
+}
+function resetDatums(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 1.9 : 1.4, r = s ? 4.6 : 4.4;
+  const grid = gridMark(k, 10.6, 4, r, 28, w, 'light');
+  if (v === 'A') return k.render(grid + ringArrow(k, 22, 21.4, s ? 5 : 5.2, w, s ? 3.8 : 3.4, s ? 3.4 : 3));
+  return k.render(grid + isoBox(k, 22, 20.6, s ? 6.4 : 6, s ? .7 : .5));
+}
+
+// ---- 13. Level Extents (orange clay) ------------------------------------------------------------------
+// a level line with its head (a ring) at the right end
+function levelMark(k, y, x1, hr, w, tone) {
+  return k.part(`M${x1} ${y} L${27 - 2 * hr} ${y}`, tone, w, true) + k.part(ring(27 - hr, y, hr), tone, w, true);
+}
+function levelExtents(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 1.9 : 1.4, hr = s ? 3.4 : 3.2;
+  const hl = s ? 4.4 : 4, hw = s ? 3.6 : 3.2;
+  if (v === 'A') return k.render(faded(k.part('M4.4 4 L4.4 28', 'deep', s ? 1.2 : .8, true), .7) + levelMark(k, 10, 4.4, hr, w, 'lit') + levelMark(k, 22, 4.4, hr, w, 'light'));
+  if (v === 'B') return k.render(k.part('M8 10.4 L24 10.4', 'light', w, true) + k.part(head(4, 10.4, 180, hl, hw), 'light', .6, true) +
+                                 k.part(head(28, 10.4, 0, hl, hw), 'light', .6, true) + levelMark(k, 21.4, 5, hr, w, 'lit'));
+  // C: the lower level is stretched out to match the upper one
+  return k.render(levelMark(k, 9, 4.4, hr, w, 'light') + levelMark(k, 22, 13, hr, w, 'lit') +
+                  faded(k.part('M8.4 22 L13 22', 'lit', w, true), .45) + k.part(head(4.2, 22, 180, hl, hw), 'lit', .6, true));
+}
+
+// ---- 14. Flip Bubbles (orange clay) -------------------------------------------------------------------
+function flipBubbles(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 1.9 : 1.4, r = s ? 4 : 3.8, hl = s ? 4.4 : 4, hw = s ? 3.6 : 3.2;
+  if (v === 'B') {
+    // a grid: bubble on top, faded spot at the bottom, a curved arrow taking it down
+    return k.render(k.part(`M11 ${4 + 2 * r} L11 ${28 - 2 * r}`, 'light', w, true) + k.part(ring(11, 4 + r, r), 'lit', w, true) +
+                    faded(k.part(ring(11, 28 - r, r), 'light', w, true)) +
+                    k.part('M18.4 6.6 Q27.4 15.4 20.6 23', 'lit', w, true) + k.part(endHead(27.4, 15.4, 20.6, 23, hl, hw), 'lit', .6, true));
+  }
+  const y = v === 'A' ? 22 : 23.4;
+  const line = k.part(`M${4 + 2 * r} ${y} L${28 - 2 * r} ${y}`, 'light', w, true) + k.part(ring(4 + r, y, r), 'lit', w, true) + faded(k.part(ring(28 - r, y, r), 'light', w, true));
+  if (v === 'A') return k.render(line + k.part('M7.6 13 Q16 4.4 23 11.2', 'lit', w, true) + k.part(endHead(16, 4.4, 23, 11.2, hl, hw), 'lit', .6, true));
+  // C: swap arrows above the line
+  return k.render(line + k.part('M6 7.4 L22.4 7.4', 'lit', w, true) + k.part(head(27, 7.4, 0, hl, hw), 'lit', .6, true) +
+                  k.part('M26 14.6 L9.6 14.6', 'light', w, true) + k.part(head(5, 14.6, 180, hl, hw), 'light', .6, true));
+}
+
+// ---- 15. Auto Dimension (orange clay) - a big button: the 32 px drawing is what shows ------------------
+function autoDimension(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 1.8 : 1.3, tw = s ? 1.3 : .95, r = s ? 3.8 : 3.4;
+  const tick = (x, y) => k.part(`M${x - 1.9} ${y + 1.9} L${x + 1.9} ${y - 1.9}`, 'deep', tw, true);
+  const grids = (a, b, top = 3.6) => gridMark(k, a, top, r, 28, w, 'light') + gridMark(k, b, top, r, 28, w, 'light');
+  if (v === 'A') return k.render(grids(8, 24) + k.part('M4 20.6 L28 20.6', 'lit', w, true) + tick(8, 20.6) + tick(24, 20.6));
+  if (v === 'B') {
+    // dimensions only: a chain row and an overall row, with witness lines
+    const wit = ['M5 6 L5 26', 'M27 6 L27 26', 'M16 6.6 L16 14'].map(d => k.part(d, 'light', tw, true)).join('');
+    return k.render(wit + k.part('M5 10.6 L27 10.6', 'lit', w, true) + k.part('M5 21.6 L27 21.6', 'lit', w, true) +
+                    tick(5, 10.6) + tick(16, 10.6) + tick(27, 10.6) + tick(5, 21.6) + tick(27, 21.6));
+  }
+  // C: grids and a dimension, plus a spark between the bubbles = done for you
+  return k.render(grids(7.4, 24.6, 4.6) + k.part('M4 21.6 L28 21.6', 'lit', w, true) + tick(7.4, 21.6) + tick(24.6, 21.6) +
+                  k.part(star(16, 7.6, s ? 5 : 4.8, s ? 1.9 : 1.6, 4), 'lit', .5, true));
+}
+
+// ---- 16. Match Elevation (orange clay) ----------------------------------------------------------------
+function matchElevation(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, cw = s ? 1.5 : 1.1;
+  if (v === 'A') {
+    // two pipes: the right one moved up to the left one's height (faded = where it was)
+    return k.render(faded(k.part(circle(23.5, 25.4, 3.4), 'light', 1, true), .35) + k.part('M20.6 20.2 L23.5 17.4 L26.4 20.2', 'lit', cw, true) +
+                    k.part('M14.4 11 L17.6 11', 'deep', s ? 1.2 : .9, true) + k.part(circle(8.5, 11, 4), 'lit', 1, true) + k.part(circle(23.5, 11, 4), 'light', 1, true));
+  }
+  if (v === 'B') {
+    // the same with two ducts
+    return k.render(faded(k.part(rect(20, 22.4, 28, 27.6), 'light', 1.2, true), .35) + k.part('M21 20.4 L24 17.4 L27 20.4', 'lit', cw, true) +
+                    k.part('M14.2 11 L17.8 11', 'deep', s ? 1.2 : .9, true) + k.part(rect(4, 7.6, 12, 14.4), 'lit', 1.2, true) + k.part(rect(20, 7.6, 28, 14.4), 'light', 1.2, true));
+  }
+  // C: a pipe going up onto a height line
+  return k.render(k.part('M4 7.4 L28 7.4', 'lit', s ? 1.9 : 1.4, true) + k.part('M16 19.6 L16 15', 'light', s ? 1.9 : 1.4, true) +
+                  k.part(head(16, 10.8, -90, s ? 4.6 : 4.2, s ? 3.8 : 3.4), 'light', .6, true) + k.part(circle(16, 24, 3.6), 'lit', 1, true));
+}
+
+// ---- 17. Reassign Level (orange clay) -----------------------------------------------------------------
+function reassignLevel(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, w = s ? 1.9 : 1.4, hr = s ? 3.2 : 3;
+  const levels = levelMark(k, 6.8, 4, hr, w, 'lit') + faded(levelMark(k, 25.2, 4, hr, w, 'light'));
+  if (v === 'A') return k.render(levels + k.part(rect(6.2, 12.6, 13.8, 19.4), 'light', 1.2, true) +
+                                 k.part('M20.4 20.6 L20.4 14.8', 'lit', w, true) + k.part(head(20.4, 10.4, -90, s ? 4.4 : 4, s ? 3.6 : 3.2), 'lit', .6, true));
+  // B: the element stays put; its line to the upper level is drawn, the old one fades
+  return k.render(levels + k.part('M16 12 L16 8.2', 'lit', w, true) + faded(k.part('M16 20 L16 23.8', 'light', w, true)) +
+                  k.part(rect(12.4, 13.2, 19.6, 18.8), 'light', 1.2, true));
+}
+
+// ---- 18. Pin / Unpin (orange clay) --------------------------------------------------------------------
+function pinShape(k, s, needleEnd) {
+  return k.part(rect(11.6, 3.6, 20.4, 6), 'light', 1, true) + k.part(shape([[13.4, 7.2], [18.6, 7.2], [19.4, 14.6], [12.6, 14.6]]), 'lit', 1, true) +
+         k.part(rect(9, 15.8, 23, 17.2), 'deep', 1, true) + k.part(`M16 19.2 L16 ${needleEnd}`, 'deep', s ? 1.3 : .95, true);
+}
+function pinUnpin(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') return k.render(`<g transform="rotate(40 16 16)">${pinShape(k, s, 28.4)}</g>`);
+  // B: the pin pushed into an element
+  return k.render(k.part(rect(6, 24, 26, 27.4), 'light', 1.2, true) + pinShape(k, s, 23));
+}
+
+// ---- 19. Smart Selection (orange clay) - a big button -------------------------------------------------
+function smartSelection(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, bw = s ? 1.8 : 1.3;
+  if (v === 'A') {
+    // a selection window with the pointer at its corner
+    const corners = ['M4 9.4 L4 4 L9.4 4', 'M17.6 4 L23 4 L23 9.4', 'M4 17.6 L4 23 L9.4 23'].map(d => k.part(d, 'light', bw, true)).join('');
+    const pointer = shape([[17, 15.6], [17, 28.4], [20.1, 25.6], [22.2, 29.8], [24.6, 28.8], [22.5, 24.6], [26.8, 24.6]]);
+    return k.render(corners + k.part(pointer, 'lit', s ? 1 : .8, true));
+  }
+  // B: a window keeping only one category: the squares are kept (bright), the circles are dropped (faded)
+  const corners = ['M4 10 L4 4 L10 4', 'M22 4 L28 4 L28 10', 'M28 22 L28 28 L22 28', 'M10 28 L4 28 L4 22'].map(d => k.part(d, 'light', bw, true)).join('');
+  return k.render(corners + faded(k.part(circle(20.2, 11.8, 2.6), 'light', 1, true) + k.part(circle(11.8, 20.2, 2.6), 'light', 1, true)) +
+                  k.part(rect(9.6, 9.6, 14, 14), 'lit', 1.2, true) + k.part(rect(18, 18, 22.4, 22.4), 'lit', 1.2, true));
+}
+
+// ---- 20. Quick Clash (orange clay) - a big button -----------------------------------------------------
+function quickClash(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  const burst = (ro, ri) => k.part(star(16, 16, ro, ri, 8), 'deep', .5, true);
+  if (v === 'A') return k.render(k.part('M5 9.6 L27 22.4', 'light', s ? 2.8 : 2.4, true) + k.part('M5 22.4 L27 9.6', 'lit', s ? 2.8 : 2.4, true) + burst(s ? 7 : 6.6, s ? 3.4 : 3.2));
+  if (v === 'B') return k.render(k.part(rect(4.6, 4.6, 17, 17), 'light', 1.2, true) + k.part(rect(15, 15, 27.4, 27.4), 'lit', 1.2, true) + k.part(rect(15, 15, 17, 17), 'deep', 1.2, true));
+  // C: a pipe running through a duct, a spark where they meet
+  return k.render(k.part(rect(4, 11.4, 28, 20.6), 'light', 1.2, true) + k.part('M16 3.6 L16 28.4', 'lit', s ? 2.6 : 2.2, true) + burst(s ? 6 : 5.4, s ? 3 : 2.6));
+}
+
+// ---- 21. Model Walk (orange clay) - a big button ------------------------------------------------------
+function walker(k, s) {
+  const w = s ? 2 : 1.6;
+  return k.part('M16.4 11.6 L19.6 15.6 L23.4 16.4', 'light', w, true) + k.part('M14.6 18.6 L17.8 22.8 L18.4 28', 'light', w, true) +
+         k.part('M16.6 10.6 L14.6 18.6', 'lit', w * 1.25, true) + k.part('M14.6 18.6 L11.6 23.4 L8 27', 'lit', w, true) +
+         k.part('M16.4 11.6 L12.6 14.8 L10.4 18.8', 'lit', w, true) + k.part(circle(18, 5.6, s ? 2.6 : 2.4), 'lit', 1, true);
+}
+function modelWalk(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') return k.render(walker(k, s));
+  if (v === 'B') {
+    // two footprints, one step ahead of the other
+    const r = s ? .8 : .6;
+    return k.render(`<g transform="rotate(-12 11 21)">${k.part(ellipse(11, 17, 3.4, 4.4), 'light', r, true) + k.part(ellipse(11, 25.8, 2.6, 2.1), 'light', r, true)}</g>` +
+                    `<g transform="rotate(12 21 13)">${k.part(ellipse(21, 9, 3.4, 4.4), 'lit', r, true) + k.part(ellipse(21, 17.8, 2.6, 2.1), 'lit', r, true)}</g>`);
+  }
+  // C: the walker on a path going into the distance
+  return k.render(faded(k.part(shape([[11.6, 27], [20.4, 27], [28.4, 29.8], [3.6, 29.8]]), 'light', .6, true), .55) +
+                  `<g transform="translate(16 2) scale(.86) translate(-16 0)">${walker(k, s)}</g>`);
+}
+
+// ---- 22. Element ID / 23. Find by ID (orange clay) ----------------------------------------------------
+const TAG = shape([[5, 9.6], [19.6, 9.6], [26.6, 16], [19.6, 22.4], [5, 22.4]]);
+const hashLines = (k, s, tone1, tone2) =>
+  k.part('M5 11.6 L27 11.6', tone2, s ? 2.1 : 1.7, true) + k.part('M4.6 20.4 L26.6 20.4', tone2, s ? 2.1 : 1.7, true) +
+  k.part('M13 4.6 L10.6 27.4', tone1, s ? 2.1 : 1.7, true) + k.part('M21.4 4.6 L19 27.4', tone1, s ? 2.1 : 1.7, true);
+function elementId(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') return k.render(k.part(TAG, 'lit', 1.2, true) + k.part(circle(20.6, 16, s ? 1.6 : 1.5), 'deep', .5, true));
+  if (v === 'B') return k.render(hashLines(k, s, 'lit', 'light'));
+  // C: an element with its tag
+  return k.render(k.part(rect(4.6, 4.6, 16.4, 16.4), 'light', 1.4, true) +
+                  k.part(shape([[12, 17.4], [21.6, 17.4], [27, 22.2], [21.6, 27], [12, 27]]), 'lit', 1.1, true) + k.part(circle(22.4, 22.2, 1.3), 'deep', .5, true));
+}
+function magnifier(k, s, cx, cy, R, hx) {
+  return k.part(`M${PT(cx + R * .74, cy + R * .74)} L${PT(hx, hx)}`, 'deep', s ? 2.6 : 2.2, true) + k.part(ring(cx, cy, R), 'lit', s ? 2 : 1.5, true);
+}
+function findById(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') {
+    // a magnifier with # in the lens (the # only at 32 px)
+    const hash = s ? '' : ['M12.4 9.2 L11.4 16.8', 'M15.8 9.2 L14.8 16.8', 'M9 11.4 L17.2 11.4', 'M8.6 14.6 L16.8 14.6'].map(d => k.part(d, 'light', 1.05, true)).join('');
+    return k.render(hash + magnifier(k, s, 13, 13, s ? 7.4 : 7.8, 27));
+  }
+  const small = v === 'B'
+    ? ['M9.4 4 L8 17', 'M14.2 4 L12.8 17', 'M4.2 8.2 L17.4 8.2', 'M3.8 12.8 L17 12.8'].map(d => k.part(d, 'light', s ? 1.6 : 1.2, true)).join('')
+    : k.part(shape([[4.4, 6.4], [14.4, 6.4], [19.4, 11.4], [14.4, 16.4], [4.4, 16.4]]), 'light', 1.1, true) + k.part(circle(15, 11.4, 1.2), 'deep', .5, true);
+  return k.render(small + magnifier(k, s, 21, 21, s ? 4.6 : 4.8, 28.4));
+}
+
+// ---- 24. 3D Views by Workset / 25. Link Workset (orange clay) -----------------------------------------
+const sheet = (cy, cx = 16, hw = 12, hh = 5.2) => shape([[cx, cy - hh], [cx + hw, cy], [cx, cy + hh], [cx - hw, cy]]);
+function views3D(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small, rr = s ? .7 : .5, h = s ? 6.2 : 6;
+  if (v === 'A') return k.render(isoBox(k, 9.4, 21.4, h, rr) + isoBox(k, 22.6, 21.4, h, rr) + isoBox(k, 16, 8.8, h, rr));
+  // B: a 3D view sitting on stacked layers (the worksets)
+  return k.render(k.part(sheet(25.4), 'deep', .8, true) + k.part(sheet(21.4), 'light', .8, true) + isoBox(k, 16, 11.4, s ? 7 : 6.6, s ? .8 : .6));
+}
+function linkWorkset(size, v) {
+  const k = softKit(size, { allOrange: true }), s = k.small;
+  if (v === 'A') {
+    const lw = s ? 1.5 : 1.1;
+    return k.render(k.part(sheet(25, 14, 10, 4.6), 'deep', .8, true) + k.part(sheet(20.6, 14, 10, 4.6), 'light', .8, true) + k.part(sheet(16.2, 14, 10, 4.6), 'lit', .8, true) +
+                    k.part(linkLoop(19.8, 6.8, 1.2, 2.6, 0), 'light', lw, true) + k.part(linkLoop(25, 6.8, 1.2, 2.6, 0), 'lit', lw, true));
+  }
+  if (v === 'B') {
+    // a chain link (the Revit link) over the worksets
+    const lw = s ? 1.8 : 1.3;
+    return k.render(k.part(sheet(24.8, 16, 12, 5), 'deep', .8, true) + k.part(sheet(20.4, 16, 12, 5), 'lit', .8, true) +
+                    k.part(linkLoop(12.6, 8.4, 2.4, 3.6, 0), 'light', lw, true) + k.part(linkLoop(19.4, 8.4, 2.4, 3.6, 0), 'lit', lw, true));
+  }
+  // C: today's stacked layers in clay, the top one bright
+  return k.render(k.part(sheet(24), 'deep', .8, true) + k.part(sheet(18.6), 'light', .8, true) + k.part(sheet(13.2), 'lit', .8, true));
 }
 
 // ---- 3. Filter Pro ------------------------------------------------------------------------
@@ -605,7 +936,7 @@ function save(canvas, file) {
 }
 
 (async () => {
-  const host = document.getElementById('icons'), exp = {};
+  const host = document.getElementById('icons'), exp = {}, review = [];
   for (const ic of ICONS) {
     // An icon has one drawing (svg) or several to choose from (variants); each variant exports as Name-<letter>.
     const variants = ic.variants || [{ label: 'New', note: '', svg: ic.svg }];
@@ -622,11 +953,12 @@ function save(canvas, file) {
       const big = await toCanvas(v.svg(32), Math.round(128 * DPR));
       drawn.push({ v, c16, c32, sharp16, sharp32, big, tag });
     }
-    // the ribbon preview shows the newest drawing of each icon (the last variant)
+    // the ribbon preview shows the new drawing only once it is in the add-in; options still being chosen show today's icon
     const newest = drawn[drawn.length - 1];
-    RIB[ic.name] = { i16: newest.c16.toDataURL('image/png'), i32: newest.c32.toDataURL('image/png') };
+    if (ic.status === 'in place') RIB[ic.name] = { i16: newest.c16.toDataURL('image/png'), i32: newest.c32.toDataURL('image/png') };
     // finished icons (in the add-in) show only in the ribbon preview, not as a detail block (Ajmal, 2026-11-22)
     if (ic.status === 'in place') continue;
+    review.push({ ic, drawn });
     const block = document.createElement('section'); block.className = 'icon';
     block.innerHTML = `<div class="title"><b>${ic.title}</b><span class="tag ${ic.status === 'in place' ? 'done' : ''}">${ic.status}</span>
       <span class="what">${ic.what}</span></div>`;
@@ -657,9 +989,33 @@ function save(canvas, file) {
     host.appendChild(block);
   }
   buildRibbons();
+  buildSheet(review);
   document.getElementById('export').textContent = JSON.stringify(exp);
   document.body.dataset.ready = '1';
 })();
+
+// ---- Review sheet: every icon still being chosen on one row - today's icon, then each option, on a light and a dark
+// ribbon, at 32 and 16 px as Revit shows them (plain files stretched by the display scale), plus a big view.
+// Open the page as icon-studio.html#sheet to see only this sheet (for a screenshot).
+function buildSheet(review) {
+  const host = document.getElementById('sheet');
+  if (!review.length) { host.style.display = 'none'; return; }
+  const copy = (c, css) => { const n = document.createElement('canvas'); n.width = c.width; n.height = c.height; n.getContext('2d').drawImage(c, 0, 0); return show(n, css); };
+  const img = (file, px) => { const i = new Image(); i.src = TODAY_DIR + file; i.width = px; i.height = px; return i; };
+  const pair = (light, dark) => { const p = document.createElement('div'); p.className = 'sh-pair';
+    const l = document.createElement('div'); l.className = 'sh-l'; l.append(...light);
+    const d = document.createElement('div'); d.className = 'sh-d'; d.append(...dark); p.append(l, d); return p; };
+  const cell = (label, note, p) => { const c = document.createElement('div'); c.className = 'sh-cell';
+    const t = document.createElement('div'); t.className = 'sh-lbl'; t.innerHTML = `<b>${label}</b> ${note}`; c.append(t, p); return c; };
+  host.innerHTML = '<h2>Review sheet - pick one letter per icon (e.g. "Toggle Links B, Highlight A"). Each option: big view, then 32 and 16 px as Revit shows them, on a light and a dark ribbon.</h2>';
+  for (const { ic, drawn } of review) {
+    const row = document.createElement('div'); row.className = 'sh-row';
+    const name = document.createElement('div'); name.className = 'sh-name'; name.innerHTML = `<b>${ic.title.replace(/^\d+\. /, '')}</b><span>${ic.what}</span>`;
+    row.append(name, cell('Today', '', pair([img(ic.name + '32.png', 32), img(ic.name + '16.png', 16)], [img(ic.name + '32.png', 32), img(ic.name + '16.png', 16)])));
+    for (const r of drawn) row.append(cell(r.v.label, r.v.note, pair([copy(r.big, 52), copy(r.c32, 32), copy(r.c16, 16)], [copy(r.c32, 32), copy(r.c16, 16)])));
+    host.appendChild(row);
+  }
+}
 
 // ---- Revit ribbon preview: the Heron tab as Revit lays it out (from HeronToolsApp.cs and Ajmal's screenshot).
 // New icons where one is drawn here, today's icon everywhere else. Icons are plain 16 / 32 px files,

@@ -10,8 +10,9 @@
 # name (16, 32, @2x), 32-bit with transparency, clear corners, nothing cut at the border. Optional -Shot saves a
 # screenshot of the page at 150 % (the owner's screen). Copy a checked file into src\HeronTools\Resources\Icons
 # only after the owner's typed "yes".
-#   powershell -ExecutionPolicy Bypass -File tools\icon-studio\export-icons.ps1 [-Shot page.png]
-param([string]$Html = (Join-Path $PSScriptRoot 'icon-studio.html'), [string]$OutDir = (Join-Path $PSScriptRoot 'export'), [string]$Shot)
+#   powershell -ExecutionPolicy Bypass -File tools\icon-studio\export-icons.ps1 [-Shot page.png] [-Sheet sheet.png]
+param([string]$Html = (Join-Path $PSScriptRoot 'icon-studio.html'), [string]$OutDir = (Join-Path $PSScriptRoot 'export'), [string]$Shot,
+      [string]$Sheet, [int]$SheetHeight = 1700)
 $e = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 $u = "file:///" + ($Html -replace '\\', '/')
 $prof = "$env:TEMP\heron-edge-shot"
@@ -38,6 +39,10 @@ Get-ChildItem $OutDir -Filter *.png | ForEach-Object {
 }
 if ($Shot) {
   & $e --headless=new --disable-gpu --hide-scrollbars --allow-file-access-from-files --virtual-time-budget=5000 --window-size=1280,2400 --force-device-scale-factor=1.5 --user-data-dir=$prof --screenshot=$Shot $u 2>$null | Out-Null
+}
+# -Sheet: a screenshot of the review sheet only (every icon still being chosen, one row each)
+if ($Sheet) {
+  & $e --headless=new --disable-gpu --hide-scrollbars --allow-file-access-from-files --virtual-time-budget=8000 --window-size=1280,$SheetHeight --force-device-scale-factor=1.5 --user-data-dir=$prof --screenshot=$Sheet "$u#sheet" 2>$null | Out-Null
 }
 
 
